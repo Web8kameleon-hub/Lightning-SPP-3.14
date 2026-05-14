@@ -1,6 +1,7 @@
 ﻿using wwwmmm.PublicAPI;
 using wwwmmm.Services;
 using wwwmmm.SDK;
+using LightningSPP.Licensing;
 
 namespace wwwmmm;
 
@@ -33,6 +34,19 @@ internal class Program
 
         switch (command)
         {
+            case "activate":
+                ActivateLicense(args);
+                break;
+            case "license":
+            case "status":
+                LicenseManager.ShowLicenseStatus();
+                break;
+            case "deactivate":
+                LicenseManager.DeactivateLicense();
+                break;
+            case "generate-license":
+                GenerateSampleLicense(args);
+                break;
             case "scan":
                 await QuickScan(args);
                 break;
@@ -289,7 +303,12 @@ internal class Program
     private static void ShowHelp()
     {
         Console.WriteLine("Lightning Scan-Process-Print System");
-        Console.WriteLine("\nCommands:");
+        Console.WriteLine("\nLicense Commands:");
+        Console.WriteLine("  activate <key>          - Activate a license key");
+        Console.WriteLine("  license / status        - Show license status and usage");
+        Console.WriteLine("  deactivate              - Deactivate current license");
+        Console.WriteLine("  generate-license <tier> - Generate sample license (dev/testing)");
+        Console.WriteLine("\nProcessing Commands:");
         Console.WriteLine("  scan <source>           - Quick scan using TideWave + Resonance");
         Console.WriteLine("  process                 - Process using Hybrid Multi-Engine");
         Console.WriteLine("  print                   - Print with Stigma Premium");
@@ -308,5 +327,61 @@ internal class Program
         Console.WriteLine("  • Clisonic Global AI - AI-powered enhancement");
         Console.WriteLine("  • Stigma - Premium print quality");
         Console.WriteLine("  • Stigma Memory - Optimization");
+        Console.WriteLine("\nPricing:");
+        Console.WriteLine("  • FREE Tier: 1,000 operations/month");
+        Console.WriteLine("  • PAY-AS-YOU-GO: €0.001/operation, min €9.99/month");
+        Console.WriteLine("  • UNLIMITED: €99.99/year, unlimited operations");
+        Console.WriteLine("  • ENTERPRISE: Custom pricing and SLA");
+        Console.WriteLine("\nPurchase: https://aba-gmbh.de/lightning-spp");
+        Console.WriteLine("Support:  clisonix@pm.me");
+    }
+
+    private static void ActivateLicense(string[] args)
+    {
+        if (args.Length < 2)
+        {
+            Console.WriteLine("Usage: wwwmmm activate <LICENSE-KEY>");
+            Console.WriteLine("Example: wwwmmm activate LSPP-UNLTD-A1B2-C3D4-E5F6-1234");
+            return;
+        }
+
+        var licenseKey = args[1];
+        LicenseManager.ActivateLicense(licenseKey);
+    }
+
+    private static void GenerateSampleLicense(string[] args)
+    {
+        Console.WriteLine("🔑 Lightning SPP License Generator\n");
+
+        if (args.Length < 2)
+        {
+            Console.WriteLine("Usage: wwwmmm generate-license <tier> [email] [company]");
+            Console.WriteLine("\nTiers:");
+            Console.WriteLine("  free       - Free tier (1,000 ops/month, 1 device)");
+            Console.WriteLine("  unlimited  - Unlimited tier (€99.99/year, 10 devices)");
+            Console.WriteLine("  enterprise - Enterprise tier (custom, unlimited devices)");
+            Console.WriteLine("\nExample:");
+            Console.WriteLine("  wwwmmm generate-license unlimited user@company.com \"Acme Corp\"");
+            return;
+        }
+
+        var tier = args[1].ToLower();
+        var email = args.Length > 2 ? args[2] : "demo@example.com";
+        var company = args.Length > 3 ? args[3] : "Demo Company";
+
+        LicenseKey license = tier switch
+        {
+            "free" => LicenseManager.SampleLicenses.GenerateFreeLicense(email),
+            "unlimited" => LicenseManager.SampleLicenses.GenerateUnlimitedLicense(email, company),
+            "enterprise" => LicenseManager.SampleLicenses.GenerateEnterpriseLicense(email, company, -1),
+            _ => throw new ArgumentException($"Unknown tier: {tier}")
+        };
+
+        Console.WriteLine("✅ License generated successfully!\n");
+        Console.WriteLine(license.ToString());
+        Console.WriteLine($"\n💾 License JSON:\n{license.ToJson()}");
+        Console.WriteLine($"\n🔑 To activate, run:");
+        Console.WriteLine($"   wwwmmm activate {license.Key}");
     }
 }
+
