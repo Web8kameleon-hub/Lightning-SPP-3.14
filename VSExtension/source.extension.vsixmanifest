@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Id="LightningSPP.VisualStudio.Extension" Version="3.14.0" Language="en-US" Publisher="ABA GmbH" />
+    <DisplayName>Lightning SPP - Ultra-Fast Document Processing</DisplayName>
+    <Description xml:space="preserve">Professional document scanning, processing, and printing system for Visual Studio. Ultra-fast performance (&lt;1ms to &lt;10ms), REAL processing with ImageSharp + ML, universal device support. FREE for developers, production features require license.</Description>
+    <MoreInfo>https://github.com/Web8kameleon-hub/Lightning-SPP-3.14</MoreInfo>
+    <License>LICENSE.txt</License>
+    <GettingStartedGuide>https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/wiki</GettingStartedGuide>
+    <ReleaseNotes>https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/releases</ReleaseNotes>
+    <Icon>icon.png</Icon>
+    <PreviewImage>preview.png</PreviewImage>
+    <Tags>scan, process, print, lightning, fast, real-time, image-processing, ai, ml, medical, iot, iso, fda, ce, gdpr, hipaa</Tags>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.8,)" />
+    <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[17.8,)" />
+    <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.8,)" />
+  </Installation>
+  <Dependencies>
+    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.8,)" />
+  </Dependencies>
+  <Prerequisites>
+    <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[17.8,)" DisplayName="Visual Studio core editor" />
+    <Prerequisite Id="Microsoft.Net.Component.4.8.SDK" Version="[17.8,)" DisplayName=".NET Framework 4.8 SDK" />
+  </Prerequisites>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
+    <Asset Type="Microsoft.VisualStudio.ToolboxControl" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
+  </Assets>
+</PackageManifest>
