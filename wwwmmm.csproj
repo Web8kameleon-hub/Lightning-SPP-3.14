@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>wwwmmm</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PublishAot>true</PublishAot>
@@ -47,6 +48,16 @@
     <None Include="SECURITY.md" Pack="true" PackagePath="\" />
     <None Include="COMPLIANCE.md" Pack="true" PackagePath="\" />
     <None Include="PRICING.md" Pack="true" PackagePath="\" />
+    <Content Include="Web\wwwroot\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Tests\LightningSPP.Tests\**\*.cs" />
+    <Compile Remove="VSExtension\**\*.cs" />
+    <Compile Remove="Desktop\**\*.cs" />
+    <Compile Remove="Lightning-SPP-3.14\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -63,6 +74,7 @@
     <!-- Real AI/ML -->
     <PackageReference Include="Microsoft.ML" Version="3.0.1" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.19.2" />
+    <PackageReference Include="Stripe.net" Version="51.1.0" />
 
     <!-- Real Memory Management -->
     <PackageReference Include="System.Memory" Version="4.6.0" />
