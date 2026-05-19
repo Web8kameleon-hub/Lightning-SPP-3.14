@@ -6,6 +6,7 @@ namespace wwwmmm.Services;
 public interface IScanService
 {
     Task<ScanResult> ScanAsync(ScanRequest request, CancellationToken cancellationToken = default);
+    Task<ScanResult> ScanAsync(byte[] data, ScanMode mode = ScanMode.Lightning, int quality = 300, CancellationToken cancellationToken = default);
     Task<ScanResult> ResonanceScanAsync(byte[] data, CancellationToken cancellationToken = default);
 }
 

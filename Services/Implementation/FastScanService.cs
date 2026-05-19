@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp.Advanced;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
@@ -13,9 +14,19 @@ namespace wwwmmm.Services.Implementation;
 /// </summary>
 public class FastScanService : IScanService
 {
+    private const int MaxNanoDecibelQuality = 2400;
+
+    private readonly ILogger<FastScanService> _logger;
+
+    public FastScanService(ILogger<FastScanService> logger)
+    {
+        _logger = logger;
+    }
     public async Task<ScanResult> ScanAsync(ScanRequest request, CancellationToken cancellationToken = default)
     {
         var sw = Stopwatch.StartNew();
+        _logger.LogDebug("ScanAsync started. Mode={Mode} Quality={Quality} Source={Source}",
+            request.Mode, request.Quality, request.Source);
 
         try
         {
@@ -43,11 +54,48 @@ public class FastScanService : IScanService
                 "PNG"
             );
 
+            _logger.LogDebug("ScanAsync completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
             return new ScanResult(data, metadata, true);
         }
         catch (Exception ex)
         {
             sw.Stop();
+            _logger.LogError(ex, "ScanAsync failed after {ElapsedMs}ms", sw.ElapsedMilliseconds);
+            return new ScanResult(
+                Array.Empty<byte>(),
+                new ScanMetadata(DateTime.UtcNow, sw.ElapsedMilliseconds, "Error", 0, "None"),
+                false,
+                ex.Message
+            );
+        }
+    }
+
+    public async Task<ScanResult> ScanAsync(byte[] data, ScanMode mode = ScanMode.Lightning, int quality = 300, CancellationToken cancellationToken = default)
+    {
+        var sw = Stopwatch.StartNew();
+        _logger.LogDebug("ScanAsync(byte[]) started. Mode={Mode} Quality={Quality} DataLength={Length}",
+            mode, quality, data.Length);
+
+        try
+        {
+            var request = new ScanRequest(Source: string.Empty, Mode: mode, Quality: quality);
+            var processed = mode switch
+            {
+                ScanMode.Lightning => await ProcessInMemoryAsync(data, request, cancellationToken),
+                ScanMode.TideWave => await ProcessInMemoryAsync(data, request, cancellationToken),
+                ScanMode.Resonance => await ProcessInMemoryAsync(data, request, cancellationToken),
+                ScanMode.NanoDecibel => await ProcessInMemoryAsync(data, request, cancellationToken),
+                _ => await ProcessInMemoryAsync(data, request, cancellationToken)
+            };
+
+            sw.Stop();
+            _logger.LogDebug("ScanAsync(byte[]) completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
+            return new ScanResult(processed, new ScanMetadata(DateTime.UtcNow, sw.ElapsedMilliseconds, mode.ToString(), quality, "PNG"), true);
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            _logger.LogError(ex, "ScanAsync(byte[]) failed after {ElapsedMs}ms", sw.ElapsedMilliseconds);
             return new ScanResult(
                 Array.Empty<byte>(),
                 new ScanMetadata(DateTime.UtcNow, sw.ElapsedMilliseconds, "Error", 0, "None"),
@@ -132,17 +180,59 @@ public class FastScanService : IScanService
         }
     }
 
+    private async Task<byte[]> ProcessInMemoryAsync(byte[] sourceData, ScanRequest request, CancellationToken cancellationToken)
+    {
+        var image = LoadImageOrCreateFromBinary(sourceData, request.Quality);
+        using (image)
+        {
+            image.Mutate(ctx =>
+            {
+                ctx.AutoOrient();
+                ResizeForQuality(ctx, image.Size, request.Quality);
+                ApplyModeFilters(ctx, request.Mode);
+            });
+            var encoded = await EncodePngAsync(image, cancellationToken);
+            return request.Mode switch
+            {
+                ScanMode.TideWave => await ApplyTideWaveProcessing(encoded, cancellationToken),
+                ScanMode.Resonance => await ApplyResonanceAlgorithm(encoded, cancellationToken),
+                ScanMode.NanoDecibel => await ApplyNanoDecibelEnhancement(encoded, cancellationToken),
+                _ => encoded
+            };
+        }
+    }
+
+    private static void ApplyModeFilters(IImageProcessingContext ctx, ScanMode mode)
+    {
+        switch (mode)
+        {
+            case ScanMode.Lightning:
+                ctx.Grayscale().Contrast(1.05f);
+                break;
+            case ScanMode.TideWave:
+                ctx.Grayscale().GaussianSharpen(1.25f).Contrast(1.1f);
+                break;
+            case ScanMode.Resonance:
+                ctx.Grayscale().GaussianSharpen(1.8f).Contrast(1.2f);
+                break;
+            case ScanMode.NanoDecibel:
+                ctx.Grayscale().GaussianSharpen(2.2f).Contrast(1.3f);
+                break;
+        }
+    }
+
     private async Task<byte[]> NanoDecibelScanAsync(ScanRequest request, CancellationToken cancellationToken)
     {
+        var effectiveQuality = Math.Min(request.Quality * 4, MaxNanoDecibelQuality);
         var sourceData = await ReadSourceBytesAsync(request.Source, cancellationToken);
-        var image = LoadImageOrCreateFromBinary(sourceData, request.Quality * 4);
+        var image = LoadImageOrCreateFromBinary(sourceData, effectiveQuality);
 
         using (image)
         {
             image.Mutate(ctx =>
             {
                 ctx.AutoOrient();
-                ResizeForQuality(ctx, image.Size, request.Quality * 4);
+                ResizeForQuality(ctx, image.Size, effectiveQuality);
                 ctx.Grayscale().GaussianSharpen(2.2f).Contrast(1.3f);
             });
 
@@ -223,6 +313,7 @@ public class FastScanService : IScanService
         CancellationToken cancellationToken,
         Action<IImageProcessingContext> transform)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using var image = LoadImageOrCreateFromBinary(data, 300);
         image.Mutate(transform);
         return await EncodePngAsync(image, cancellationToken);
