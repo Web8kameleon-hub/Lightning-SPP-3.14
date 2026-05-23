@@ -2,6 +2,7 @@
 using wwwmmm.Services;
 using wwwmmm.SDK;
 using LightningSPP.Licensing;
+using wwwmmm.Web;
 
 namespace wwwmmm;
 
@@ -46,6 +47,13 @@ internal class Program
                 break;
             case "generate-license":
                 GenerateSampleLicense(args);
+                break;
+            case "issue-key":
+                IssueLicenseKey(args);
+                break;
+            case "serve":
+            case "api":
+                await StartApiServer(args);
                 break;
             case "scan":
                 await QuickScan(args);
@@ -308,6 +316,8 @@ internal class Program
         Console.WriteLine("  license / status        - Show license status and usage");
         Console.WriteLine("  deactivate              - Deactivate current license");
         Console.WriteLine("  generate-license <tier> - Generate sample license (dev/testing)");
+        Console.WriteLine("  issue-key <tier> <email> <company> [devices] [days] [stripe|internal]");
+        Console.WriteLine("                         - Issue production key with audit log");
         Console.WriteLine("\nProcessing Commands:");
         Console.WriteLine("  scan <source>           - Quick scan using TideWave + Resonance");
         Console.WriteLine("  process                 - Process using Hybrid Multi-Engine");
@@ -317,6 +327,7 @@ internal class Program
         Console.WriteLine("  demo                    - Run demonstration");
         Console.WriteLine("  test                    - Run system tests");
         Console.WriteLine("  examples                - Run usage examples");
+        Console.WriteLine("  serve [port]            - Start REST API + Web Dashboard");
         Console.WriteLine("\nTechnologies:");
         Console.WriteLine("  • TideWave - Balanced scanning");
         Console.WriteLine("  • CLX - Core processing");
@@ -334,6 +345,52 @@ internal class Program
         Console.WriteLine("  • ENTERPRISE: Custom pricing and SLA");
         Console.WriteLine("\nPurchase: https://aba-gmbh.de/lightning-spp");
         Console.WriteLine("Support:  clisonix@pm.me");
+    }
+
+    private static void IssueLicenseKey(string[] args)
+    {
+        if (args.Length < 5)
+        {
+            Console.WriteLine("Usage: wwwmmm issue-key <tier> <email> <company> [devices] [days] [stripe|internal]");
+            Console.WriteLine("Example: wwwmmm issue-key unlimited admin@aba-gmbh.de \"ABA GmbH\" 10 365 stripe");
+            return;
+        }
+
+        var tier = args[1];
+        var email = args[2];
+        var company = args[3];
+        var devices = args.Length > 4 && int.TryParse(args[4], out var d) ? d : 1;
+        var days = args.Length > 5 && int.TryParse(args[5], out var v) ? v : 365;
+        var paymentRaw = args.Length > 6 ? args[6].ToLowerInvariant() : "stripe";
+        var mode = paymentRaw == "internal"
+            ? LicenseManager.PaymentMode.InternalQuantum
+            : LicenseManager.PaymentMode.StripeOnly;
+
+        var license = LicenseManager.CreateLicenseKey(
+            email,
+            company,
+            tier,
+            devices,
+            days,
+            useInternalQuantumSecurity: mode == LicenseManager.PaymentMode.InternalQuantum,
+            paymentMode: mode);
+
+        Console.WriteLine("✅ License issued successfully");
+        Console.WriteLine($"Key: {license.Key}");
+        Console.WriteLine($"Tier: {license.Tier}");
+        Console.WriteLine($"Expires: {license.ExpirationDate:yyyy-MM-dd}");
+        Console.WriteLine($"Payment mode: {mode}");
+    }
+
+    private static async Task StartApiServer(string[] args)
+    {
+        var port = 13080;
+        if (args.Length > 1 && int.TryParse(args[1], out var parsedPort))
+        {
+            port = parsedPort;
+        }
+
+        await LicenseApiServer.RunAsync(port);
     }
 
     private static void ActivateLicense(string[] args)
@@ -379,7 +436,7 @@ internal class Program
 
         Console.WriteLine("✅ License generated successfully!\n");
         Console.WriteLine(license.ToString());
-        Console.WriteLine($"\n💾 License JSON:\n{license.ToJson()}");
+        Console.WriteLine($"\n💾 License Storage Format:\n{license.ToStorageString()}");
         Console.WriteLine($"\n🔑 To activate, run:");
         Console.WriteLine($"   wwwmmm activate {license.Key}");
     }

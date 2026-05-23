@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>wwwmmm Resonance Banner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-night: #020305;
+      --bg-ink: #041018;
+      --bg-deep: #071822;
+      --ice: #f5ffff;
+      --soft-ice: #a4d7e6;
+      --pulse: #00fff7;
+      --pulse-2: #69f0ff;
+      --amber: #ffd34d;
+      --line: rgba(0, 255, 247, 0.08);
+      --glass: rgba(6, 19, 28, 0.5);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Orbitron", "Sora", sans-serif;
+      color: var(--ice);
+      background:
+        radial-gradient(circle at center, rgba(0,255,247,0.20), rgba(0,0,0,0.95) 56%),
+        radial-gradient(circle at 80% 18%, rgba(255,211,77,0.14), transparent 30%),
+        radial-gradient(circle at 18% 20%, rgba(105,240,255,0.14), transparent 32%),
+        linear-gradient(180deg, #010203 0%, var(--bg-ink) 48%, var(--bg-deep) 100%);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .hero {
+      position: relative;
+      isolation: isolate;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px 20px;
+      overflow: hidden;
+    }
+
+    .atmosphere,
+    .scan-wave,
+    .hero-grid,
+    .orbital-ring,
+    .wave-overlay,
+    .grain {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .atmosphere {
+      background:
+        radial-gradient(circle at 24% 26%, rgba(0,255,247,0.22), transparent 34%),
+        radial-gradient(circle at 78% 18%, rgba(105,240,255,0.18), transparent 28%),
+        radial-gradient(circle at 58% 58%, rgba(255,211,77,0.12), transparent 38%),
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,0.04), transparent 42%);
+      animation: drift 8s ease-in-out infinite alternate;
+      z-index: -3;
+    }
+
+    .hero-grid {
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.35;
+      animation: gridMove 20s linear infinite;
+      z-index: -2;
+    }
+
+    .orbital-ring {
+      inset: auto 7% 32%;
+      height: 17%;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(0,0,0,0.08), rgba(0,0,0,0.34) 66%);
+      border: 1px solid rgba(25,255,246,0.12);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03) inset,
+        0 0 64px rgba(0,255,247,0.22),
+        0 0 140px rgba(255,211,77,0.12);
+      filter: blur(0.3px);
+      transform: perspective(900px) rotateX(76deg);
+      transform-origin: center;
+      z-index: -2;
+    }
+
+    .scan-wave {
+      display: none;
+      z-index: -1;
+    }
+
+    .wave-overlay {
+      display: none;
+    }
+
+    .grain {
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.05) 0 0.6px, transparent 0.8px),
+        radial-gradient(circle at 70% 30%, rgba(255,255,255,0.04) 0 0.7px, transparent 1px);
+      background-size: 240px 240px, 320px 320px;
+      opacity: 0.22;
+      z-index: -1;
+    }
+
+    .core {
+      position: relative;
+      width: min(1400px, 94vw);
+      margin: 0 auto;
+      padding: 40px 32px 20px;
+      background: linear-gradient(180deg, rgba(8,18,27,0.28) 0%, rgba(5,12,18,0.10) 62%, rgba(0,0,0,0) 100%);
+      border-radius: 30px;
+    }
+
+    .brand {
+      margin: 0;
+      font-size: clamp(4.7rem, 12vw, 10rem);
+      line-height: 1;
+      font-weight: 700;
+      text-transform: lowercase;
+      text-shadow:
+        0 0 16px rgba(0,255,247,.28),
+        0 0 40px rgba(0,255,247,.34),
+        0 0 96px rgba(0,255,247,.18),
+        0 0 140px rgba(255,211,77,.08);
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0;
+      padding: 0;
+      position: relative;
+      white-space: nowrap;
+      will-change: transform, filter;
+    }
+
+    .brand::after {
+      content: "";
+      position: absolute;
+      left: 12%;
+      right: 12%;
+      bottom: -22px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,255,247,1), rgba(255,255,255,0.4), rgba(255,211,77,0.8), transparent);
+      box-shadow: 0 0 34px rgba(0,255,247,0.62), 0 0 60px rgba(255,211,77,0.18);
+      opacity: 1;
+    }
+
+    .chunk {
+      display: inline-block;
+      transform-origin: center 76%;
+      transition: transform 0.05s linear;
+      position: relative;
+      letter-spacing: -0.04em;
+      will-change: transform, filter, color;
+    }
+
+    .chunk-wave {
+      color: rgba(220,255,255,0.98);
+      filter: drop-shadow(0 0 34px rgba(0,255,247,0.46));
+    }
+
+    .chunk-mark {
+      margin-left: -0.05em;
+      color: rgba(255,248,236,0.99);
+      filter: drop-shadow(0 0 34px rgba(255,211,77,0.34));
+    }
+
+    .chunk::before {
+      content: attr(data-echo);
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.34;
+      mix-blend-mode: screen;
+      filter: blur(22px);
+      transform: translateY(6px) scale(1.01, 0.98);
+    }
+
+    .chunk-wave::before {
+      color: rgba(0,255,247,0.92);
+    }
+
+    .chunk-mark::before {
+      color: rgba(255,220,120,0.62);
+    }
+
+    .status-tag {
+      margin: 36px auto 0;
+      color: rgba(25,255,246,.96);
+      font-size: 0.82rem;
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      opacity: 0.72;
+      animation: breathe 3s ease-in-out infinite;
+    }
+
+    .stigma-canvas {
+      width: min(1240px, 94vw);
+      height: 240px;
+      margin: 16px auto 0;
+      display: block;
+      opacity: 0.96;
+    }
+
+    .controls {
+      margin-top: 22px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .video-subtitles {
+      margin-top: 18px;
+      min-height: 60px;
+      display: grid;
+      place-items: center;
+      padding: 0 10px;
+    }
+
+    .subtitle-line {
+      font-size: clamp(13px, 1.8vw, 24px);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #f3ffff;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 260ms ease, transform 260ms ease;
+      text-shadow: 0 0 36px rgba(0,255,247,0.44), 0 0 70px rgba(255,211,77,0.10);
+    }
+
+    .subtitle-line.show {
+      opacity: 0.9;
+      transform: translateY(0);
+    }
+
+    .btn {
+      text-decoration: none;
+      color: #efffff;
+      background: linear-gradient(120deg, #0d2d3d, #15455f);
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-weight: 700;
+      border: 1px solid rgba(25,255,246,0.34);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 10px 28px rgba(0,0,0,0.35), 0 0 28px rgba(0,255,247,0.16);
+      cursor: pointer;
+    }
+
+    .btn.alt {
+      color: #fff4e1;
+      background: linear-gradient(120deg, #3b230f, #674221);
+      border-color: rgba(255,208,122,0.44);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 10px 28px rgba(0,0,0,0.38), 0 0 28px rgba(255,211,77,0.16);
+    }
+
+    .chip {
+      margin: 18px auto 0;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      color: #ebffff;
+      background: rgba(6, 19, 29, 0.78);
+      border: 1px solid rgba(25,255,246,0.26);
+      border-radius: 999px;
+      padding: 7px 12px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #baffff;
+      box-shadow: 0 0 0 0 rgba(186,255,255,0.68);
+    }
+
+    body.capture-mode .controls,
+    body.capture-mode .chip,
+    body.capture-mode .status-tag {
+      display: none;
+    }
+
+    body.capture-mode .core {
+      width: min(1440px, 98vw);
+      padding-top: 34px;
+      background: transparent;
+    }
+
+    @keyframes gridMove {
+      from { transform: translateY(0); }
+      to { transform: translateY(40px); }
+    }
+
+    @keyframes drift {
+      from { transform: translateX(-1.6%) translateY(-1%); }
+      to { transform: translateX(1.6%) translateY(1.2%); }
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.35; }
+      50% {
+        opacity: 1;
+        text-shadow: 0 0 16px rgba(0,255,247,1), 0 0 32px rgba(0,255,247,0.76), 0 0 52px rgba(255,211,77,0.18);
+      }
+    }
+
+    @media (max-width: 680px) {
+      .core {
+        width: min(96vw, 680px);
+        padding: 28px 14px 10px;
+      }
+      .brand {
+        font-size: clamp(56px, 22vw, 104px);
+      }
+      .subtitle-line {
+        font-size: 12px;
+        letter-spacing: 0.1em;
+      }
+      .status-tag {
+        font-size: 10px;
+        letter-spacing: 0.2em;
+      }
+      .stigma-canvas { height: 170px; margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <div class="atmosphere" aria-hidden="true"></div>
+    <div class="hero-grid" aria-hidden="true"></div>
+    <div class="orbital-ring" aria-hidden="true"></div>
+    <div class="scan-wave" aria-hidden="true"></div>
+    <div class="wave-overlay" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <div class="core">
+      <h1 class="brand" aria-label="wwwmmm">
+        <span class="chunk chunk-wave" data-echo="www">www</span><span class="chunk chunk-mark" data-echo="mmm">mmm</span>
+      </h1>
+      <div class="status-tag">Resonance Flow // Stigma Nodes Online</div>
+      <canvas class="stigma-canvas" id="stigmaCanvas" aria-hidden="true"></canvas>
+      <div class="video-subtitles" aria-live="polite"><div id="subtitleLine" class="subtitle-line"></div></div>
+
+      <div class="chip"><span class="dot" id="beatDot"></span><span id="beatLabel">Beat Sync: Visual Pulse</span></div>
+
+      <div class="controls">
+        <button class="btn" id="audioToggle">Aktivizo Audio Beat</button>
+        <a class="btn alt" href="/">Kthehu te Landing</a>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const preset = params.get('preset') || '';
+    const cinematic10 = preset.toLowerCase() === 'cinematic10';
+    const captureMode = params.get('capture') === '1';
+    const forceCapture = captureMode || cinematic10;
+    if (forceCapture) {
+      document.body.classList.add('capture-mode');
+    }
+
+    const chunks = Array.from(document.querySelectorAll('.chunk'));
+    const hero = document.querySelector('.hero');
+    const beatDot = document.getElementById('beatDot');
+    const beatLabel = document.getElementById('beatLabel');
+    const audioToggle = document.getElementById('audioToggle');
+    const subtitleLine = document.getElementById('subtitleLine');
+
+    let beatPulse = 0;
+    let beatTime = 0;
+    const bpm = Number(params.get('bpm') || 92);
+    const beatInterval = 60 / Math.max(40, Math.min(220, bpm));
+    const renderDurationSec = Number(params.get('duration') || (cinematic10 ? 10 : 0));
+    const renderDurationMs = renderDurationSec > 0 ? renderDurationSec * 1000 : 0;
+    let startTime = 0;
+    let audioCtx = null;
+    let audioEnabled = false;
+
+    const subtitleTimeline = cinematic10
+      ? [
+          { start: 0.2, end: 2.6, text: 'SCAN: Harmonic Wave Lock' },
+          { start: 2.6, end: 5.6, text: 'PROCESS: Resonance Compression' },
+          { start: 5.6, end: 8.6, text: 'PRINT: Stigma Fluid Imprint' },
+          { start: 8.6, end: 10.2, text: 'wwwmmm // LIGHTNING SPP 3.14' }
+        ]
+      : [];
+
+    function syncSubtitles(elapsedMs) {
+      if (!subtitleTimeline.length) {
+        subtitleLine.classList.remove('show');
+        subtitleLine.textContent = '';
+        return;
+      }
+
+      const elapsedSec = elapsedMs / 1000;
+      const cue = subtitleTimeline.find((item) => elapsedSec >= item.start && elapsedSec < item.end);
+      if (!cue) {
+        subtitleLine.classList.remove('show');
+        return;
+      }
+
+      if (subtitleLine.textContent !== cue.text) {
+        subtitleLine.textContent = cue.text;
+      }
+      subtitleLine.classList.add('show');
+    }
+
+    function startBeatClock(ts) {
+      const now = ts / 1000;
+      if (beatTime === 0) beatTime = now;
+      if (now - beatTime >= beatInterval) {
+        beatTime = now;
+        beatPulse = 1;
+        beatDot.style.boxShadow = '0 0 0 10px #7ce9ff33';
+        if (audioEnabled && audioCtx) {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = 72;
+          gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.1, audioCtx.currentTime + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.14);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.16);
+        }
+      }
+    }
+
+    function fadeBeatPulse() {
+      beatPulse *= 0.9;
+      if (beatPulse < 0.02) {
+        beatDot.style.boxShadow = '0 0 0 0 #7ce9ff00';
+      }
+    }
+
+    audioToggle.addEventListener('click', async () => {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+      audioEnabled = !audioEnabled;
+      beatLabel.textContent = audioEnabled ? 'Beat Sync: Audio + Visual' : 'Beat Sync: Visual Pulse';
+      audioToggle.textContent = audioEnabled ? 'Ndalo Audio Beat' : 'Aktivizo Audio Beat';
+    });
+
+    function animateBrand(t) {
+      if (startTime === 0) startTime = t;
+      const elapsed = t - startTime;
+      if (renderDurationMs && elapsed >= renderDurationMs) {
+        syncSubtitles(renderDurationMs);
+        return;
+      }
+
+      startBeatClock(t);
+      fadeBeatPulse();
+      syncSubtitles(elapsed);
+      const time = t * 0.0019;
+      chunks.forEach((chunk, i) => {
+        const waveA = Math.sin(time * 2.2 + i * 0.82) * 18;
+        const waveB = Math.sin(time * 4.7 + i * 1.13) * 6;
+        const intensity = Math.max(0, waveA + waveB + beatPulse * 18);
+        const driftX = Math.sin(time * 1.25 + i * 0.6) * (i === 0 ? -6 : 6);
+        const relax = Math.sin(time * 8.5 + i) * Math.min(intensity / 26, 1.2);
+        const scaleX = 1 + intensity / 115;
+        const scaleY = 1 - intensity / 120;
+        const blur = intensity / 17;
+        const bright = 1 + intensity / 36;
+        const saturate = 1.1 + intensity / 22;
+        chunk.style.transform = `translate(${driftX}px, ${intensity + relax}px) scale(${scaleX}, ${scaleY})`;
+        chunk.style.filter = `blur(${blur}px) brightness(${bright}) saturate(${saturate})`;
+        if (chunk.classList.contains('chunk-wave')) {
+          chunk.style.color = intensity > 4 ? '#b5ffff' : '#efffff';
+          chunk.style.textShadow = `0 0 ${24 + intensity}px rgba(0, 255, 247, ${0.48 + intensity / 76}), 0 0 ${76 + intensity * 1.45}px rgba(105, 240, 255, 0.34)`;
+        } else {
+          chunk.style.color = intensity > 4 ? '#fff0cb' : '#fff7ec';
+          chunk.style.textShadow = `0 0 ${22 + intensity}px rgba(255, 211, 77, ${0.46 + intensity / 82}), 0 0 ${68 + intensity * 1.2}px rgba(255, 211, 77, 0.28)`;
+        }
+      });
+    }
+
+    function runBrandLoop(ts) {
+      animateBrand(ts);
+      requestAnimationFrame(runBrandLoop);
+    }
+
+    const canvas = document.getElementById('stigmaCanvas');
+    const ctx = canvas.getContext('2d');
+    const nodes = [];
+
+    function createNodes(count, width, height) {
+      nodes.length = 0;
+      for (let i = 0; i < count; i++) {
+        nodes.push({
+          x: (i / (count - 1)) * width,
+          y: height * (0.34 + Math.random() * 0.28),
+          vx: 0.38 + Math.random() * 0.7,
+          phase: Math.random() * Math.PI * 2,
+          radius: 8 + Math.random() * 10
+        });
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = hero.getBoundingClientRect();
+      const width = Math.min(1240, Math.floor(rect.width - 40));
+      const height = window.innerWidth < 680 ? 138 : 210;
+      canvas.width = width;
+      canvas.height = height;
+      createNodes(Math.max(10, Math.floor(width / 85)), width, height);
+    }
+
+    function drawFluid(time) {
+      const t = time * 0.0012;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalCompositeOperation = 'screen';
+
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      gradient.addColorStop(0, 'rgba(0, 255, 247, 0.26)');
+      gradient.addColorStop(0.5, 'rgba(255, 211, 77, 0.38)');
+      gradient.addColorStop(1, 'rgba(105, 240, 255, 0.26)');
+
+      ctx.beginPath();
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        node.x += node.vx;
+        if (node.x > canvas.width + 18) node.x = -18;
+
+        const yOsc = Math.sin(t * 1.7 + node.phase + node.x * 0.011) * 20;
+        const y = node.y + yOsc;
+
+        if (i === 0) {
+          ctx.moveTo(node.x, y);
+        } else {
+          const prev = nodes[i - 1];
+          const prevY = prev.y + Math.sin(t * 1.6 + prev.phase + prev.x * 0.013) * 16;
+          const cx = (prev.x + node.x) / 2;
+          const cy = (prevY + y) / 2;
+          ctx.quadraticCurveTo(prev.x, prevY, cx, cy);
+        }
+      }
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 5.5 + beatPulse * 2.5;
+      ctx.shadowColor = 'rgba(0, 255, 247, 0.62)';
+      ctx.shadowBlur = 40 + beatPulse * 18;
+      ctx.stroke();
+
+      for (let i = 0; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        const ay = nodeA.y + Math.sin(t * 1.7 + nodeA.phase + nodeA.x * 0.011) * 20;
+        for (let j = i + 1; j < nodes.length; j++) {
+          const nodeB = nodes[j];
+          const by = nodeB.y + Math.sin(t * 1.7 + nodeB.phase + nodeB.x * 0.011) * 20;
+          const dx = nodeA.x - nodeB.x;
+          const dy = ay - by;
+          const distance = Math.hypot(dx, dy);
+          if (distance > 170) continue;
+
+          const alpha = 1 - distance / 170;
+          ctx.strokeStyle = `rgba(145, 255, 255, ${alpha * 0.22})`;
+          ctx.lineWidth = alpha * 16;
+          ctx.beginPath();
+          ctx.moveTo(nodeA.x, ay);
+          ctx.lineTo(nodeB.x, by);
+          ctx.stroke();
+        }
+      }
+
+      for (const node of nodes) {
+        const yOsc = Math.sin(t * 1.7 + node.phase + node.x * 0.011) * 20;
+        const y = node.y + yOsc;
+
+        const g = ctx.createRadialGradient(node.x, y, 0, node.x, y, node.radius * 3.4);
+        g.addColorStop(0, 'rgba(255, 238, 190, 0.96)');
+        g.addColorStop(0.25, 'rgba(186, 255, 255, 0.88)');
+        g.addColorStop(0.56, 'rgba(0, 255, 247, 0.40)');
+        g.addColorStop(1, 'rgba(0, 255, 247, 0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(
+          node.x,
+          y,
+          node.radius * (1.7 + beatPulse * 0.06),
+          node.radius * (1.1 + Math.abs(Math.sin(t + node.phase)) * 0.28),
+          Math.sin(t + node.phase) * 0.4,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        ctx.strokeStyle = `rgba(240, 255, 255, ${0.28 + beatPulse * 0.12})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(node.x, y, node.radius * 1.8, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.globalCompositeOperation = 'source-over';
+
+      requestAnimationFrame(drawFluid);
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    requestAnimationFrame(runBrandLoop);
+    requestAnimationFrame(drawFluid);
+  </script>
+</body>
+</html>

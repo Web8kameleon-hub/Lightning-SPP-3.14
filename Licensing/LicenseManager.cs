@@ -1,4 +1,4 @@
-using System.Text.Json;
+using wwwmmm.Web;
 
 namespace LightningSPP.Licensing;
 
@@ -8,6 +8,12 @@ namespace LightningSPP.Licensing;
 /// </summary>
 public class LicenseManager
 {
+    public enum PaymentMode
+    {
+        StripeOnly,
+        InternalQuantum
+    }
+
     private static readonly string LicenseFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "LightningSPP",
@@ -57,8 +63,8 @@ public class LicenseManager
         {
             try
             {
-                var json = File.ReadAllText(LicenseFilePath);
-                _activeLicense = LicenseKey.FromJson(json);
+                var content = File.ReadAllText(LicenseFilePath);
+                _activeLicense = LicenseKey.FromStorageString(content);
             }
             catch
             {
@@ -159,6 +165,68 @@ public class LicenseManager
     public static long GetUsageThisMonth() => _operationsThisMonth;
 
     /// <summary>
+    /// Create a new license key with explicit security/payment strategy for internal provisioning.
+    /// </summary>
+    public static LicenseKey CreateLicenseKey(
+        string email,
+        string company,
+        string tier,
+        int devices,
+        int validityDays,
+        bool useInternalQuantumSecurity,
+        PaymentMode paymentMode = PaymentMode.StripeOnly)
+    {
+        if (paymentMode == PaymentMode.StripeOnly)
+        {
+            if (!StripeBilling.EnsureConfigured(out var stripeMessage))
+            {
+                InternalAuditLogger.Error($"Stripe configuration error: {stripeMessage}");
+                throw new InvalidOperationException(stripeMessage);
+            }
+
+            InternalAuditLogger.Info("Stripe configuration validated for key issuance.");
+        }
+
+        var normalizedTier = tier.Trim().ToLowerInvariant();
+        var selectedTier = normalizedTier switch
+        {
+            "free" => LicenseKey.LicenseTier.Free,
+            "paygo" => LicenseKey.LicenseTier.PayAsYouGo,
+            "pay-as-you-go" => LicenseKey.LicenseTier.PayAsYouGo,
+            "unlimited" => LicenseKey.LicenseTier.Unlimited,
+            "enterprise" => LicenseKey.LicenseTier.Enterprise,
+            _ => throw new ArgumentException($"Unknown tier: {tier}")
+        };
+
+        var maxOps = selectedTier switch
+        {
+            LicenseKey.LicenseTier.Free => 1000,
+            _ => -1
+        };
+
+        var maxDevices = selectedTier switch
+        {
+            LicenseKey.LicenseTier.Free => Math.Clamp(devices, 1, 1),
+            LicenseKey.LicenseTier.PayAsYouGo => Math.Clamp(devices, 1, 5),
+            LicenseKey.LicenseTier.Unlimited => Math.Clamp(devices, 1, 10),
+            LicenseKey.LicenseTier.Enterprise => devices <= 0 ? -1 : devices,
+            _ => devices
+        };
+
+        var license = LicenseKey.Generate(
+            selectedTier,
+            email,
+            company,
+            validityDays,
+            maxDevices,
+            maxOps);
+
+        InternalAuditLogger.Info($"Issued key tier={selectedTier} email={email} company={company} paymentMode={paymentMode} internalSecurity={useInternalQuantumSecurity}");
+
+        return license;
+    }
+
+    /// <summary>
     /// Display license status
     /// </summary>
     public static void ShowLicenseStatus()
@@ -202,7 +270,7 @@ public class LicenseManager
             Directory.CreateDirectory(directory);
         }
 
-        File.WriteAllText(LicenseFilePath, license.ToJson());
+        File.WriteAllText(LicenseFilePath, license.ToStorageString());
     }
 
     /// <summary>

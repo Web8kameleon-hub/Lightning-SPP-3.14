@@ -1,18 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace LightningSPP.Licensing;
-
-/// <summary>
-/// Lightning SPP License Key System - JSON Source Generator Context
-/// </summary>
-[JsonSourceGenerationOptions(WriteIndented = true)]
-[JsonSerializable(typeof(LicenseKey))]
-internal partial class LicenseKeyJsonContext : JsonSerializerContext
-{
-}
 
 /// <summary>
 /// Lightning SPP License Key System
@@ -193,19 +182,97 @@ public class LicenseKey
     }
 
     /// <summary>
-    /// Export license to JSON for storage/transmission
+    /// Export license to key-value storage format.
     /// </summary>
-    public string ToJson()
+    public string ToStorageString()
     {
-        return JsonSerializer.Serialize(this, LicenseKeyJsonContext.Default.LicenseKey);
+        var sb = new StringBuilder();
+        sb.AppendLine($"Key={Key}");
+        sb.AppendLine($"Tier={Tier}");
+        sb.AppendLine($"CustomerEmail={CustomerEmail}");
+        sb.AppendLine($"CompanyName={CompanyName}");
+        sb.AppendLine($"IssueDate={IssueDate:O}");
+        sb.AppendLine($"ExpirationDate={ExpirationDate:O}");
+        sb.AppendLine($"MaxDevices={MaxDevices}");
+        sb.AppendLine($"MaxOperationsPerMonth={MaxOperationsPerMonth}");
+        sb.AppendLine($"IsActive={IsActive}");
+        sb.AppendLine($"Features={Convert.ToBase64String(Encoding.UTF8.GetBytes(Features))}");
+        return sb.ToString();
     }
 
     /// <summary>
-    /// Import license from JSON
+    /// Import license from key-value storage format.
     /// </summary>
-    public static LicenseKey? FromJson(string json)
+    public static LicenseKey? FromStorageString(string content)
     {
-        return JsonSerializer.Deserialize(json, LicenseKeyJsonContext.Default.LicenseKey);
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var line in lines)
+        {
+            var idx = line.IndexOf('=');
+            if (idx <= 0 || idx >= line.Length - 1)
+            {
+                continue;
+            }
+
+            var key = line[..idx].Trim();
+            var val = line[(idx + 1)..].Trim();
+            values[key] = val;
+        }
+
+        if (!values.TryGetValue("Key", out var keyValue) || string.IsNullOrWhiteSpace(keyValue))
+        {
+            return null;
+        }
+
+        var tierText = values.TryGetValue("Tier", out var t) ? t : nameof(LicenseTier.Free);
+        _ = Enum.TryParse<LicenseTier>(tierText, true, out var tier);
+
+        var issueText = values.TryGetValue("IssueDate", out var i) ? i : DateTime.UtcNow.ToString("O");
+        var expText = values.TryGetValue("ExpirationDate", out var e) ? e : DateTime.UtcNow.ToString("O");
+        _ = DateTime.TryParse(issueText, out var issueDate);
+        _ = DateTime.TryParse(expText, out var expirationDate);
+
+        var maxDevicesText = values.TryGetValue("MaxDevices", out var md) ? md : "1";
+        var maxOpsText = values.TryGetValue("MaxOperationsPerMonth", out var mo) ? mo : "1000";
+        _ = int.TryParse(maxDevicesText, out var maxDevices);
+        _ = long.TryParse(maxOpsText, out var maxOps);
+
+        var isActiveText = values.TryGetValue("IsActive", out var ia) ? ia : "true";
+        _ = bool.TryParse(isActiveText, out var isActive);
+
+        var features = string.Empty;
+        if (values.TryGetValue("Features", out var f) && !string.IsNullOrWhiteSpace(f))
+        {
+            try
+            {
+                features = Encoding.UTF8.GetString(Convert.FromBase64String(f));
+            }
+            catch
+            {
+                features = string.Empty;
+            }
+        }
+
+        return new LicenseKey
+        {
+            Key = keyValue,
+            Tier = tier,
+            CustomerEmail = values.TryGetValue("CustomerEmail", out var c) ? c : string.Empty,
+            CompanyName = values.TryGetValue("CompanyName", out var n) ? n : string.Empty,
+            IssueDate = issueDate == default ? DateTime.UtcNow : issueDate,
+            ExpirationDate = expirationDate == default ? DateTime.UtcNow.AddDays(365) : expirationDate,
+            MaxDevices = maxDevices,
+            MaxOperationsPerMonth = maxOps,
+            IsActive = isActive,
+            Features = string.IsNullOrWhiteSpace(features) ? GetFeaturesForTier(tier) : features
+        };
     }
 
     public override string ToString()

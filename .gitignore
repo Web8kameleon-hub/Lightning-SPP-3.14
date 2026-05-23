@@ -408,3 +408,6 @@ FodyWeavers.xsd
 /tmp/
 *.vsidx
 *.vsidx~
+
+# Large binary assets
+tools/ffmpeg.zip

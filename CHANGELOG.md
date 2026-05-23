@@ -16,6 +16,7 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
 ### ✨ Added
 
 #### Core Features
+
 - **REAL Processing Implementation**
   - SixLabors.ImageSharp 3.1.5 for actual image processing
   - Microsoft.ML 3.0.1 for machine learning and AI
@@ -58,6 +59,7 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
   - Three predefined configurations: Default (REAL), FastSimulated, RealProduction
 
 #### Technologies
+
 - **TideWave™** - Balanced scanning technology
 - **CLX™** - Core processing engine (Fastest Brotli compression)
 - **CLI.I™** - Interactive processing (Optimal Brotli)
@@ -69,6 +71,7 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
 - **Stigma Memory™** - Memory pooling optimization
 
 #### Documentation
+
 - **README.md** - Project overview and quick start
 - **REAL_PROCESSING.md** - Detailed REAL vs SIMULATED comparison
 - **LICENSE** - MIT License with ABA GmbH copyright
@@ -85,16 +88,19 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
   - Architecture, Deployment, Security guides
 
 #### Examples
+
 - **UsageExamples.cs** - 6 classic usage scenarios
 - **UniversalExamples.cs** - 10 device-specific deployment examples
 - **RealVsSimulatedExamples.cs** - Complete REAL processing demonstration
 
 #### Testing
+
 - **SimpleTests.cs** - 5 comprehensive test cases
 - All tests passing (5/5)
 - Speed benchmarks exceeding targets
 
 #### Deployment
+
 - **Dockerfile** - Multi-stage build, optimized for production
   - Base image: mcr.microsoft.com/dotnet/runtime:10.0
   - Build image: mcr.microsoft.com/dotnet/sdk:10.0
@@ -109,6 +115,7 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
   - Multi-platform builds (linux/amd64, linux/arm64)
 
 #### Visual Studio Extension
+
 - **VSIX Package** - Visual Studio 2022 17.8+ and VS 2026 support
 - Free for developers, production features require license
 - Commands: Quick Scan, AI Processing, Stigma Print, License Manager
@@ -117,6 +124,7 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
 - Integrated license activation
 
 #### Compliance & Certifications
+
 - ✅ **ISO 9001:2015** - Quality Management System (certified)
 - ✅ **ISO 27001:2022** - Information Security Management (certified)
 - 🔄 **ISO 13485:2016** - Medical Devices (in progress, expected Q2 2025)
@@ -131,6 +139,7 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
 ### 🔧 Technical Details
 
 #### Architecture
+
 - **Service-Oriented Architecture** with interfaces
 - **Pipeline Pattern** for workflow orchestration
 - **Factory Pattern** for service creation
@@ -138,13 +147,15 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
 - **Configuration-based** mode switching
 
 #### Performance
-| Mode | Target | Actual | Status |
-|------|--------|--------|--------|
-| Instant | < 1ms | 0.3ms | ✅ 3.3x faster |
-| UltraFast | < 5ms | 3.7ms | ✅ 1.3ms margin |
-| Lightning | < 10ms | 8.2ms | ✅ 1.8ms margin |
+
+| Mode      | Target | Actual | Status       |
+| --------- | ------ | ------ | ------------ |
+| Instant   | < 1ms  | 0.3ms  | 3.3x faster  |
+| UltraFast | < 5ms  | 3.7ms  | 1.3ms margin |
+| Lightning | < 10ms | 8.2ms  | 1.8ms margin |
 
 #### Dependencies
+
 - .NET 10.0
 - SixLabors.ImageSharp 3.1.5
 - SixLabors.ImageSharp.Drawing 2.1.4
@@ -155,6 +166,7 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
 - System.IO.Compression (built-in Brotli)
 
 #### Platform Support
+
 - Windows 10/11 (x64, ARM64)
 - Linux (x64, ARM64)
 - macOS 12+ (x64, ARM64)
@@ -170,7 +182,7 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
   - Includes: README, LICENSE, SECURITY, COMPLIANCE, PRICING
   - Symbols package: LightningSPP.3.14.0.snupkg
   
-- **GitHub Repository**: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14
+- **GitHub Repository**: [Web8kameleon-hub/Lightning-SPP-3.14](https://github.com/Web8kameleon-hub/Lightning-SPP-3.14)
   - 47 files
   - 10,700+ lines of code
   - Complete documentation
@@ -188,12 +200,12 @@ Lightning SPP 3.14.0 is the first public production-ready release of the ultra-f
 
 ### 💰 Pricing
 
-| Tier | Price | Operations | Devices |
-|------|-------|------------|---------|
-| FREE | Free | 1,000/month | 1 |
-| PAY-AS-YOU-GO | €0.001/op* | Unlimited | 5 |
-| UNLIMITED ⭐ | €99.99/year | Unlimited | 10 |
-| ENTERPRISE | Custom | Unlimited | Unlimited |
+| Tier          | Price       | Operations  | Devices   |
+| ------------- | ----------- | ----------- | --------- |
+| FREE          | Free        | 1,000/month | 1         |
+| PAY-AS-YOU-GO | €0.001/op*  | Unlimited   | 5         |
+| UNLIMITED     | €99.99/year | Unlimited   | 10        |
+| ENTERPRISE    | Custom      | Unlimited   | Unlimited |
 
 *Minimum €9.99/month
 
@@ -205,8 +217,8 @@ Wattenscheider Hellweg 199
 44869 Bochum, Germany  
 HRB 21069 (Registergericht Bochum)  
 
-📧 clisonix@pm.me  
-🌐 https://aba-gmbh.de
+📧 [clisonix@pm.me](mailto:clisonix@pm.me)  
+🌐 [https://aba-gmbh.de](https://aba-gmbh.de)
 
 ### 🙏 Acknowledgments
 
@@ -218,6 +230,22 @@ HRB 21069 (Registergericht Bochum)
 ---
 
 ## [Unreleased]
+
+### Added
+
+- Dedicated xUnit test project under `Tests/LightningSPP.Tests`.
+- Deterministic API-level unit tests for scan/process/pipeline/batch flows.
+- REST API host with endpoints for health, license status, license issue, and license activation.
+- Web dashboard for license management and a marketing landing page.
+- Windows desktop drag-and-drop GUI scaffold in `Desktop/LightningSPP.Desktop`.
+- Internal audit logger and new `issue-key` command for production key issuance.
+- Operational scripts for NuGet publishing and release notes generation under `Scripts`.
+
+### Changed
+
+- CI now runs explicit unit test project instead of generic root-level test discovery.
+- CI triggers now include workflow/source/project/docs paths relevant to quality gates.
+- README now documents naming convention mapping (`wwwmmm` source vs `LightningSPP` package/product naming).
 
 ### Planned Features
 
@@ -241,14 +269,17 @@ HRB 21069 (Registergericht Bochum)
 ## Version History
 
 ### 3.x Series (Current)
+
 - **3.14.0** (2026-05-14) - Initial public release
 
 ### 2.x Series (Legacy - Not Publicly Released)
+
 - Internal development versions
 - Not recommended for new projects
 - Contact support for migration assistance
 
 ### 1.x Series (Prototype - Not Publicly Released)
+
 - Proof of concept
 - No longer supported
 
@@ -264,13 +295,13 @@ See [Migration Guide](Wiki/Migration-Guide.md) for detailed upgrade instructions
 
 - **Community**: [GitHub Discussions](https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions)
 - **Issues**: [GitHub Issues](https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues)
-- **Email**: clisonix@pm.me
+- **Email**: [clisonix@pm.me](mailto:clisonix@pm.me)
 - **Enterprise**: Dedicated support with SLA
 
 ---
 
-[3.14.0]: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/releases/tag/v3.14.0
-[Unreleased]: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/compare/v3.14.0...HEAD
+[3.14.0]: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/releases/tag/v3.14.0>
+[Unreleased]: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/compare/v3.14.0...HEAD>
 
 ---
 

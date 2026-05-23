@@ -3,8 +3,22 @@ name: Lightning SPP CI/CD
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '.github/workflows/**'
+      - 'Dockerfile'
+      - 'README.md'
+      - 'CHANGELOG.md'
   pull_request:
     branches: [ main ]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '.github/workflows/**'
+      - 'Dockerfile'
+      - 'README.md'
+      - 'CHANGELOG.md'
   release:
     types: [ published ]
 
@@ -32,8 +46,8 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
       
-    - name: Run tests
-      run: dotnet test --no-build --verbosity normal
+    - name: Run unit tests
+      run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal
       
     - name: Run Lightning SPP Demo
       run: dotnet run --no-build --configuration Release -- demo
@@ -101,7 +115,9 @@ jobs:
       run: dotnet pack --configuration Release --no-build --output ./nupkg
       
     - name: Publish to NuGet.org
-      run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      run: dotnet nuget push ./nupkg/*.nupkg --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
       
     - name: Upload NuGet package as artifact
       uses: actions/upload-artifact@v4
@@ -134,13 +150,15 @@ jobs:
       
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       with:
         context: .
         push: true
         tags: |
-          ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
-          ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
-          ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:3.14
+          ${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
+          ${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+          ${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:3.14
         platforms: linux/amd64,linux/arm64
         cache-from: type=gha
         cache-to: type=gha,mode=max

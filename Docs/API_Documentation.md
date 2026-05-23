@@ -3,6 +3,7 @@
 ## Përmbledhje
 
 Lightning SPP është një sistem i plotë për skanim, përpunim dhe printim që integron teknologjitë më të avancuara:
+
 - **TideWave**, **Resonance**, **NanoDecibel** për skanim
 - **CLX**, **CLI.I**, **XCL**, **Clisonic AI** për përpunim
 - **Stigma**, **Stigma Memory** për printim
@@ -20,6 +21,7 @@ Klasa statike që ekspozon të gjitha funksionalitetet kryesore.
 ### Metodat Kryesore
 
 #### 1. ExecuteLightningPipelineAsync
+
 Pipeline i plotë: Scan → Process → Print
 
 ```csharp
@@ -30,13 +32,16 @@ Task<PipelineResult> ExecuteLightningPipelineAsync(
 ```
 
 **Parametrat:**
+
 - `source`: Burimi për skanim (emri i file-it)
 - `cancellationToken`: Token për anulim (opsional)
 
 **Kthyen:**
+
 - `PipelineResult` me detajet e ekzekutimit
 
 **Shembull:**
+
 ```csharp
 var result = await LightningAPI.ExecuteLightningPipelineAsync("document.pdf");
 if (result.Success)
@@ -48,6 +53,7 @@ if (result.Success)
 ---
 
 #### 2. ExecuteCustomPipelineAsync
+
 Pipeline me konfigurim custom
 
 ```csharp
@@ -58,9 +64,11 @@ Task<PipelineResult> ExecuteCustomPipelineAsync(
 ```
 
 **Parametrat:**
+
 - `request`: Konfigurim i detajuar për pipeline
 
 **Shembull:**
+
 ```csharp
 var request = new PipelineRequest(
     Source: "photo.jpg",
@@ -77,6 +85,7 @@ var result = await LightningAPI.ExecuteCustomPipelineAsync(request);
 ---
 
 #### 3. QuickScanAsync
+
 Skanim i shpejtë me TideWave + Resonance
 
 ```csharp
@@ -89,6 +98,7 @@ Task<ScanResult> QuickScanAsync(
 **Performance:** ~30ms
 
 **Shembull:**
+
 ```csharp
 var result = await LightningAPI.QuickScanAsync("document.pdf");
 Console.WriteLine($"Scanned {result.Data.Length} bytes");
@@ -97,6 +107,7 @@ Console.WriteLine($"Scanned {result.Data.Length} bytes");
 ---
 
 #### 4. HighQualityScanAsync
+
 Skanim me cilësi të lartë duke përdorur NanoDecibel
 
 ```csharp
@@ -110,6 +121,7 @@ Task<ScanResult> HighQualityScanAsync(
 **Resolution:** 600 DPI
 
 **Shembull:**
+
 ```csharp
 var result = await LightningAPI.HighQualityScanAsync("photo.jpg");
 Console.WriteLine($"Resolution: {result.Metadata.Resolution} DPI");
@@ -118,6 +130,7 @@ Console.WriteLine($"Resolution: {result.Metadata.Resolution} DPI");
 ---
 
 #### 5. AIProcessAsync
+
 Përpunim me Clisonic Global AI
 
 ```csharp
@@ -131,6 +144,7 @@ Task<ProcessingResult> AIProcessAsync(
 **Performance:** ~40ms
 
 **Shembull:**
+
 ```csharp
 var scanResult = await LightningAPI.QuickScanAsync("doc.pdf");
 var processResult = await LightningAPI.AIProcessAsync(scanResult.Data);
@@ -139,6 +153,7 @@ var processResult = await LightningAPI.AIProcessAsync(scanResult.Data);
 ---
 
 #### 6. HybridProcessAsync
+
 Përpunim me të gjithë motorët (CLX + CLI.I + XCL + AI)
 
 ```csharp
@@ -152,6 +167,7 @@ Task<ProcessingResult> HybridProcessAsync(
 **Performance:** ~50ms
 
 **Shembull:**
+
 ```csharp
 var result = await LightningAPI.HybridProcessAsync(data);
 Console.WriteLine($"Engine: {result.Metadata.Engine}");
@@ -160,6 +176,7 @@ Console.WriteLine($"Engine: {result.Metadata.Engine}");
 ---
 
 #### 7. StigmaPrintAsync
+
 Printim me cilësi premium duke përdorur Stigma + Resonance
 
 ```csharp
@@ -173,6 +190,7 @@ Task<PrintResult> StigmaPrintAsync(
 **Performance:** ~60ms
 
 **Shembull:**
+
 ```csharp
 await LightningAPI.StigmaPrintAsync(data);
 ```
@@ -180,6 +198,7 @@ await LightningAPI.StigmaPrintAsync(data);
 ---
 
 #### 8. BatchProcessAsync
+
 Përpunim në grup për dokumente të shumta
 
 ```csharp
@@ -190,6 +209,7 @@ Task<List<PipelineResult>> BatchProcessAsync(
 ```
 
 **Shembull:**
+
 ```csharp
 var docs = new List<string> { "doc1.pdf", "doc2.pdf", "doc3.pdf" };
 var results = await LightningAPI.BatchProcessAsync(docs);
@@ -203,6 +223,7 @@ Console.WriteLine($"Processed {successful}/{docs.Count}");
 ## Tipet e të Dhënave
 
 ### ScanMode
+
 ```csharp
 public enum ScanMode
 {
@@ -214,6 +235,7 @@ public enum ScanMode
 ```
 
 ### ProcessingEngine
+
 ```csharp
 public enum ProcessingEngine
 {
@@ -227,6 +249,7 @@ public enum ProcessingEngine
 ```
 
 ### PrintQuality
+
 ```csharp
 public enum PrintQuality
 {
@@ -238,6 +261,7 @@ public enum PrintQuality
 ```
 
 ### PipelineRequest
+
 ```csharp
 public record PipelineRequest(
     string Source,                          // Burimi për skanim
@@ -259,6 +283,7 @@ public record PipelineRequest(
 ```
 
 ### PipelineResult
+
 ```csharp
 public record PipelineResult(
     bool Success,           // A përfundoi me sukses
@@ -269,6 +294,7 @@ public record PipelineResult(
 ```
 
 ### ScanResult
+
 ```csharp
 public record ScanResult(
     byte[] Data,            // Të dhënat e skanuara
@@ -279,6 +305,7 @@ public record ScanResult(
 ```
 
 ### ProcessingResult
+
 ```csharp
 public record ProcessingResult(
     byte[] ProcessedData,        // Të dhënat e përpunuara
@@ -289,6 +316,7 @@ public record ProcessingResult(
 ```
 
 ### PrintResult
+
 ```csharp
 public record PrintResult(
     bool Success,           // Statusi
@@ -373,19 +401,19 @@ var result = await LightningAPI.ExecuteCustomPipelineAsync(request);
 
 ## Performance Benchmarks
 
-| Operacioni | Koha mesatare | Teknologjia |
-|-----------|---------------|-------------|
-| Lightning Scan | 10ms | Lightning |
-| TideWave Scan | 30ms | TideWave |
-| Resonance Scan | 50ms | Resonance |
-| NanoDecibel Scan | 80ms | NanoDecibel |
-| CLX Processing | 20ms | CLX |
-| CLI.I Processing | 25ms | CLI.I |
-| XCL Processing | 30ms | XCL |
-| Clisonic AI | 40ms | AI |
-| Hybrid Processing | 50ms | Multi-Engine |
-| Stigma Print | 60ms | Stigma + Resonance |
-| **Full Pipeline** | **120ms** | **All Technologies** |
+| Operacioni        | Koha mesatare | Teknologjia          |
+| ----------------- | ------------- | -------------------- |
+| Lightning Scan    | 10ms          | Lightning            |
+| TideWave Scan     | 30ms          | TideWave             |
+| Resonance Scan    | 50ms          | Resonance            |
+| NanoDecibel Scan  | 80ms          | NanoDecibel          |
+| CLX Processing    | 20ms          | CLX                  |
+| CLI.I Processing  | 25ms          | CLI.I                |
+| XCL Processing    | 30ms          | XCL                  |
+| Clisonic AI       | 40ms          | AI                   |
+| Hybrid Processing | 50ms          | Multi-Engine         |
+| Stigma Print      | 60ms          | Stigma + Resonance   |
+| **Full Pipeline** | **120ms**     | **All Technologies** |
 
 ---
 
@@ -422,14 +450,17 @@ Për volume të mëdha, përdor `BatchProcessAsync` që është optimizuar për 
 ## Troubleshooting
 
 ### Pipeline dështon
+
 Kontrollo `result.Error` dhe `result.Steps` për të parë ku ka ndodhur problemi.
 
 ### Performance i ulët
+
 - Zvogëlo `OptimizationLevel`
 - Përdor `ScanMode.Lightning` në vend të `NanoDecibel`
 - Çaktivizo teknologjitë që nuk janë thelbësore
 
 ### Memory issues në batch
+
 Përpuno në grupe më të vogla në vend që të ngarkosh të gjitha njëherësh.
 
 ---
@@ -440,5 +471,4 @@ Projekti është i hapur dhe i gatshëm për përdorim publik. Për pyetje dhe s
 
 ---
 
-**Lightning Scan-Process-Print System v1.0.0**
-*⚡ Rrufe i shpejtë, cilësi e jashtëzakonshme!*
+Ky dokument mbuloi endpoint-et kryesore, parametrat, shembujt e përdorimit dhe praktikat e rekomanduara të integrimit për Lightning SPP 3.14.

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lightning SPP Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg2: #1e293b;
+      --card: #111827;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #22d3ee;
+      --accent2: #f59e0b;
+      --ok: #10b981;
+      --err: #ef4444;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at 15% 20%, #164e63, var(--bg)), linear-gradient(120deg, var(--bg), var(--bg2));
+      min-height: 100vh;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 8px; letter-spacing: 0.3px; }
+    p { color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .card {
+      background: color-mix(in srgb, var(--card) 88%, transparent);
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 26px rgba(0,0,0,0.25);
+    }
+    label { display:block; margin: 10px 0 4px; color: var(--muted); font-size: 14px; }
+    input, select, button {
+      width: 100%; box-sizing: border-box; border-radius: 10px;
+      border: 1px solid #334155; padding: 10px; background: #0b1220; color: var(--text);
+    }
+    button {
+      margin-top: 12px; cursor: pointer; background: linear-gradient(120deg, #0891b2, #06b6d4);
+      border: none; font-weight: 600; color: #06202a;
+    }
+    .row { display:flex; gap:10px; }
+    .flex-1 { flex: 1; }
+    .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; background: #1f2937; border: 1px solid #374151; }
+    .status-ok { color: var(--ok); }
+    .status-err { color: var(--err); }
+    code { background:#020617; border:1px solid #334155; padding:2px 6px; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Lightning SPP License Dashboard</h1>
+    <p>Menaxhim i licencave, gjenerim keys dhe aktivizim nga web UI.</p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Status</h2>
+        <p id="status">Duke ngarkuar...</p>
+        <button onclick="refreshStatus()">Refresh Status</button>
+      </section>
+
+      <section class="card">
+        <h2>Krijo Key</h2>
+        <label for="email">Email</label>
+        <input id="email" value="demo@example.com" />
+
+        <label for="company">Company</label>
+        <input id="company" value="Demo Company" />
+
+        <div class="row">
+          <div class="flex-1">
+            <label for="tier">Tier</label>
+            <select id="tier">
+              <option value="free">free</option>
+              <option value="paygo">paygo</option>
+              <option value="unlimited" selected>unlimited</option>
+              <option value="enterprise">enterprise</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label for="payment">Pagesa</label>
+            <select id="payment">
+              <option value="stripe" selected>stripe</option>
+              <option value="internal">internal quantum</option>
+            </select>
+          </div>
+        </div>
+
+        <button onclick="issueKey()">Issue Key</button>
+        <p id="newKey"></p>
+      </section>
+
+      <section class="card">
+        <h2>Aktivizo Key</h2>
+        <label for="licenseKey">License key</label>
+        <input id="licenseKey" placeholder="LSPP-UNLTD-..." />
+        <button onclick="activateKey()">Activate</button>
+        <p id="activation"></p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    function parseKeyValue(text) {
+      const obj = {};
+      for (const line of text.split('\n')) {
+        const idx = line.indexOf('=');
+        if (idx <= 0) continue;
+        const k = line.slice(0, idx).trim();
+        const v = line.slice(idx + 1).trim();
+        obj[k] = v;
+      }
+      return obj;
+    }
+
+    function toForm(payload) {
+      const form = new URLSearchParams();
+      for (const [k, v] of Object.entries(payload)) {
+        form.append(k, String(v));
+      }
+      return form;
+    }
+
+    async function refreshStatus() {
+      const el = document.getElementById('status');
+      try {
+        const res = await fetch('/api/license/status');
+        const text = await res.text();
+        const data = parseKeyValue(text);
+        const valid = data.valid === 'true';
+        const cls = valid ? 'status-ok' : 'status-err';
+        el.innerHTML = `HasLicense: <span class="${cls}">${data.hasLicense}</span><br/>Tier: <span class="pill">${data.tier}</span><br/>Valid: <span class="${cls}">${data.valid}</span><br/>Usage: ${data.usageThisMonth}`;
+      } catch (e) {
+        el.innerHTML = '<span class="status-err">API unavailable</span>';
+      }
+    }
+
+    async function issueKey() {
+      const payload = {
+        email: document.getElementById('email').value,
+        company: document.getElementById('company').value,
+        tier: document.getElementById('tier').value,
+        useInternalQuantumSecurity: document.getElementById('payment').value === 'internal'
+      };
+
+      const res = await fetch('/api/license/issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: toForm(payload)
+      });
+      const data = parseKeyValue(await res.text());
+      const out = document.getElementById('newKey');
+      if (data.ok === 'true') {
+        out.innerHTML = `Generated: <code>${data.key}</code>`;
+        document.getElementById('licenseKey').value = data.key;
+      } else {
+        out.textContent = data.error || 'Error';
+      }
+    }
+
+    async function activateKey() {
+      const key = document.getElementById('licenseKey').value;
+      const res = await fetch('/api/license/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: toForm({ key })
+      });
+      const data = parseKeyValue(await res.text());
+      document.getElementById('activation').innerHTML = data.ok === 'true'
+        ? '<span class="status-ok">Activation successful</span>'
+        : '<span class="status-err">Activation failed</span>';
+      await refreshStatus();
+    }
+
+    refreshStatus();
+  </script>
+</body>
+</html>
