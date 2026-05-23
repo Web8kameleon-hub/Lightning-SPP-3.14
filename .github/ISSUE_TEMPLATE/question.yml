@@ -1,0 +1,22 @@
+name: Question / support
+description: Ask a usage or integration question
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      placeholder: "Shkruaj pyetjen këtu..."
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      placeholder: "Çfarë po ndërton? Cili endpoint/SDK?"
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "3.14.0"

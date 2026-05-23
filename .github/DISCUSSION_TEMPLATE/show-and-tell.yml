@@ -1,0 +1,17 @@
+title: "[Showcase] "
+labels: ["showcase"]
+body:
+  - type: textarea
+    attributes:
+      label: What did you build with Lightning SPP?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Stack / deployment
+  - type: textarea
+    attributes:
+      label: Screenshots / metrics
+  - type: textarea
+    attributes:
+      label: Lessons learned

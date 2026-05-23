@@ -90,7 +90,7 @@ internal class Program
                 break;
             case "simulated":
                 LightningAPI.UseSimulatedServices();
-                Console.WriteLine("✓ Switched to SIMULATED mode (fast, fake data)");
+                Console.WriteLine("✓ Compatibility mode requested. Simulated services are removed; running REAL services.");
                 await RunDemo();
                 break;
             default:

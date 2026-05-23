@@ -253,3 +253,20 @@ Kontributet janë të mirëpritura. Udhëzimet: [CONTRIBUTING.md](CONTRIBUTING.m
 ## Support
 
 Për pyetje ose raportime, hap një issue në repository.
+
+## Community & Contributors
+
+Duam sa më shumë kontribues aktivë 🚀
+
+- Discussions: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions
+- Issues: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues
+- Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Stepstones roadmap: [STEPSTONES.md](STEPSTONES.md)
+- Community wiki page: [Wiki/Community-Guide.md](Wiki/Community-Guide.md)
+
+### Quick start për contributor të rinj
+1. Fork repo
+2. Zgjidh një issue me label `good-first-issue`
+3. Hap PR të vogël + test/dokumentim
+4. Bashkohu në Discussions për ide të reja
+

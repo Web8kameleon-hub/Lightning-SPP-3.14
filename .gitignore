@@ -411,3 +411,8 @@ FodyWeavers.xsd
 
 # Large binary assets
 tools/ffmpeg.zip
+tools/ffmpeg-*-essentials_build/
+*.mp4
+
+# Embedded repository (avoid accidental submodule-like add)
+Lightning-SPP-3.14/

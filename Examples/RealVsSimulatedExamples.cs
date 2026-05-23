@@ -5,54 +5,51 @@ using System.Diagnostics;
 namespace wwwmmm.Examples;
 
 /// <summary>
-/// Examples demonstrating REAL vs SIMULATED services
-/// Shows the difference between fake data and actual processing
+/// Examples validating REAL processing paths.
+/// Legacy simulated entry points are compatibility aliases and route to real services.
 /// </summary>
 public static class RealVsSimulatedExamples
 {
     public static async Task CompareRealVsSimulated()
     {
         Console.WriteLine("╔═══════════════════════════════════════════════════╗");
-        Console.WriteLine("║  REAL vs SIMULATED Processing Comparison         ║");
+        Console.WriteLine("║  REAL Processing Path Validation                 ║");
         Console.WriteLine("╚═══════════════════════════════════════════════════╝\n");
 
-        var testData = GenerateTestData(1024 * 100); // 100KB test data
-
-        // Test with SIMULATED services
-        Console.WriteLine("🔹 Testing with SIMULATED services (fast, fake data)...\n");
+        // Legacy compatibility method - now routes to real services.
+        Console.WriteLine("🔹 Testing COMPATIBILITY path (UseSimulatedServices => REAL services)...\n");
         LightningAPI.UseSimulatedServices();
-        
-        var simStart = Stopwatch.StartNew();
-        var simResult = await LightningAPI.ExecuteLightningPipelineAsync("test-simulated.dat");
-        simStart.Stop();
 
-        Console.WriteLine("SIMULATED Results:");
-        Console.WriteLine($"  Total Time: {simStart.ElapsedMilliseconds}ms");
-        Console.WriteLine($"  Success: {simResult.Success}");
-        Console.WriteLine($"  Steps completed: {simResult.Steps.Count}");
+        var compatibilityStart = Stopwatch.StartNew();
+        var compatibilityResult = await LightningAPI.ExecuteLightningPipelineAsync("test-compatibility.dat");
+        compatibilityStart.Stop();
 
-        // Test with REAL services
-        Console.WriteLine("\n🔹 Testing with REAL services (actual processing)...\n");
+        Console.WriteLine("COMPATIBILITY Path Results:");
+        Console.WriteLine($"  Total Time: {compatibilityStart.ElapsedMilliseconds}ms");
+        Console.WriteLine($"  Success: {compatibilityResult.Success}");
+        Console.WriteLine($"  Steps completed: {compatibilityResult.Steps.Count}");
+
+        // Real path
+        Console.WriteLine("\n🔹 Testing REAL path (UseRealServices)...\n");
         LightningAPI.UseRealServices();
 
         var realStart = Stopwatch.StartNew();
         var realResult = await LightningAPI.ExecuteLightningPipelineAsync("test-real.dat");
         realStart.Stop();
 
-        Console.WriteLine("REAL Results:");
+        Console.WriteLine("REAL Path Results:");
         Console.WriteLine($"  Total Time: {realStart.ElapsedMilliseconds}ms");
         Console.WriteLine($"  Success: {realResult.Success}");
         Console.WriteLine($"  Steps completed: {realResult.Steps.Count}");
 
         // Comparison
-        Console.WriteLine("\n📊 Performance Comparison:");
-        Console.WriteLine($"  Simulated: {simStart.ElapsedMilliseconds}ms");
-        Console.WriteLine($"  Real:      {realStart.ElapsedMilliseconds}ms");
-        Console.WriteLine($"  Difference: {realStart.ElapsedMilliseconds - simStart.ElapsedMilliseconds}ms");
-        Console.WriteLine($"  Overhead:   {((double)realStart.ElapsedMilliseconds / simStart.ElapsedMilliseconds):F2}x");
+        Console.WriteLine("\n📊 Path Comparison:");
+        Console.WriteLine($"  Compatibility path: {compatibilityStart.ElapsedMilliseconds}ms");
+        Console.WriteLine($"  Real path:          {realStart.ElapsedMilliseconds}ms");
+        Console.WriteLine($"  Difference:         {realStart.ElapsedMilliseconds - compatibilityStart.ElapsedMilliseconds}ms");
 
-        Console.WriteLine("\n✅ REAL services provide actual processing!");
-        Console.WriteLine("✅ SIMULATED services are faster but fake!");
+        Console.WriteLine("\n✅ Both paths use REAL processing services.");
+        Console.WriteLine("✅ No fake/simulated data path is active.");
     }
 
     public static async Task DemonstrateRealImageProcessing()

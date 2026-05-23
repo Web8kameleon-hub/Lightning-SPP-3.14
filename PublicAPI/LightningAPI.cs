@@ -39,11 +39,11 @@ public static class LightningAPI
     }
 
     /// <summary>
-    /// Use SIMULATED services for testing
+    /// Compatibility method. Simulated mode has been removed and this now uses real services.
     /// </summary>
     public static void UseSimulatedServices()
     {
-        Configure(LightningConfiguration.FastSimulated);
+        Configure(LightningConfiguration.RealProduction);
     }
 
     /// <summary>

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions (Q&A)
+    url: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions
+    about: For questions, ideas, and community conversations.
+  - name: Security report
+    url: https://aba-gmbh.de
+    about: Please do not report vulnerabilities in public issues. Use the security contact in SECURITY.md.

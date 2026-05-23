@@ -43,6 +43,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include=".github\DISCUSSION_TEMPLATE\ideas.yml" />
+    <None Include=".github\DISCUSSION_TEMPLATE\show-and-tell.yml" />
+    <None Include=".github\ISSUE_TEMPLATE\bug_report.yml" />
+    <None Include=".github\ISSUE_TEMPLATE\config.yml" />
+    <None Include=".github\ISSUE_TEMPLATE\feature_request.yml" />
+    <None Include=".github\ISSUE_TEMPLATE\question.yml" />
+    <None Include=".github\labeler.yml" />
+    <None Include=".github\pull_request_template.md" />
+    <None Include=".github\workflows\auto-label.yml" />
+    <None Include=".github\workflows\community-welcome.yml" />
+    <None Include=".github\workflows\stale.yml" />
     <None Include="README.md" Pack="true" PackagePath="\" />
     <None Include="LICENSE" Pack="true" PackagePath="\" />
     <None Include="SECURITY.md" Pack="true" PackagePath="\" />

@@ -5,7 +5,7 @@ namespace wwwmmm.Configuration;
 
 /// <summary>
 /// Configuration for Lightning SPP 3.14
-/// Determines whether to use REAL or SIMULATED services
+/// REAL services only configuration
 /// </summary>
 public class LightningConfiguration
 {
@@ -30,12 +30,13 @@ public class LightningConfiguration
 
     public static LightningConfiguration FastSimulated => new()
     {
-        UseRealServices = false,
-        UseRealImageProcessing = false,
-        UseRealAIProcessing = false,
-        UseRealPrinting = false,
-        EnablePerformanceLogging = false,
-        EnableMemoryOptimization = false
+        // Kept for backward compatibility - now routes to real services.
+        UseRealServices = true,
+        UseRealImageProcessing = true,
+        UseRealAIProcessing = true,
+        UseRealPrinting = true,
+        EnablePerformanceLogging = true,
+        EnableMemoryOptimization = true
     };
 
     public static LightningConfiguration RealProduction => new()
@@ -64,38 +65,17 @@ public static class ServiceFactory
 
     public static IScanService CreateScanService()
     {
-        if (_config.UseRealImageProcessing)
-        {
-            return new wwwmmm.Services.Implementation.RealImageProcessor();
-        }
-        else
-        {
-            return new wwwmmm.Services.Implementation.FastScanService();
-        }
+        return new wwwmmm.Services.Implementation.RealImageProcessor();
     }
 
     public static IProcessingService CreateProcessingService()
     {
-        if (_config.UseRealAIProcessing)
-        {
-            return new wwwmmm.Services.Implementation.RealAIProcessor();
-        }
-        else
-        {
-            return new wwwmmm.Services.Implementation.HybridProcessingService();
-        }
+        return new wwwmmm.Services.Implementation.RealAIProcessor();
     }
 
     public static IPrintService CreatePrintService()
     {
-        if (_config.UseRealPrinting)
-        {
-            return new wwwmmm.Services.Implementation.RealPrintService(_config.PrintOutputDirectory);
-        }
-        else
-        {
-            return new wwwmmm.Services.Implementation.StigmaPrintService();
-        }
+        return new wwwmmm.Services.Implementation.RealPrintService(_config.PrintOutputDirectory);
     }
 
     public static LightningPipeline CreatePipeline()

@@ -83,8 +83,9 @@ public static class SimpleTests
     {
         try
         {
-            var result = await LightningAPI.QuickScanAsync("test.pdf");
-            return result.Success && result.Data.Length >= 0;
+            var sourcePath = CreateTempTestFile("scan-service", 4096);
+            var result = await LightningAPI.QuickScanAsync(sourcePath);
+            return result.Success && result.Data.Length > 0;
         }
         catch
         {
@@ -96,9 +97,9 @@ public static class SimpleTests
     {
         try
         {
-            var testData = new byte[1000];
+            var testData = GenerateTestData(1000);
             var result = await LightningAPI.HybridProcessAsync(testData);
-            return result.Success && result.ProcessedData.Length >= 0;
+            return result.Success && result.ProcessedData.Length > 0;
         }
         catch
         {
@@ -110,7 +111,7 @@ public static class SimpleTests
     {
         try
         {
-            var testData = new byte[1000];
+            var testData = GenerateTestData(1000);
             var result = await LightningAPI.StigmaPrintAsync(testData);
             return result.Success;
         }
@@ -124,7 +125,8 @@ public static class SimpleTests
     {
         try
         {
-            var result = await LightningAPI.ExecuteLightningPipelineAsync("test.pdf");
+            var sourcePath = CreateTempTestFile("pipeline", 8192);
+            var result = await LightningAPI.ExecuteLightningPipelineAsync(sourcePath);
             return result.Success && result.Steps.Count > 0;
         }
         catch
@@ -137,13 +139,32 @@ public static class SimpleTests
     {
         try
         {
-            var sources = new List<string> { "doc1.pdf", "doc2.pdf" };
+            var sources = new List<string>
+            {
+                CreateTempTestFile("batch-1", 2048),
+                CreateTempTestFile("batch-2", 3072)
+            };
+
             var results = await LightningAPI.BatchProcessAsync(sources);
-            return results.All(r => r.Success);
+            return results.Count == sources.Count && results.All(r => r.Success);
         }
         catch
         {
             return false;
         }
+    }
+
+    private static byte[] GenerateTestData(int size)
+    {
+        var data = new byte[size];
+        Random.Shared.NextBytes(data);
+        return data;
+    }
+
+    private static string CreateTempTestFile(string prefix, int size)
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), $"lightning-spp-{prefix}-{Guid.NewGuid():N}.bin");
+        File.WriteAllBytes(filePath, GenerateTestData(size));
+        return filePath;
     }
 }

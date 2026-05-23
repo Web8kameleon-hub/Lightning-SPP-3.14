@@ -73,6 +73,18 @@ internal static class LicenseApiServer
                 return;
             }
 
+            if (path == "/swagger")
+            {
+                await ServeStaticAsync(context, "swagger.html", "text/html; charset=utf-8");
+                return;
+            }
+
+            if (path == "/openapi.json")
+            {
+                await ServeStaticAsync(context, "openapi.json", "application/json; charset=utf-8");
+                return;
+            }
+
             if (path == "/api/health")
             {
                 await TextAsync(context, HttpStatusCode.OK, $"ok=true\nservice=LightningSPP\ntimestamp={DateTime.UtcNow:O}");

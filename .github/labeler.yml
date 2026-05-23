@@ -1,0 +1,19 @@
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: ['**/*.md', 'Wiki/**', 'Docs/**']
+
+api:
+  - changed-files:
+      - any-glob-to-any-file: ['Web/**', 'PublicAPI/**', 'Services/**']
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: ['Tests/**']
+
+ci-cd:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/workflows/**', '.github/**']
+
+cli:
+  - changed-files:
+      - any-glob-to-any-file: ['Program.cs', 'Scripts/**']

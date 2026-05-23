@@ -1,0 +1,63 @@
+name: Bug report
+description: Report a reproducible bug in Lightning SPP
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Faleminderit që ndihmon projektin! Ju lutem plotëso fushat që ta riprodhojmë shpejt problemin.
+  - type: input
+    id: version
+    attributes:
+      label: Lightning SPP version
+      placeholder: "p.sh. 3.14.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime
+      options:
+        - .NET 10
+        - Docker
+        - Visual Studio Extension
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior / error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stacktrace
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues first
+          required: true
+        - label: I can reproduce this on latest main
+          required: false

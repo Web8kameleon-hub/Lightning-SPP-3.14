@@ -1,0 +1,53 @@
+name: Community Welcome
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Welcome new issue
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `👋 Faleminderit për kontributin!
+
+            - Lexo \\`CONTRIBUTING.md\\`
+            - Për pyetje përdor Discussions
+            - Për security raporto privat te security@aba-gmbh.de
+
+            Ne do bëjmë triage sa më shpejt.`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+      - name: Welcome new PR
+        if: github.event_name == 'pull_request_target'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `🚀 Faleminderit për PR!
+
+            Ju lutem sigurohu:
+            - build/test kalon lokal
+            - docs janë përditësuar kur duhet
+            - nuk ka secrets/token në changes
+
+            Team do bëjë review sa më shpejt.`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });

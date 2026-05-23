@@ -146,7 +146,7 @@ public class RealPrintService : IPrintService
     private async Task<byte[]> ApplyResonanceEnhancementAsync(byte[] data, CancellationToken cancellationToken)
     {
         // REAL Resonance: Pattern-based enhancement
-        await Task.Run(() =>
+        return await Task.Run(() =>
         {
             var enhanced = new byte[data.Length];
             Buffer.BlockCopy(data, 0, enhanced, 0, data.Length);
@@ -157,9 +157,9 @@ public class RealPrintService : IPrintService
                 // Apply resonance smoothing
                 enhanced[i] = (byte)((enhanced[i] + enhanced[i + 1]) / 2);
             }
-        }, cancellationToken);
 
-        return data;
+            return enhanced;
+        }, cancellationToken);
     }
 
     private async Task<byte[]> CompressWithMaxQualityAsync(byte[] data, CancellationToken cancellationToken)

@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest a new capability for Lightning SPP
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ide e re? Perfekt. Jep sa më shumë kontekst që të planifikohet mirë.
+  - type: input
+    id: problem
+    attributes:
+      label: Problem statement
+      placeholder: "Çfarë problemi po zgjidhim?"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      placeholder: "Si e imagjinon implementimin?"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - API
+        - SDK
+        - CLI
+        - Web / Dashboard
+        - Licensing / Billing
+        - Docs / Wiki
+        - DevEx / Tooling
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I can open a PR for this
+          required: false

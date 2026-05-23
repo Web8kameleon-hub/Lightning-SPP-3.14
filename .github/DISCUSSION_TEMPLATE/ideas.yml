@@ -1,0 +1,18 @@
+title: "[Idea] "
+labels: ["idea"]
+body:
+  - type: textarea
+    attributes:
+      label: Idea
+      description: What do you want to build or improve?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Problem it solves
+  - type: textarea
+    attributes:
+      label: Proposal
+  - type: textarea
+    attributes:
+      label: Expected impact

@@ -261,13 +261,13 @@ public class RealAIProcessor : IProcessingService
     private async Task<byte[]> MLOptimizeAsync(byte[] data, CancellationToken cancellationToken)
     {
         // REAL ML optimization using pattern recognition
-        await Task.Run(() =>
+        return await Task.Run(() =>
         {
             // Simple pattern-based optimization
             // In production, this would use trained ML models
             var optimized = new byte[data.Length];
             Buffer.BlockCopy(data, 0, optimized, 0, data.Length);
-            
+
             // ML-inspired optimization: reduce redundancy
             for (int i = 1; i < optimized.Length; i++)
             {
@@ -276,9 +276,9 @@ public class RealAIProcessor : IProcessingService
                     optimized[i] = (byte)(optimized[i] ^ 0x01); // XOR pattern
                 }
             }
-        }, cancellationToken);
 
-        return data;
+            return optimized;
+        }, cancellationToken);
     }
 
     private async Task<byte[]> MemoryOptimizeAsync(byte[] data, CancellationToken cancellationToken)
