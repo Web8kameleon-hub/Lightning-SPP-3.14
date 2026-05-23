@@ -1,0 +1,15 @@
+[Unit]
+Description=Lightning SPP API Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/lightning
+ExecStart=/usr/bin/dotnet /opt/lightning/wwwmmm.dll serve 11400
+Restart=always
+RestartSec=3
+User=www-data
+Environment=ASPNETCORE_ENVIRONMENT=Production
+
+[Install]
+WantedBy=multi-user.target
