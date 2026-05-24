@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using LightningSPP.Licensing;
 
 namespace wwwmmm.Services;
 
@@ -30,6 +31,13 @@ public class LightningPipeline
 
         try
         {
+            // License gate — enforce usage limits before any work is done
+            if (!LicenseManager.CheckAndIncrementUsage())
+            {
+                return new PipelineResult(false, 0, results,
+                    "Operation limit reached. Please upgrade your Lightning SPP license or wait for the next billing cycle.");
+            }
+
             // Phase 1: Lightning Scan
             results.Add("⚡ Starting Lightning Scan...");
             var scanResult = await _scanService.ScanAsync(

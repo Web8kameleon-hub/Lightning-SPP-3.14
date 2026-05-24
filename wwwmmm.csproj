@@ -17,7 +17,7 @@
     <Authors>Ledjan Ahmati, ABA GmbH</Authors>
     <Company>ABA GmbH</Company>
     <Product>Lightning Scan-Process-Print System</Product>
-    <Description>Ultra-fast scan-process-print system with REAL processing. Lightning SPP delivers &lt;1ms to &lt;10ms performance using ImageSharp, Microsoft.ML, and Brotli compression. Universal SDK supports Medical/Mobile/IoT/Embedded/Desktop/Web/Cloud devices. Technologies: TideWave, CLX, CLI.I, XCL, Resonance, NanoDecibel, Clisonic AI, Stigma. Production-ready with ISO/FDA/CE compliance.</Description>
+    <Description>Ultra-fast scan-process-print system with REAL processing. Lightning SPP delivers &lt;1ms to &lt;10ms performance using SkiaSharp, Microsoft.ML, and Brotli compression. Universal SDK supports Medical/Mobile/IoT/Embedded/Desktop/Web/Cloud devices. Technologies: TideWave, CLX, CLI.I, XCL, Resonance, NanoDecibel, Clisonic AI, Stigma. Production-ready with ISO/FDA/CE compliance.</Description>
     <Copyright>Copyright © 2025-2026 ABA GmbH. All rights reserved.</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Web8kameleon-hub/Lightning-SPP-3.14</PackageProjectUrl>
@@ -28,7 +28,7 @@
     <PackageReleaseNotes>
       Version 3.14.0 - Initial Release
       - Ultra-fast processing: &lt;1ms (Instant), &lt;5ms (UltraFast), &lt;10ms (Lightning)
-      - REAL implementations: ImageSharp, Microsoft.ML, Brotli compression, File I/O
+      - REAL implementations: SkiaSharp, Microsoft.ML, Brotli compression, File I/O
       - Universal SDK for 7 device types (Medical, Mobile, IoT, Embedded, Desktop, Web, Cloud)
       - Complete documentation: API, Architecture, Deployment, Security, Compliance
       - ISO 9001/27001 certified, FDA/CE compliance in progress
@@ -43,6 +43,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include=".github\auto_assign.yml" />
     <None Include=".github\DISCUSSION_TEMPLATE\ideas.yml" />
     <None Include=".github\DISCUSSION_TEMPLATE\show-and-tell.yml" />
     <None Include=".github\ISSUE_TEMPLATE\bug_report.yml" />
@@ -51,6 +52,7 @@
     <None Include=".github\ISSUE_TEMPLATE\question.yml" />
     <None Include=".github\labeler.yml" />
     <None Include=".github\pull_request_template.md" />
+    <None Include=".github\workflows\auto-assign-reviewers.yml" />
     <None Include=".github\workflows\auto-label.yml" />
     <None Include=".github\workflows\community-welcome.yml" />
     <None Include=".github\workflows\stale.yml" />
@@ -79,8 +81,7 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
 
     <!-- Real Image Processing -->
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
-    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.4" />
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
 
     <!-- Real AI/ML -->
     <PackageReference Include="Microsoft.ML" Version="3.0.1" />
@@ -90,9 +91,6 @@
     <!-- Logging -->
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
 
-    <!-- Real Memory Management -->
-    <PackageReference Include="System.Memory" Version="4.6.0" />
-    <PackageReference Include="System.Buffers" Version="4.6.0" />
   </ItemGroup>
 
 </Project>

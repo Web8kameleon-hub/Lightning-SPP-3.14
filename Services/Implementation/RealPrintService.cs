@@ -79,7 +79,7 @@ public class RealPrintService : IPrintService
         try
         {
             // REAL Stigma Premium Processing
-            
+
             // Step 1: Stigma preprocessing with memory pooling
             using var pool = MemoryPool<byte>.Shared;
             using var memory = pool.Rent(data.Length);
@@ -203,6 +203,28 @@ public class RealPrintService : IPrintService
                 {
                     // Ignore errors
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Clean up output files older than the specified number of days (default: 7).
+    /// Should be called periodically to prevent temp directory bloat.
+    /// </summary>
+    public void CleanupOldFiles(int olderThanDays = 7)
+    {
+        if (!Directory.Exists(_outputDirectory)) return;
+        var cutoff = DateTime.UtcNow.AddDays(-olderThanDays);
+        foreach (var file in Directory.GetFiles(_outputDirectory))
+        {
+            try
+            {
+                if (File.GetLastWriteTimeUtc(file) < cutoff)
+                    File.Delete(file);
+            }
+            catch
+            {
+                // Ignore individual file errors
             }
         }
     }

@@ -21,7 +21,7 @@ namespace LightningSPP.VisualStudio
     public sealed class LightningSPPPackage : AsyncPackage
     {
         public const string PackageGuidString = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-        
+
         private static readonly string[] ProductionFeatures = new[]
         {
             "AI Processing (Clisonic)",
@@ -50,7 +50,7 @@ namespace LightningSPP.VisualStudio
         {
             // Use REAL services for accurate testing
             PublicAPI.LightningAPI.UseRealServices();
-            
+
             // Check license
             if (!LicenseManager.HasValidLicense())
             {
@@ -71,7 +71,7 @@ namespace LightningSPP.VisualStudio
             if (license == null || tier == LicenseKey.LicenseTier.Free)
             {
                 ShowInfoBar(
-                    "Lightning SPP (FREE Tier)", 
+                    "Lightning SPP (FREE Tier)",
                     "You're using the FREE developer tier. Unlock production features with a license.",
                     new InfoBarAction("Get License", () => OpenUrl("https://aba-gmbh.de/lightning-spp")),
                     new InfoBarAction("Activate License", ShowActivateDialog)
@@ -122,7 +122,7 @@ namespace LightningSPP.VisualStudio
                     {
                         // Show paywall icon if feature locked
                         menuCommand.Enabled = LicenseManager.IsFeatureAvailable("ai");
-                        menuCommand.Text = LicenseManager.IsFeatureAvailable("ai") 
+                        menuCommand.Text = LicenseManager.IsFeatureAvailable("ai")
                             ? "Process with Clisonic AI"
                             : "Process with Clisonic AI (License Required) 🔒";
                     }
@@ -162,7 +162,7 @@ namespace LightningSPP.VisualStudio
         private void QuickScanCallback(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            
+
             // FREE tier - always available
             VsShellUtilities.ShowMessageBox(
                 this,
@@ -343,7 +343,7 @@ namespace LightningSPP.VisualStudio
         private void ShowInfoBar(string title, string message, params InfoBarAction[] actions)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            
+
             // Create info bar model
             var infoBarModel = new InfoBarModel(
                 new[] { new InfoBarTextSpan(message) },
@@ -355,7 +355,7 @@ namespace LightningSPP.VisualStudio
             // Get info bar UI factory
             var factory = GetGlobalService(typeof(SVsInfoBarUIFactory)) as IVsInfoBarUIFactory;
             var element = factory?.CreateInfoBar(infoBarModel);
-            
+
             if (element != null)
             {
                 // Add to main window
@@ -366,9 +366,47 @@ namespace LightningSPP.VisualStudio
 
         private string PromptForInput(string title, string message)
         {
-            // Simple input dialog using VS services
-            // In real implementation, create custom dialog
-            return string.Empty; // Placeholder
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            // WPF input dialog hosted inside Visual Studio
+            var dialog = new System.Windows.Window
+            {
+                Title = title,
+                Width = 480,
+                Height = 220,
+                WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
+                ResizeMode = System.Windows.ResizeMode.NoResize,
+                WindowStyle = System.Windows.WindowStyle.ToolWindow
+            };
+
+            var stack = new System.Windows.Controls.StackPanel { Margin = new System.Windows.Thickness(16) };
+            stack.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = message,
+                TextWrapping = System.Windows.TextWrapping.Wrap,
+                Margin = new System.Windows.Thickness(0, 0, 0, 8)
+            });
+
+            var input = new System.Windows.Controls.TextBox { Height = 28, Margin = new System.Windows.Thickness(0, 0, 0, 12) };
+            stack.Children.Add(input);
+
+            var btnPanel = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Right
+            };
+            var okBtn = new System.Windows.Controls.Button { Content = "OK", Width = 80, Margin = new System.Windows.Thickness(0, 0, 8, 0), IsDefault = true };
+            var cancelBtn = new System.Windows.Controls.Button { Content = "Cancel", Width = 80, IsCancel = true };
+            okBtn.Click += (_, _) => { dialog.DialogResult = true; dialog.Close(); };
+            cancelBtn.Click += (_, _) => { dialog.DialogResult = false; dialog.Close(); };
+            btnPanel.Children.Add(okBtn);
+            btnPanel.Children.Add(cancelBtn);
+            stack.Children.Add(btnPanel);
+
+            dialog.Content = stack;
+            dialog.Loaded += (_, _) => input.Focus();
+
+            return dialog.ShowDialog() == true ? input.Text.Trim() : string.Empty;
         }
 
         private void OpenUrl(string url)
@@ -380,15 +418,46 @@ namespace LightningSPP.VisualStudio
             });
         }
 
+        private const string SettingsCollectionPath = "LightningSPP";
+        private const string WelcomeShownKey = "WelcomeShown";
+
         private bool HasShownWelcomeMessage()
         {
-            // Check user settings
-            return false; // Placeholder
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try
+            {
+                var settingsManager = GetService(typeof(Microsoft.VisualStudio.Shell.Interop.SVsSettingsManager))
+                    as Microsoft.VisualStudio.Shell.Interop.IVsSettingsManager;
+                if (settingsManager == null) return false;
+                settingsManager.GetReadOnlySettingsStore(
+                    (uint)Microsoft.VisualStudio.Shell.Interop.__VsSettingsScope.SettingsScope_UserSettings,
+                    out var store);
+                if (store == null) return false;
+                store.CollectionExists(SettingsCollectionPath, out int exists);
+                if (exists == 0) return false;
+                store.GetInt(SettingsCollectionPath, WelcomeShownKey, 0, out int value);
+                return value == 1;
+            }
+            catch { return false; }
         }
 
         private void SetWelcomeMessageShown()
         {
-            // Save to user settings
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try
+            {
+                var settingsManager = GetService(typeof(Microsoft.VisualStudio.Shell.Interop.SVsSettingsManager))
+                    as Microsoft.VisualStudio.Shell.Interop.IVsSettingsManager;
+                if (settingsManager == null) return;
+                settingsManager.GetWritableSettingsStore(
+                    (uint)Microsoft.VisualStudio.Shell.Interop.__VsSettingsScope.SettingsScope_UserSettings,
+                    out var store);
+                if (store == null) return;
+                store.CollectionExists(SettingsCollectionPath, out int exists);
+                if (exists == 0) store.CreateCollection(SettingsCollectionPath);
+                store.SetInt(SettingsCollectionPath, WelcomeShownKey, 1);
+            }
+            catch { }
         }
 
         #endregion

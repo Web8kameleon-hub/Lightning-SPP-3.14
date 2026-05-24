@@ -1,14 +1,11 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Advanced;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 using System.Diagnostics;
 using System.IO;
 
 namespace wwwmmm.Services.Implementation;
 
 /// <summary>
-/// REAL Image Processing Service - Using ImageSharp with real source and in-memory data
+/// REAL Image Processing Service - Using SkiaSharp with real source and in-memory data
 /// </summary>
 public class RealImageProcessor : IScanService
 {
@@ -132,45 +129,20 @@ public class RealImageProcessor : IScanService
         int quality,
         CancellationToken cancellationToken)
     {
-        using var image = LoadImageOrCreateFromBinary(sourceData, quality);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        image.Mutate(x =>
-        {
-            x.AutoOrient();
-            ApplyQualityResize(x, image.Width, image.Height, quality, mode);
-
-            switch (mode)
-            {
-                case ScanMode.Lightning:
-                    x.Grayscale().Contrast(1.05f);
-                    break;
-                case ScanMode.TideWave:
-                    x.Grayscale().GaussianSharpen(1.2f).Contrast(1.12f);
-                    break;
-                case ScanMode.Resonance:
-                    x.DetectEdges().GaussianSharpen(2.0f).Contrast(1.25f);
-                    break;
-                case ScanMode.NanoDecibel:
-                    x.DetectEdges()
-                     .GaussianSharpen(2.8f)
-                     .Contrast(1.35f)
-                     .Brightness(1.08f)
-                     .Saturate(1.15f);
-                    break;
-            }
-        });
+        using var sourceBitmap = LoadBitmapOrCreateFromBinary(sourceData, quality);
+        using var resizedBitmap = ResizeByQuality(sourceBitmap, quality, mode);
+        using var processedBitmap = ApplyModeProcessing(resizedBitmap, mode);
+        using var image = SKImage.FromBitmap(processedBitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
 
         await using var ms = new MemoryStream();
-        await image.SaveAsPngAsync(ms, cancellationToken);
+        data.SaveTo(ms);
         return ms.ToArray();
     }
 
-    private static void ApplyQualityResize(
-        IImageProcessingContext context,
-        int sourceWidth,
-        int sourceHeight,
-        int quality,
-        ScanMode mode)
+    private static SKBitmap ResizeByQuality(SKBitmap source, int quality, ScanMode mode)
     {
         var modeMultiplier = mode switch
         {
@@ -182,36 +154,148 @@ public class RealImageProcessor : IScanService
         };
 
         var qualityScale = Math.Clamp(quality / 300f, 0.5f, 4f) * modeMultiplier;
-        var width = Math.Max(64, (int)Math.Round(sourceWidth * qualityScale));
-        var height = Math.Max(64, (int)Math.Round(sourceHeight * qualityScale));
-        context.Resize(width, height);
+        var width = Math.Max(64, (int)Math.Round(source.Width * qualityScale));
+        var height = Math.Max(64, (int)Math.Round(source.Height * qualityScale));
+
+        var resized = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var canvas = new SKCanvas(resized);
+        canvas.Clear(SKColors.Black);
+        using var paint = new SKPaint
+        {
+            IsAntialias = true,
+            FilterQuality = SKFilterQuality.High,
+            IsDither = true
+        };
+        canvas.DrawBitmap(source, new SKRect(0, 0, width, height), paint);
+        return resized;
     }
 
-    private static Image<Rgba32> LoadImageOrCreateFromBinary(byte[] sourceData, int quality)
+    private static SKBitmap ApplyModeProcessing(SKBitmap source, ScanMode mode)
+    {
+        // Keep processing explicit and deterministic per scan mode.
+        return mode switch
+        {
+            ScanMode.Lightning => ApplyColorTransform(source, grayscale: true, contrast: 1.05f),
+            ScanMode.TideWave => ApplyColorTransform(source, grayscale: true, contrast: 1.12f, saturation: 1.03f),
+            ScanMode.Resonance => ApplyEdgeEnhanced(source, contrast: 1.25f, brightness: 1.02f),
+            ScanMode.NanoDecibel => ApplyEdgeEnhanced(source, contrast: 1.35f, brightness: 1.08f, saturation: 1.15f),
+            _ => source.Copy(SKColorType.Rgba8888)
+        };
+    }
+
+    private static SKBitmap ApplyColorTransform(SKBitmap source, bool grayscale = false, float contrast = 1.0f, float brightness = 1.0f, float saturation = 1.0f)
+    {
+        var output = new SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var canvas = new SKCanvas(output);
+
+        var matrix = BuildColorMatrix(grayscale, contrast, brightness, saturation);
+        using var paint = new SKPaint
+        {
+            IsAntialias = true,
+            FilterQuality = SKFilterQuality.High,
+            ColorFilter = SKColorFilter.CreateColorMatrix(matrix)
+        };
+        canvas.DrawBitmap(source, 0, 0, paint);
+        return output;
+    }
+
+    private static SKBitmap ApplyEdgeEnhanced(SKBitmap source, float contrast, float brightness, float saturation = 1.0f)
+    {
+        using var gray = ApplyColorTransform(source, grayscale: true, contrast: 1.0f);
+        var output = new SKBitmap(gray.Width, gray.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+
+        for (var y = 1; y < gray.Height - 1; y++)
+        {
+            for (var x = 1; x < gray.Width - 1; x++)
+            {
+                var gx =
+                    -GetGray(gray, x - 1, y - 1) + GetGray(gray, x + 1, y - 1) +
+                    -2 * GetGray(gray, x - 1, y) + 2 * GetGray(gray, x + 1, y) +
+                    -GetGray(gray, x - 1, y + 1) + GetGray(gray, x + 1, y + 1);
+
+                var gy =
+                    GetGray(gray, x - 1, y - 1) + 2 * GetGray(gray, x, y - 1) + GetGray(gray, x + 1, y - 1) -
+                    GetGray(gray, x - 1, y + 1) - 2 * GetGray(gray, x, y + 1) - GetGray(gray, x + 1, y + 1);
+
+                var magnitude = Math.Clamp((int)Math.Sqrt((gx * gx) + (gy * gy)), 0, 255);
+                output.SetPixel(x, y, new SKColor((byte)magnitude, (byte)magnitude, (byte)magnitude, 255));
+            }
+        }
+
+        return ApplyColorTransform(output, grayscale: false, contrast: contrast, brightness: brightness, saturation: saturation);
+    }
+
+    private static int GetGray(SKBitmap bitmap, int x, int y)
+    {
+        var p = bitmap.GetPixel(x, y);
+        return (int)(0.299f * p.Red + 0.587f * p.Green + 0.114f * p.Blue);
+    }
+
+    private static float[] BuildColorMatrix(bool grayscale, float contrast, float brightness, float saturation)
+    {
+        var c = contrast;
+        var b = (brightness - 1f) * 255f;
+        var s = saturation;
+
+        if (grayscale)
+        {
+            return
+            [
+                0.2126f * c, 0.7152f * c, 0.0722f * c, 0, b,
+                0.2126f * c, 0.7152f * c, 0.0722f * c, 0, b,
+                0.2126f * c, 0.7152f * c, 0.0722f * c, 0, b,
+                0,           0,           0,           1, 0
+            ];
+        }
+
+        var rw = 0.3086f;
+        var gw = 0.6094f;
+        var bw = 0.0820f;
+
+        var sr = (1 - s) * rw;
+        var sg = (1 - s) * gw;
+        var sb = (1 - s) * bw;
+
+        return
+        [
+            (sr + s) * c, sg * c,       sb * c,       0, b,
+            sr * c,       (sg + s) * c, sb * c,       0, b,
+            sr * c,       sg * c,       (sb + s) * c, 0, b,
+            0,            0,            0,            1, 0
+        ];
+    }
+
+    private static SKBitmap LoadBitmapOrCreateFromBinary(byte[] sourceData, int quality)
     {
         try
         {
-            return Image.Load<Rgba32>(sourceData);
+            using var managed = SKData.CreateCopy(sourceData);
+            var decoded = SKBitmap.Decode(managed);
+            if (decoded != null)
+            {
+                return decoded;
+            }
         }
         catch
         {
-            var width = 512;
-            var targetHeight = Math.Max(128, Math.Min(4096, quality * 2));
-            var height = Math.Max(targetHeight, (int)Math.Ceiling(sourceData.Length / (double)width));
-            var image = new Image<Rgba32>(width, height);
-
-            for (var y = 0; y < height; y++)
-            {
-                var row = image.DangerousGetPixelRowMemory(y).Span;
-                for (var x = 0; x < width; x++)
-                {
-                    var index = y * width + x;
-                    var value = index < sourceData.Length ? sourceData[index] : (byte)0;
-                    row[x] = new Rgba32(value, value, value, 255);
-                }
-            }
-
-            return image;
+            // Fallback below.
         }
+
+        var width = 512;
+        var targetHeight = Math.Max(128, Math.Min(4096, quality * 2));
+        var height = Math.Max(targetHeight, (int)Math.Ceiling(sourceData.Length / (double)width));
+        var bitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var index = y * width + x;
+                var value = index < sourceData.Length ? sourceData[index] : (byte)0;
+                bitmap.SetPixel(x, y, new SKColor(value, value, value, 255));
+            }
+        }
+
+        return bitmap;
     }
 }

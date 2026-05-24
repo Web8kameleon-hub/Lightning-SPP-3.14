@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using LightningSPP.Licensing;
@@ -6,6 +7,22 @@ namespace wwwmmm.Web;
 
 internal static class LicenseApiServer
 {
+    // Rate limiting: max requests per window per IP
+    private const int RateLimitMaxRequests = 30;
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
+    private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _rateLimits = new();
+
+    private static bool IsRateLimited(string ip)
+    {
+        var now = DateTime.UtcNow;
+        var entry = _rateLimits.GetOrAdd(ip, _ => (0, now));
+        if (now - entry.WindowStart > RateLimitWindow)
+            entry = (0, now);
+        entry = (entry.Count + 1, entry.WindowStart);
+        _rateLimits[ip] = entry;
+        return entry.Count > RateLimitMaxRequests;
+    }
+
     public static async Task RunAsync(int port, CancellationToken cancellationToken = default)
     {
         var listener = new HttpListener();
@@ -53,6 +70,28 @@ internal static class LicenseApiServer
 
     private static async Task HandleRequestAsync(HttpListenerContext context)
     {
+        // CORS headers
+        context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+        context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
+        context.Response.Headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type";
+
+        // Pre-flight
+        if (context.Request.HttpMethod == "OPTIONS")
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            context.Response.Close();
+            return;
+        }
+
+        // Rate limiting
+        var clientIp = context.Request.RemoteEndPoint?.Address?.ToString() ?? "unknown";
+        if (IsRateLimited(clientIp))
+        {
+            context.Response.Headers["Retry-After"] = "60";
+            await TextAsync(context, HttpStatusCode.TooManyRequests, "ok=false\nerror=Rate limit exceeded");
+            return;
+        }
+
         var path = context.Request.Url?.AbsolutePath?.TrimEnd('/') ?? "/";
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -120,6 +159,19 @@ internal static class LicenseApiServer
 
             if (path == "/api/license/issue" && context.Request.HttpMethod == "POST")
             {
+                // Authorization: require LSPP_ADMIN_TOKEN environment variable
+                var adminToken = Environment.GetEnvironmentVariable("LSPP_ADMIN_TOKEN");
+                var authHeader = context.Request.Headers["Authorization"];
+                var providedToken = authHeader?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
+                    ? authHeader[7..]
+                    : null;
+                if (string.IsNullOrWhiteSpace(adminToken) || !string.Equals(adminToken, providedToken, StringComparison.Ordinal))
+                {
+                    context.Response.Headers["WWW-Authenticate"] = "Bearer";
+                    await TextAsync(context, HttpStatusCode.Unauthorized, "ok=false\nerror=Unauthorized");
+                    return;
+                }
+
                 var form = await ReadFormAsync(context.Request);
                 var email = ValueFromQueryOrForm(context.Request, form, "email") ?? "demo@example.com";
                 var company = ValueFromQueryOrForm(context.Request, form, "company") ?? "Demo Company";
@@ -156,16 +208,37 @@ internal static class LicenseApiServer
 
     private static async Task ServeStaticAsync(HttpListenerContext context, string fileName, string contentType)
     {
-        var fullPath = Path.Combine(AppContext.BaseDirectory, "Web", "wwwroot", fileName);
-        if (!File.Exists(fullPath))
+        // Prevent path traversal — allow only simple file names (no slashes or dots outside extension)
+        var safeName = Path.GetFileName(fileName);
+        if (!string.Equals(safeName, fileName, StringComparison.Ordinal) || fileName.Contains('.', StringComparison.Ordinal) && Path.GetDirectoryName(fileName) != string.Empty)
         {
-            // Fallback for local dev runs from repository root.
-            fullPath = Path.Combine(Directory.GetCurrentDirectory(), "Web", "wwwroot", fileName);
+            await TextAsync(context, HttpStatusCode.BadRequest, "ok=false\nerror=Invalid file name");
+            return;
+        }
+
+        var wwwroot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Web", "wwwroot"));
+        var fullPath = Path.GetFullPath(Path.Combine(wwwroot, safeName));
+        if (!fullPath.StartsWith(wwwroot, StringComparison.OrdinalIgnoreCase))
+        {
+            await TextAsync(context, HttpStatusCode.Forbidden, "ok=false\nerror=Forbidden");
+            return;
         }
 
         if (!File.Exists(fullPath))
         {
-            await TextAsync(context, HttpStatusCode.NotFound, $"ok=false\nerror=Missing static file: {fileName}");
+            // Fallback for local dev runs from repository root.
+            var devRoot = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "Web", "wwwroot"));
+            fullPath = Path.GetFullPath(Path.Combine(devRoot, safeName));
+            if (!fullPath.StartsWith(devRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+            {
+                await TextAsync(context, HttpStatusCode.NotFound, $"ok=false\nerror=Missing static file: {safeName}");
+                return;
+            }
+        }
+
+        if (!File.Exists(fullPath))
+        {
+            await TextAsync(context, HttpStatusCode.NotFound, $"ok=false\nerror=Missing static file: {safeName}");
             return;
         }
 

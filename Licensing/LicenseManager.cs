@@ -1,10 +1,13 @@
+using System.Security.Cryptography;
+using System.Text;
 using wwwmmm.Web;
 
 namespace LightningSPP.Licensing;
 
 /// <summary>
 /// License Manager for Lightning SPP
-/// Handles license activation, validation, and usage tracking
+/// Handles license activation, validation, and usage tracking.
+/// license.json is stored AES-256-GCM encrypted (key derived from machine entropy).
 /// </summary>
 public class LicenseManager
 {
@@ -58,12 +61,12 @@ public class LicenseManager
         if (_activeLicense != null)
             return _activeLicense;
 
-        // Try to load from file
         if (File.Exists(LicenseFilePath))
         {
             try
             {
-                var content = File.ReadAllText(LicenseFilePath);
+                var encrypted = File.ReadAllBytes(LicenseFilePath);
+                var content = DecryptLicense(encrypted);
                 _activeLicense = LicenseKey.FromStorageString(content);
             }
             catch
@@ -266,11 +269,55 @@ public class LicenseManager
     {
         var directory = Path.GetDirectoryName(LicenseFilePath);
         if (directory != null && !Directory.Exists(directory))
-        {
             Directory.CreateDirectory(directory);
-        }
 
-        File.WriteAllText(LicenseFilePath, license.ToStorageString());
+        var encrypted = EncryptLicense(license.ToStorageString());
+        File.WriteAllBytes(LicenseFilePath, encrypted);
+    }
+
+    // AES-256-GCM encryption using a machine-local key derived from machine name + app name.
+    // Provides confidentiality at rest without requiring a user-supplied passphrase.
+    private static byte[] DeriveKey()
+    {
+        var entropy = Encoding.UTF8.GetBytes($"LightningSPP:{Environment.MachineName}:{Environment.UserName}");
+        return SHA256.HashData(entropy); // 32 bytes = AES-256
+    }
+
+    private static byte[] EncryptLicense(string plaintext)
+    {
+        var key = DeriveKey();
+        var nonce = new byte[AesGcm.NonceByteSizes.MaxSize]; // 12 bytes
+        RandomNumberGenerator.Fill(nonce);
+        var plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
+        var ciphertext = new byte[plaintextBytes.Length];
+        var tag = new byte[AesGcm.TagByteSizes.MaxSize]; // 16 bytes
+
+        using var aes = new AesGcm(key, AesGcm.TagByteSizes.MaxSize);
+        aes.Encrypt(nonce, plaintextBytes, ciphertext, tag);
+
+        // Format: [nonce(12)] [tag(16)] [ciphertext]
+        var result = new byte[nonce.Length + tag.Length + ciphertext.Length];
+        Buffer.BlockCopy(nonce, 0, result, 0, nonce.Length);
+        Buffer.BlockCopy(tag, 0, result, nonce.Length, tag.Length);
+        Buffer.BlockCopy(ciphertext, 0, result, nonce.Length + tag.Length, ciphertext.Length);
+        return result;
+    }
+
+    private static string DecryptLicense(byte[] data)
+    {
+        var key = DeriveKey();
+        const int nonceLen = 12, tagLen = 16;
+        if (data.Length < nonceLen + tagLen)
+            throw new CryptographicException("Invalid license data.");
+
+        var nonce = data[..nonceLen];
+        var tag = data[nonceLen..(nonceLen + tagLen)];
+        var ciphertext = data[(nonceLen + tagLen)..];
+        var plaintext = new byte[ciphertext.Length];
+
+        using var aes = new AesGcm(key, tagLen);
+        aes.Decrypt(nonce, ciphertext, tag, plaintext);
+        return Encoding.UTF8.GetString(plaintext);
     }
 
     /// <summary>

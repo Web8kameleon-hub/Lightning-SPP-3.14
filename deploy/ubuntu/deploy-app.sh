@@ -17,15 +17,23 @@ cd "$APP_DIR"
 dotnet publish -c Release -o /opt/lightning/publish
 sudo cp -f /opt/lightning/publish/* /opt/lightning/
 
+# Nginx snippets used by site config
+sudo mkdir -p /etc/nginx/snippets
+sudo cp -f deploy/ubuntu/nginx-lichting.clisonix.com.conf /etc/nginx/sites-available/lichting.clisonix.com
+sudo ln -sf /etc/nginx/sites-available/lichting.clisonix.com /etc/nginx/sites-enabled/lichting.clisonix.com
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# Systemd service
 sudo cp -f deploy/ubuntu/lightning.service /etc/systemd/system/lightning.service
 sudo systemctl daemon-reload
 sudo systemctl enable lightning
 sudo systemctl restart lightning
 sudo systemctl status lightning --no-pager
 
-sudo cp -f deploy/ubuntu/nginx-lichting.clisonix.com.conf /etc/nginx/sites-available/lichting.clisonix.com
-sudo ln -sf /etc/nginx/sites-available/lichting.clisonix.com /etc/nginx/sites-enabled/lichting.clisonix.com
 sudo nginx -t
 sudo systemctl reload nginx
 
-echo "Deploy finished. Next: sudo certbot --nginx -d lichting.clisonix.com"
+echo "Deploy finished."
+echo "Next:"
+echo "  1) sudo certbot --nginx -d lichting.clisonix.com"
+echo "  2) sudo bash /opt/lightning/deploy/ubuntu/harden-server.sh"

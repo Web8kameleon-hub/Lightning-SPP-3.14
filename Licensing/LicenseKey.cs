@@ -94,8 +94,8 @@ public class LicenseKey
     {
         using var sha256 = SHA256.Create();
         var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(payload));
-        // Take first 4 bytes and convert to hex
-        return Convert.ToHexString(hash[..2]).ToUpper();
+        // Take first 8 bytes (64-bit) — stronger checksum
+        return Convert.ToHexString(hash[..8]).ToUpper();
     }
 
     /// <summary>
