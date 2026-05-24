@@ -34,6 +34,7 @@ public class LightningPipeline
             // License gate — enforce usage limits before any work is done
             if (!LicenseManager.CheckAndIncrementUsage())
             {
+                LightningMetrics.RecordPipeline(false);
                 return new PipelineResult(false, 0, results,
                     "Operation limit reached. Please upgrade your Lightning SPP license or wait for the next billing cycle.");
             }
@@ -53,8 +54,10 @@ public class LightningPipeline
 
             if (!scanResult.Success)
             {
+                LightningMetrics.RecordPipeline(false);
                 return new PipelineResult(false, sw.ElapsedMilliseconds, results, scanResult.Error);
             }
+            LightningMetrics.RecordScan(scanResult.Metadata.ProcessingTimeMs);
 
             results.Add($"✓ Scan completed in {scanResult.Metadata.ProcessingTimeMs}ms using {scanResult.Metadata.Technology}");
 
@@ -74,8 +77,10 @@ public class LightningPipeline
 
             if (!processResult.Success)
             {
+                LightningMetrics.RecordPipeline(false);
                 return new PipelineResult(false, sw.ElapsedMilliseconds, results, processResult.Error);
             }
+            LightningMetrics.RecordProcess(processResult.Metadata.ProcessingTimeMs);
 
             results.Add($"✓ Processing completed in {processResult.Metadata.ProcessingTimeMs}ms using {processResult.Metadata.Engine}");
 
@@ -97,20 +102,24 @@ public class LightningPipeline
 
                 if (!printResult.Success)
                 {
+                    LightningMetrics.RecordPipeline(false);
                     return new PipelineResult(false, sw.ElapsedMilliseconds, results, printResult.Error);
                 }
+                LightningMetrics.RecordPrint(printResult.Metadata.ProcessingTimeMs);
 
                 results.Add($"✓ Print completed in {printResult.Metadata.ProcessingTimeMs}ms");
             }
 
             sw.Stop();
             results.Add($"\n⚡ Total pipeline time: {sw.ElapsedMilliseconds}ms");
+            LightningMetrics.RecordPipeline(true);
 
             return new PipelineResult(true, sw.ElapsedMilliseconds, results);
         }
         catch (Exception ex)
         {
             sw.Stop();
+            LightningMetrics.RecordPipeline(false);
             return new PipelineResult(false, sw.ElapsedMilliseconds, results, ex.Message);
         }
     }

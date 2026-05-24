@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Globalization;
 
 namespace LightningSPP.Licensing;
 
@@ -9,6 +10,26 @@ namespace LightningSPP.Licensing;
 /// </summary>
 public class LicenseKey
 {
+    private const string LegacyPrefix = "LSPP";
+    private const string SignedPrefix = "LSP2";
+    private const string SigningKeyEnv = "LSPP_LICENSE_SIGNING_KEY";
+    private const string SigningKeysEnv = "LSPP_LICENSE_SIGNING_KEYS";
+    private const string ActiveKidEnv = "LSPP_LICENSE_SIGNING_ACTIVE_KID";
+    private const string SigningKeyExpirationsEnv = "LSPP_LICENSE_SIGNING_KEY_EXPIRATIONS";
+    private const string SigningKeyRolloutsEnv = "LSPP_LICENSE_SIGNING_KEY_ROLLOUTS";
+    private const string GraceWindowDaysEnv = "LSPP_LICENSE_SIGNING_GRACE_DAYS";
+    private const string DeprecationWindowDaysEnv = "LSPP_LICENSE_SIGNING_DEPRECATION_DAYS";
+    private const string SecondaryKidEnv = "LSPP_LICENSE_SIGNING_SECONDARY_KID";
+    private const string SecondaryKidUntilUtcEnv = "LSPP_LICENSE_SIGNING_SECONDARY_KID_UNTIL_UTC";
+
+    private enum KidPhase
+    {
+        Active,
+        Grace,
+        Deprecated,
+        Invalid
+    }
+
     public string Key { get; set; } = string.Empty;
     public LicenseTier Tier { get; set; }
     public string CustomerEmail { get; set; } = string.Empty;
@@ -30,8 +51,9 @@ public class LicenseKey
 
     /// <summary>
     /// Generate a new Lightning SPP license key
-    /// Format: LSPP-{TIER}-{RANDOM}-{CHECKSUM}
-    /// Example: LSPP-UNLTD-X7K9-M2P4-Q8W6-5A3C
+    /// Format (signed): LSP2-{KID}-{TIER}-{EXP_yyyyMMdd}-{SEG}-{SIGNATURE}
+    /// Example: LSP2-k1-UNLTD-20270524-AB12CD34-9F04C4F7AA2E1B5C
+    /// Legacy LSPP-* keys remain supported for backward compatibility.
     /// </summary>
     public static LicenseKey Generate(
         LicenseTier tier,
@@ -69,25 +91,264 @@ public class LicenseKey
             _ => "TRIAL"
         };
 
-        // Generate random segments (4 segments of 4 chars each)
-        var segments = new List<string>();
+        var expiration = license.ExpirationDate.ToString("yyyyMMdd");
+        string segment;
         using (var rng = RandomNumberGenerator.Create())
         {
-            for (int i = 0; i < 4; i++)
+            var bytes = new byte[4];
+            rng.GetBytes(bytes);
+            segment = Convert.ToHexString(bytes).ToUpper();
+        }
+
+        var kid = ResolveActiveKid();
+        var key = ResolveSigningKeys();
+        if (!key.TryGetValue(kid, out var signingSecret))
+        {
+            signingSecret = ResolveDefaultSigningSecret();
+            kid = "k1";
+        }
+
+        if (IsKidExpired(kid, DateTime.UtcNow, out var expiresOn))
+        {
+            throw new InvalidOperationException($"Signing key '{kid}' expired on {expiresOn:yyyy-MM-dd}. Rotate active KID.");
+        }
+
+        var phase = ResolveKidPhase(kid, DateTime.UtcNow, out var rolloutDate);
+        if (phase == KidPhase.Invalid)
+        {
+            throw new InvalidOperationException($"Signing key '{kid}' is invalid after rollover window (rollout={rolloutDate:yyyy-MM-dd}). Rotate active KID.");
+        }
+
+        var payload = $"{tierCode}|{expiration}|{segment}";
+        var signature = ComputeSignature(payload, signingSecret);
+
+        // Signed format with KID: LSP2-{KID}-{TIER}-{EXP}-{SEG}-{SIGNATURE}
+        return $"{SignedPrefix}-{kid}-{tierCode}-{expiration}-{segment}-{signature}";
+    }
+
+    private static string ComputeSignature(string payload, string secret)
+    {
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
+        return Convert.ToHexString(hash[..8]).ToUpper();
+    }
+
+    private static string ResolveDefaultSigningSecret()
+    {
+        var secret = Environment.GetEnvironmentVariable(SigningKeyEnv);
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            // Dev fallback for local usage. In production set LSPP_LICENSE_SIGNING_KEY.
+            secret = "LSPP-DEV-DEFAULT-CHANGE-IN-PROD";
+        }
+        return secret;
+    }
+
+    private static string ResolveActiveKid()
+    {
+        var kid = Environment.GetEnvironmentVariable(ActiveKidEnv);
+        return string.IsNullOrWhiteSpace(kid) ? "k1" : kid.Trim();
+    }
+
+    private static Dictionary<string, string> ResolveSigningKeys()
+    {
+        var keys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var packed = Environment.GetEnvironmentVariable(SigningKeysEnv);
+
+        if (!string.IsNullOrWhiteSpace(packed))
+        {
+            var entries = packed.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var entry in entries)
             {
-                var bytes = new byte[2];
-                rng.GetBytes(bytes);
-                var segment = Convert.ToHexString(bytes).ToUpper();
-                segments.Add(segment);
+                var idx = entry.IndexOf('=');
+                if (idx <= 0 || idx >= entry.Length - 1)
+                {
+                    idx = entry.IndexOf(':');
+                }
+
+                if (idx <= 0 || idx >= entry.Length - 1)
+                {
+                    continue;
+                }
+
+                var kid = entry[..idx].Trim();
+                var secret = entry[(idx + 1)..].Trim();
+                if (!string.IsNullOrWhiteSpace(kid) && !string.IsNullOrWhiteSpace(secret))
+                {
+                    keys[kid] = secret;
+                }
             }
         }
 
-        // Create payload for checksum
-        var payload = $"{license.CustomerEmail}|{license.Tier}|{license.ExpirationDate:yyyyMMdd}";
-        var checksum = ComputeChecksum(payload);
+        if (keys.Count == 0)
+        {
+            keys["k1"] = ResolveDefaultSigningSecret();
+        }
 
-        // Format: LSPP-{TIER}-{SEG1}-{SEG2}-{SEG3}-{CHECKSUM}
-        return $"LSPP-{tierCode}-{segments[0]}-{segments[1]}-{segments[2]}-{checksum}";
+        return keys;
+    }
+
+    private static Dictionary<string, DateOnly> ResolveSigningKeyExpirations()
+    {
+        var expirations = new Dictionary<string, DateOnly>(StringComparer.OrdinalIgnoreCase);
+        var packed = Environment.GetEnvironmentVariable(SigningKeyExpirationsEnv);
+        if (string.IsNullOrWhiteSpace(packed))
+            return expirations;
+
+        var entries = packed.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var entry in entries)
+        {
+            var idx = entry.IndexOf('=');
+            if (idx <= 0 || idx >= entry.Length - 1)
+                idx = entry.IndexOf(':');
+
+            if (idx <= 0 || idx >= entry.Length - 1)
+                continue;
+
+            var kid = entry[..idx].Trim();
+            var dateText = entry[(idx + 1)..].Trim();
+            if (DateOnly.TryParseExact(dateText, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            {
+                expirations[kid] = date;
+            }
+        }
+
+        return expirations;
+    }
+
+    private static bool IsKidExpired(string kid, DateTime utcNow, out DateOnly? expiresOn)
+    {
+        var expirations = ResolveSigningKeyExpirations();
+        if (!expirations.TryGetValue(kid, out var date))
+        {
+            expiresOn = null;
+            return false;
+        }
+
+        expiresOn = date;
+        var today = DateOnly.FromDateTime(utcNow.Date);
+        return today > date;
+    }
+
+    private static Dictionary<string, DateOnly> ResolveSigningKeyRollouts()
+    {
+        var rollouts = new Dictionary<string, DateOnly>(StringComparer.OrdinalIgnoreCase);
+        var packed = Environment.GetEnvironmentVariable(SigningKeyRolloutsEnv);
+        if (string.IsNullOrWhiteSpace(packed))
+            return rollouts;
+
+        var entries = packed.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var entry in entries)
+        {
+            var idx = entry.IndexOf('=');
+            if (idx <= 0 || idx >= entry.Length - 1)
+                idx = entry.IndexOf(':');
+
+            if (idx <= 0 || idx >= entry.Length - 1)
+                continue;
+
+            var kid = entry[..idx].Trim();
+            var dateText = entry[(idx + 1)..].Trim();
+            if (DateOnly.TryParseExact(dateText, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            {
+                rollouts[kid] = date;
+            }
+        }
+
+        return rollouts;
+    }
+
+    private static int ResolveWindowDays(string envName, int fallback)
+    {
+        var raw = Environment.GetEnvironmentVariable(envName);
+        if (int.TryParse(raw, out var parsed) && parsed > 0)
+            return parsed;
+        return fallback;
+    }
+
+    private static KidPhase ResolveKidPhase(string kid, DateTime utcNow, out DateOnly? rolloutDate)
+    {
+        var rollouts = ResolveSigningKeyRollouts();
+        if (!rollouts.TryGetValue(kid, out var rollout))
+        {
+            rolloutDate = null;
+            return KidPhase.Active;
+        }
+
+        rolloutDate = rollout;
+        var today = DateOnly.FromDateTime(utcNow.Date);
+        var ageDays = today.DayNumber - rollout.DayNumber;
+        if (ageDays < 0)
+            return KidPhase.Active;
+
+        var graceDays = ResolveWindowDays(GraceWindowDaysEnv, 30);
+        var deprecationDays = ResolveWindowDays(DeprecationWindowDaysEnv, 60);
+
+        if (ageDays < graceDays)
+            return KidPhase.Grace;
+        if (ageDays < deprecationDays)
+            return KidPhase.Deprecated;
+        return KidPhase.Invalid;
+    }
+
+    private static bool IsKidUsableForValidation(string kid, DateTime utcNow)
+    {
+        if (IsKidExpired(kid, utcNow, out _))
+            return false;
+
+        // Dual-validation window: allow temporary secondary KID for safe cluster rollout.
+        if (IsKidInDualValidationWindow(kid, utcNow))
+            return true;
+
+        var phase = ResolveKidPhase(kid, utcNow, out _);
+        return phase != KidPhase.Invalid;
+    }
+
+    private static bool IsKidInDualValidationWindow(string kid, DateTime utcNow)
+    {
+        var secondaryKid = Environment.GetEnvironmentVariable(SecondaryKidEnv);
+        if (string.IsNullOrWhiteSpace(secondaryKid))
+            return false;
+
+        var untilRaw = Environment.GetEnvironmentVariable(SecondaryKidUntilUtcEnv);
+        if (!DateTime.TryParse(untilRaw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var untilUtc))
+            return false;
+
+        if (utcNow > untilUtc)
+            return false;
+
+        return string.Equals(kid, secondaryKid.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string GetSigningStatusText()
+    {
+        var keys = ResolveSigningKeys();
+        var activeKid = ResolveActiveKid();
+        var now = DateTime.UtcNow;
+        var graceDays = ResolveWindowDays(GraceWindowDaysEnv, 30);
+        var deprecationDays = ResolveWindowDays(DeprecationWindowDaysEnv, 60);
+        var secondaryKid = Environment.GetEnvironmentVariable(SecondaryKidEnv) ?? string.Empty;
+        var secondaryUntilRaw = Environment.GetEnvironmentVariable(SecondaryKidUntilUtcEnv) ?? string.Empty;
+        var dualActive = IsKidInDualValidationWindow(secondaryKid, now);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("ok=true");
+        sb.AppendLine($"activeKid={activeKid}");
+        sb.AppendLine($"loadedKids={string.Join(',', keys.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))}");
+        sb.AppendLine($"dualValidationActive={dualActive.ToString().ToLowerInvariant()}");
+        sb.AppendLine($"secondaryKid={(string.IsNullOrWhiteSpace(secondaryKid) ? "none" : secondaryKid)}");
+        sb.AppendLine($"secondaryKidValidUntilUtc={(string.IsNullOrWhiteSpace(secondaryUntilRaw) ? "none" : secondaryUntilRaw)}");
+        sb.AppendLine($"graceDays={graceDays}");
+        sb.AppendLine($"deprecationDays={deprecationDays}");
+
+        foreach (var kid in keys.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
+        {
+            var expired = IsKidExpired(kid, now, out var expiresOn);
+            var phase = ResolveKidPhase(kid, now, out var rolloutDate);
+            sb.AppendLine($"kid={kid}|phase={phase.ToString().ToLowerInvariant()}|expired={expired.ToString().ToLowerInvariant()}|rollout={(rolloutDate.HasValue ? rolloutDate.Value.ToString("yyyy-MM-dd") : "none")}|expiresOn={(expiresOn.HasValue ? expiresOn.Value.ToString("yyyy-MM-dd") : "none")}");
+        }
+
+        return sb.ToString();
     }
 
     private static string ComputeChecksum(string payload)
@@ -105,14 +366,106 @@ public class LicenseKey
     {
         license = null;
 
-        if (string.IsNullOrEmpty(key) || !key.StartsWith("LSPP-"))
+        if (string.IsNullOrEmpty(key))
             return false;
 
-        var parts = key.Split('-');
-        if (parts.Length != 6)
+        var parts = key.Split('-', StringSplitOptions.RemoveEmptyEntries);
+
+        if (parts.Length == 6 && string.Equals(parts[0], SignedPrefix, StringComparison.Ordinal))
+        {
+            var kid = parts[1];
+            var tierSigned = parts[2] switch
+            {
+                "FREE" => LicenseTier.Free,
+                "PAYGO" => LicenseTier.PayAsYouGo,
+                "UNLTD" => LicenseTier.Unlimited,
+                "ENTER" => LicenseTier.Enterprise,
+                _ => (LicenseTier?)null
+            };
+
+            if (tierSigned == null)
+                return false;
+
+            if (!DateTime.TryParseExact(parts[3], "yyyyMMdd", null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out var exp))
+                return false;
+
+            var segment = parts[4];
+            var signature = parts[5];
+            var payload = $"{parts[2]}|{parts[3]}|{segment}";
+
+            var signingKeys = ResolveSigningKeys();
+            if (!signingKeys.TryGetValue(kid, out var secretForKid))
+                return false;
+
+            if (!IsKidUsableForValidation(kid, DateTime.UtcNow))
+                return false;
+
+            var expectedSig = ComputeSignature(payload, secretForKid);
+
+            if (!string.Equals(signature, expectedSig, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            license = new LicenseKey
+            {
+                Key = key,
+                Tier = tierSigned.Value,
+                IssueDate = DateTime.UtcNow,
+                ExpirationDate = exp,
+                IsActive = true,
+                Features = GetFeaturesForTier(tierSigned.Value)
+            };
+
+            return true;
+        }
+
+        // Backward compatibility for earlier signed format without KID:
+        // LSP2-{TIER}-{EXP}-{SEG}-{SIGNATURE}
+        if (parts.Length == 5 && string.Equals(parts[0], SignedPrefix, StringComparison.Ordinal))
+        {
+            var tierSigned = parts[1] switch
+            {
+                "FREE" => LicenseTier.Free,
+                "PAYGO" => LicenseTier.PayAsYouGo,
+                "UNLTD" => LicenseTier.Unlimited,
+                "ENTER" => LicenseTier.Enterprise,
+                _ => (LicenseTier?)null
+            };
+
+            if (tierSigned == null)
+                return false;
+
+            if (!DateTime.TryParseExact(parts[2], "yyyyMMdd", null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out var exp))
+                return false;
+
+            var segment = parts[3];
+            var signature = parts[4];
+            var payload = $"{parts[1]}|{parts[2]}|{segment}";
+
+            var signingKeys = ResolveSigningKeys();
+            var signatureValid = signingKeys
+                .Where(kv => IsKidUsableForValidation(kv.Key, DateTime.UtcNow))
+                .Any(kv => string.Equals(signature, ComputeSignature(payload, kv.Value), StringComparison.OrdinalIgnoreCase));
+
+            if (!signatureValid)
+                return false;
+
+            license = new LicenseKey
+            {
+                Key = key,
+                Tier = tierSigned.Value,
+                IssueDate = DateTime.UtcNow,
+                ExpirationDate = exp,
+                IsActive = true,
+                Features = GetFeaturesForTier(tierSigned.Value)
+            };
+
+            return true;
+        }
+
+        // Legacy compatibility path
+        if (parts.Length != 6 || !string.Equals(parts[0], LegacyPrefix, StringComparison.Ordinal))
             return false;
 
-        // Parse tier
         var tier = parts[1] switch
         {
             "FREE" => LicenseTier.Free,
@@ -125,11 +478,12 @@ public class LicenseKey
         if (tier == null)
             return false;
 
-        // Basic validation passed
         license = new LicenseKey
         {
             Key = key,
             Tier = tier.Value,
+            IssueDate = DateTime.UtcNow,
+            ExpirationDate = DateTime.UtcNow.AddYears(1),
             IsActive = true,
             Features = GetFeaturesForTier(tier.Value)
         };

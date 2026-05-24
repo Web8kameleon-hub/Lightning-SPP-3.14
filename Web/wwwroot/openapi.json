@@ -29,6 +29,57 @@
         }
       }
     },
+    "/api/metrics": {
+      "get": {
+        "summary": "Get runtime pipeline metrics",
+        "responses": {
+          "200": {
+            "description": "Runtime metrics snapshot",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts": {
+      "get": {
+        "summary": "Get active SLO/SLA alert status",
+        "responses": {
+          "200": {
+            "description": "Current alert state",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stigma/schema": {
+      "get": {
+        "summary": "Get Stigma schema and version",
+        "responses": {
+          "200": {
+            "description": "Stigma schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/license/status": {
       "get": {
         "summary": "Get current license status",
@@ -78,6 +129,7 @@
     "/api/license/issue": {
       "post": {
         "summary": "Issue a new license key",
+        "description": "Requires Authorization: Bearer <LSPP_ADMIN_TOKEN>",
         "requestBody": {
           "required": true,
           "content": {
@@ -99,6 +151,27 @@
         "responses": {
           "200": {
             "description": "License issued"
+          }
+        }
+      }
+    },
+    "/api/license/signing-status": {
+      "get": {
+        "summary": "Get signing key-ring status",
+        "description": "Admin-only. Requires Authorization: Bearer <LSPP_ADMIN_TOKEN>",
+        "responses": {
+          "200": {
+            "description": "Signing KID status",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
           }
         }
       }

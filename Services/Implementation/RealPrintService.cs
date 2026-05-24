@@ -92,7 +92,7 @@ public class RealPrintService : IPrintService
             var optimized = await CompressWithMaxQualityAsync(enhanced, cancellationToken);
 
             // Step 4: Write to file with Stigma quality
-            var fileName = $"stigma_output_{DateTime.Now:yyyyMMdd_HHmmss}.dat";
+            var fileName = $"stigma_output_{DateTime.UtcNow:yyyyMMdd_HHmmss_fffffff}_{Guid.NewGuid():N}.dat";
             var filePath = Path.Combine(_outputDirectory, fileName);
 
             await File.WriteAllBytesAsync(filePath, optimized, cancellationToken);
@@ -126,7 +126,7 @@ public class RealPrintService : IPrintService
         PrintOptions options,
         CancellationToken cancellationToken)
     {
-        var fileName = $"output_{options.Quality}_{DateTime.Now:yyyyMMdd_HHmmss}.dat";
+        var fileName = $"output_{options.Quality}_{DateTime.UtcNow:yyyyMMdd_HHmmss_fffffff}_{Guid.NewGuid():N}.dat";
         var filePath = Path.Combine(_outputDirectory, fileName);
 
         // REAL: Compress based on quality
@@ -138,7 +138,7 @@ public class RealPrintService : IPrintService
         // Create copies if requested
         for (int i = 1; i < options.Copies; i++)
         {
-            var copyPath = Path.Combine(_outputDirectory, $"output_{options.Quality}_{DateTime.Now:yyyyMMdd_HHmmss}_copy{i}.dat");
+            var copyPath = Path.Combine(_outputDirectory, $"output_{options.Quality}_{DateTime.UtcNow:yyyyMMdd_HHmmss_fffffff}_{Guid.NewGuid():N}_copy{i}.dat");
             File.Copy(filePath, copyPath);
         }
     }

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using LightningSPP.Licensing;
+using wwwmmm.Services;
 
 namespace wwwmmm.Web;
 
@@ -35,7 +36,7 @@ internal static class LicenseApiServer
         listener.Start();
 
         Console.WriteLine($"REST API + Dashboard running on http://localhost:{port}");
-        Console.WriteLine("Endpoints: /api/health, /api/license/status, /api/license/issue, /api/license/activate");
+        Console.WriteLine("Endpoints: /api/health, /api/metrics, /api/alerts, /api/stigma/schema, /api/license/status, /api/license/issue, /api/license/activate, /api/license/signing-status");
         Console.WriteLine("Dashboard: /dashboard, Landing page: /");
         InternalAuditLogger.Info($"Server started on port {port}");
 
@@ -130,6 +131,30 @@ internal static class LicenseApiServer
                 return;
             }
 
+            if (path == "/api/metrics")
+            {
+                await TextAsync(context, HttpStatusCode.OK, LightningMetrics.ToText());
+                return;
+            }
+
+            if (path == "/api/alerts")
+            {
+                await TextAsync(context, HttpStatusCode.OK, LightningMetrics.AlertsToText());
+                return;
+            }
+
+            if (path == "/api/stigma/schema")
+            {
+                var payload = StigmaSchema.ToJson();
+                var buffer = Encoding.UTF8.GetBytes(payload);
+                context.Response.StatusCode = (int)HttpStatusCode.OK;
+                context.Response.ContentType = "application/json; charset=utf-8";
+                context.Response.ContentLength64 = buffer.LongLength;
+                await context.Response.OutputStream.WriteAsync(buffer);
+                context.Response.Close();
+                return;
+            }
+
             if (path == "/api/license/status")
             {
                 var license = LicenseManager.GetActiveLicense();
@@ -159,13 +184,7 @@ internal static class LicenseApiServer
 
             if (path == "/api/license/issue" && context.Request.HttpMethod == "POST")
             {
-                // Authorization: require LSPP_ADMIN_TOKEN environment variable
-                var adminToken = Environment.GetEnvironmentVariable("LSPP_ADMIN_TOKEN");
-                var authHeader = context.Request.Headers["Authorization"];
-                var providedToken = authHeader?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
-                    ? authHeader[7..]
-                    : null;
-                if (string.IsNullOrWhiteSpace(adminToken) || !string.Equals(adminToken, providedToken, StringComparison.Ordinal))
+                if (!IsAdminAuthorized(context.Request))
                 {
                     context.Response.Headers["WWW-Authenticate"] = "Bearer";
                     await TextAsync(context, HttpStatusCode.Unauthorized, "ok=false\nerror=Unauthorized");
@@ -194,6 +213,19 @@ internal static class LicenseApiServer
                     $"tier={result.Tier}",
                     $"expires={result.ExpirationDate:O}");
                 await TextAsync(context, HttpStatusCode.OK, issuedText);
+                return;
+            }
+
+            if (path == "/api/license/signing-status" && context.Request.HttpMethod == "GET")
+            {
+                if (!IsAdminAuthorized(context.Request))
+                {
+                    context.Response.Headers["WWW-Authenticate"] = "Bearer";
+                    await TextAsync(context, HttpStatusCode.Unauthorized, "ok=false\nerror=Unauthorized");
+                    return;
+                }
+
+                await TextAsync(context, HttpStatusCode.OK, LicenseKey.GetSigningStatusText());
                 return;
             }
 
@@ -300,6 +332,20 @@ internal static class LicenseApiServer
     private static bool ParseBool(string? value, bool fallback)
     {
         return bool.TryParse(value, out var parsed) ? parsed : fallback;
+    }
+
+    private static bool IsAdminAuthorized(HttpListenerRequest request)
+    {
+        var adminToken = Environment.GetEnvironmentVariable("LSPP_ADMIN_TOKEN");
+        if (string.IsNullOrWhiteSpace(adminToken))
+            return false;
+
+        var authHeader = request.Headers["Authorization"];
+        var providedToken = authHeader?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
+            ? authHeader[7..]
+            : null;
+
+        return string.Equals(adminToken, providedToken, StringComparison.Ordinal);
     }
 
     private static async Task TextAsync(HttpListenerContext context, HttpStatusCode statusCode, string payload)
