@@ -76,8 +76,29 @@ public class LicenseKey
             Features = GetFeaturesForTier(tier)
         };
 
-        license.Key = GenerateKeyString(license);
+        try
+        {
+            license.Key = GenerateKeyString(license);
+            SigningAuditTrail.Record(TryExtractKid(license.Key) ?? ResolveActiveKid(), license.Key, "success");
+        }
+        catch (Exception ex)
+        {
+            SigningAuditTrail.Record(ResolveActiveKid(), null, "fail", ex.Message);
+            throw;
+        }
+
         return license;
+    }
+
+    private static string? TryExtractKid(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return null;
+
+        var parts = key.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 6 && string.Equals(parts[0], SignedPrefix, StringComparison.Ordinal))
+            return parts[1];
+        return null;
     }
 
     private static string GenerateKeyString(LicenseKey license)

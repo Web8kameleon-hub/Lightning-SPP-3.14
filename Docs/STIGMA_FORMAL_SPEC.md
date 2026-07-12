@@ -1,6 +1,7 @@
 # Stigma Formal Specification (v1.0)
 
 ## 1. Scope
+
 This document defines the formal behavior of the Stigma pipeline in Lightning SPP.
 
 Pipeline phases:
