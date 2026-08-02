@@ -172,6 +172,12 @@ internal static class LicenseApiServer
 
         try
         {
+            // Kloud fabric bridge: Scan-Process-Print JSON endpoints (/api/v1/*)
+            if (await FabricApiEndpoints.TryHandleAsync(context, path))
+            {
+                return;
+            }
+
             if (path == "/index.html" && context.Request.HttpMethod is "GET" or "HEAD")
             {
                 context.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
