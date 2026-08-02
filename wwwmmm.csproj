@@ -82,6 +82,8 @@
 
     <!-- Real Image Processing -->
     <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <!-- Linux native libSkiaSharp.so for container/Linux publish (scan pipeline) -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.8" />
 
     <!-- Real AI/ML -->
     <PackageReference Include="Microsoft.ML" Version="3.0.1" />
