@@ -107,6 +107,12 @@ internal static class LicenseApiServer
                 return;
             }
 
+            // Kloud fabric bridge: Scan-Process-Print JSON endpoints (/api/v1/*)
+            if (await FabricApiEndpoints.TryHandleAsync(context, path))
+            {
+                return;
+            }
+
             if (path == "/dashboard")
             {
                 await ServeStaticAsync(context, "dashboard.html", "text/html; charset=utf-8");
