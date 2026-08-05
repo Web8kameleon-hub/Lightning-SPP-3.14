@@ -70,6 +70,10 @@ internal class Program
             case "batch":
                 await BatchProcess(args);
                 break;
+            case "learn":
+            case "selflearn":
+                await RunSelfLearning();
+                break;
             case "demo":
                 await RunDemo();
                 break;
@@ -240,6 +244,113 @@ internal class Program
         Console.WriteLine($"\n✓ ABSOLUTE SPEED achieved!");
     }
 
+    private static async Task RunSelfLearning()
+    {
+        Console.WriteLine("🧠 Lightning CLX Self-Learning Mode — started");
+        Console.WriteLine("   Press Ctrl+C to stop.\n");
+
+        using var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+
+        var rng = new Random();
+        var engines = new[] { ProcessingEngine.CLX, ProcessingEngine.Hybrid, ProcessingEngine.TideWave };
+        var scanModes = new[] { ScanMode.Fast, ScanMode.Lightning, ScanMode.Quality };
+
+        // Adaptive weights — CLX starts neutral
+        var engineWeights = new Dictionary<ProcessingEngine, double>
+        {
+            [ProcessingEngine.CLX] = 1.0,
+            [ProcessingEngine.Hybrid] = 1.0,
+            [ProcessingEngine.TideWave] = 1.0
+        };
+
+        long cycle = 0;
+        long totalSuccess = 0;
+        long totalFail = 0;
+
+        while (!cts.IsCancellationRequested)
+        {
+            cycle++;
+
+            // Pick engine proportional to weight (soft-max selection)
+            var totalWeight = engineWeights.Values.Sum();
+            var pick = rng.NextDouble() * totalWeight;
+            ProcessingEngine selectedEngine = engines[0];
+            foreach (var kv in engineWeights)
+            {
+                pick -= kv.Value;
+                if (pick <= 0) { selectedEngine = kv.Key; break; }
+            }
+
+            var scanMode = scanModes[rng.Next(scanModes.Length)];
+            var payloadSize = rng.Next(512, 8192);
+            var payload = new byte[payloadSize];
+            rng.NextBytes(payload);
+
+            var req = new PipelineRequest(
+                Source: $"learn-cycle-{cycle}",
+                ScanMode: scanMode,
+                Quality: 300,
+                UseResonance: true,
+                UseNanoDecibel: false,
+                ProcessingEngine: selectedEngine,
+                UseAI: true,
+                UseClisonic: true,
+                OptimizationLevel: 5,
+                UseStigmaMemory: true,
+                ShouldPrint: false,
+                PrintQuality: PrintQuality.Standard,
+                Copies: 1
+            );
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            ProcessingResult? result = null;
+            try
+            {
+                var opts = new ProcessingOptions(
+                    selectedEngine,
+                    UseAI: true,
+                    UseClisonic: true,
+                    OptimizationLevel: 5,
+                    UseStigmaMemory: true
+                );
+                var svc = new wwwmmm.Services.Implementation.HybridProcessingService();
+                result = await svc.ProcessAsync(payload, opts);
+            }
+            catch { /* absorb transient errors */ }
+            sw.Stop();
+
+            bool success = result?.Success ?? false;
+            if (success) totalSuccess++;
+            else totalFail++;
+
+            // Reinforcement: reward faster/successful engines; penalise failures
+            const double alpha = 0.05;
+            if (success)
+                engineWeights[selectedEngine] = Math.Min(5.0, engineWeights[selectedEngine] * (1.0 + alpha));
+            else
+                engineWeights[selectedEngine] = Math.Max(0.1, engineWeights[selectedEngine] * (1.0 - alpha * 2));
+
+            // Log every 10 cycles
+            if (cycle % 10 == 0)
+            {
+                var rate = totalSuccess * 100.0 / cycle;
+                Console.WriteLine($"[Cycle {cycle,6}] Success={totalSuccess} Fail={totalFail} Rate={rate:F1}% | " +
+                    $"CLX={engineWeights[ProcessingEngine.CLX]:F2} " +
+                    $"Hybrid={engineWeights[ProcessingEngine.Hybrid]:F2} " +
+                    $"TideWave={engineWeights[ProcessingEngine.TideWave]:F2}");
+            }
+
+            // Small pause to avoid tight-loop CPU saturation
+            await Task.Delay(TimeSpan.FromMilliseconds(200), cts.Token).ContinueWith(_ => { });
+        }
+
+        Console.WriteLine($"\n🧠 Self-learning stopped after {cycle} cycles.");
+        Console.WriteLine($"   Final weights — CLX:{engineWeights[ProcessingEngine.CLX]:F3} " +
+            $"Hybrid:{engineWeights[ProcessingEngine.Hybrid]:F3} " +
+            $"TideWave:{engineWeights[ProcessingEngine.TideWave]:F3}");
+    }
+
     private static async Task RunDemo()
     {
         Console.WriteLine("🚀 Running Demo...\n");
@@ -325,6 +436,7 @@ internal class Program
         Console.WriteLine("  pipeline <source>       - Run complete Lightning Pipeline");
         Console.WriteLine("  batch <sources...>      - Batch process multiple items");
         Console.WriteLine("  demo                    - Run demonstration");
+        Console.WriteLine("  learn / selflearn       - Self-learning mode (continuous adaptive loop)");
         Console.WriteLine("  test                    - Run system tests");
         Console.WriteLine("  examples                - Run usage examples");
         Console.WriteLine("  serve [port]            - Start REST API + Web Dashboard");
