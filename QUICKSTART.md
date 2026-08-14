@@ -36,7 +36,8 @@ Rezultatet ndryshojnë sipas hardware, por komanda duhet të ekzekutohet pa gabi
 ## 3. Demo funksionale
 
 ```bash
-dotnet run demo
+
+
 ```
 
 Opsionale:
