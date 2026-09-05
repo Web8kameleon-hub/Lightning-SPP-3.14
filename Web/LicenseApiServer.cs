@@ -36,7 +36,7 @@ internal static class LicenseApiServer
         listener.Start();
 
         Console.WriteLine($"REST API + Dashboard running on http://localhost:{port}");
-        Console.WriteLine("Endpoints: /api/health, /api/metrics, /api/alerts, /api/stigma/schema, /api/license/status, /api/license/issue, /api/license/activate, /api/license/signing-status");
+        Console.WriteLine("Endpoints: /api/health, /api/metrics, /api/alerts, /api/stigma/schema, /api/license/status, /api/license/issue, /api/license/activate, /api/license/signing-status, /api/stripe/webhook");
         Console.WriteLine("Dashboard: /dashboard, Landing page: /");
         InternalAuditLogger.Info($"Server started on port {port}");
 
@@ -74,7 +74,7 @@ internal static class LicenseApiServer
         // CORS headers
         context.Response.Headers["Access-Control-Allow-Origin"] = "*";
         context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
-        context.Response.Headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type";
+        context.Response.Headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Stripe-Signature";
 
         // Pre-flight
         if (context.Request.HttpMethod == "OPTIONS")
@@ -152,6 +152,39 @@ internal static class LicenseApiServer
                 context.Response.ContentLength64 = buffer.LongLength;
                 await context.Response.OutputStream.WriteAsync(buffer);
                 context.Response.Close();
+                return;
+            }
+
+            if (path == "/api/stripe/webhook" && context.Request.HttpMethod == "POST")
+            {
+                using var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8);
+                var payload = await reader.ReadToEndAsync();
+                var signature = context.Request.Headers["Stripe-Signature"] ?? string.Empty;
+
+                if (!StripeBilling.TryVerifyWebhook(
+                        payload,
+                        signature,
+                        out var stripeEvent,
+                        out var destination,
+                        out var verificationError))
+                {
+                    InternalAuditLogger.Error($"Stripe webhook rejected: {verificationError}");
+                    await TextAsync(context, HttpStatusCode.BadRequest, "ok=false\nerror=Invalid webhook signature");
+                    return;
+                }
+
+                if (stripeEvent is null || !StripeBilling.TryMarkEventProcessed(stripeEvent.Id))
+                {
+                    await TextAsync(context, HttpStatusCode.OK, "ok=true\nduplicate=true");
+                    return;
+                }
+
+                InternalAuditLogger.Info(
+                    $"Stripe webhook verified: destination={destination}, type={stripeEvent.Type}, id={stripeEvent.Id}");
+                await TextAsync(
+                    context,
+                    HttpStatusCode.OK,
+                    $"ok=true\ndestination={destination}\neventType={stripeEvent.Type}");
                 return;
             }
 
