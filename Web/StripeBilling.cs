@@ -65,7 +65,7 @@ internal static class StripeBilling
         {
             try
             {
-                stripeEvent = EventUtility.ConstructEvent(payload, signature, candidate.Secret);
+                stripeEvent = EventUtility.ConstructEvent(\n                    payload,\n                    signature,\n                    candidate.Secret,\n                    tolerance: 300,\n                    throwOnApiVersionMismatch: false);
                 matchedDestination = candidate.Destination;
                 error = string.Empty;
                 return true;
