@@ -93,7 +93,7 @@ Look for issues labeled [`good first issue`](https://github.com/Web8kameleon-hub
 - Integration examples
 - Unit tests
 - Benchmarks
-- Medical device compliance testing
+- Regulated-workflow validation and compliance evidence
 
 ---
 
@@ -150,9 +150,9 @@ Lightning-SPP-3.14/
 │   ├── RealImageProcessor.cs    # REAL: ImageSharp
 │   ├── RealAIProcessor.cs       # REAL: ML
 │   ├── RealPrintService.cs      # REAL: File I/O
-│   ├── FastScanService.cs       # SIMULATED
-│   ├── HybridProcessingService.cs  # SIMULATED
-│   └── StigmaPrintService.cs    # SIMULATED
+│   ├── FastScanService.cs       # Compatibility wrapper
+│   ├── HybridProcessingService.cs  # Compatibility wrapper
+│   └── StigmaPrintService.cs    # Compatibility wrapper
 ├── SDK/                   # Public SDKs
 │   ├── Lightning314.cs
 │   └── UniversalSDK.cs
