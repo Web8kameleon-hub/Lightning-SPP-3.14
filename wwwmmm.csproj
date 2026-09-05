@@ -17,24 +17,21 @@
     <Authors>Ledjan Ahmati, ABA GmbH</Authors>
     <Company>ABA GmbH</Company>
     <Product>Lightning Scan-Process-Print System</Product>
-    <Description>Ultra-fast scan-process-print system with REAL processing. Lightning SPP delivers &lt;1ms to &lt;10ms performance using SkiaSharp, Microsoft.ML, and Brotli compression. Universal SDK supports Medical/Mobile/IoT/Embedded/Desktop/Web/Cloud devices. Technologies: TideWave, CLX, CLI.I, XCL, Resonance, NanoDecibel, Clisonic AI, Stigma. Production-ready with ISO/FDA/CE compliance.</Description>
+    <Description>Modular scan-process-output toolkit using SkiaSharp, Microsoft.ML, ONNX Runtime, and lossless Brotli artifacts. Includes adaptive quality, balanced, and lightning execution profiles for desktop, web, edge, and cloud integration.</Description>
     <Copyright>Copyright © 2025-2026 ABA GmbH. All rights reserved.</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Web8kameleon-hub/Lightning-SPP-3.14</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Web8kameleon-hub/Lightning-SPP-3.14</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>scan;process;print;lightning;fast;real-time;image-processing;ai;ml;medical;iot;embedded;tidewave;clx;resonance;nanodecibel;clisonic;stigma;iso;fda;ce;gdpr;hipaa</PackageTags>
+    <PackageTags>scan;process;output;lightning;image-processing;ai;ml;iot;embedded;tidewave;clx;resonance;nanodecibel;clisonic;stigma</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>
-      Version 3.14.0 - Initial Release
-      - Ultra-fast processing: &lt;1ms (Instant), &lt;5ms (UltraFast), &lt;10ms (Lightning)
-      - REAL implementations: SkiaSharp, Microsoft.ML, Brotli compression, File I/O
-      - Universal SDK for 7 device types (Medical, Mobile, IoT, Embedded, Desktop, Web, Cloud)
-      - Complete documentation: API, Architecture, Deployment, Security, Compliance
-      - ISO 9001/27001 certified, FDA/CE compliance in progress
-      - GDPR/HIPAA compliant
-      - Docker ready (64.5MB image)
-      - All tests passing (5/5)
+      Version 3.14.0
+      - Real image, processing, compression, and file-output implementations
+      - Adaptive Stigma profiles: quality, balanced, and lightning
+      - Lossless Brotli output artifacts with round-trip tests
+      - SDK profiles for desktop, web, edge, and cloud integration
+      - Compliance-sensitive deployments require independent validation and certification
     </PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
