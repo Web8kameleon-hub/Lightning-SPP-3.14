@@ -14,7 +14,7 @@ Lightning SPP 3.14 është një platformë e integruar për skanim, përpunim dh
 
 Versioni 3.14 përdor komponentë realë të ekosistemit .NET:
 
-- SixLabors.ImageSharp për përpunim imazhi
+- SkiaSharp për përpunim imazhi
 - Microsoft.ML për AI/ML
 - Brotli për kompresim efikas
 - File I/O për gjenerim output-i real në disk
@@ -38,7 +38,7 @@ Detaje shtesë: [REAL_PROCESSING.md](REAL_PROCESSING.md)
 
 Lightning SPP 3.14 është i përshtatshëm për:
 
-- Pajisje mjekësore dhe diagnostikuese
+- Workflows dokumentesh dhe imazhesh që mund të integrohen në produkte mjekësore pas validimit dhe certifikimit përkatës
 - Aplikacione mobile (iOS/Android)
 - Pajisje IoT dhe sisteme embedded
 - Aplikacione desktop dhe web
@@ -78,7 +78,25 @@ var cloudResult = await CloudAPI.ProcessMassive(millionsOfItems, maxParallelism:
 - Resonance: fokus në precizion
 - NanoDecibel: fokus në cilësi maksimale
 - Clisonic Global AI: përmirësim i asistuar nga AI
-- Stigma dhe Stigma Memory: printim premium dhe optimizim memorie
+- Stigma: kontroll adaptiv i të gjithë pipeline-it dhe artifact output lossless\n- Stigma Memory: profilizim i përdorimit të memories
+
+## Profilet Stigma
+
+`WWWMMM_STIGMA_LEVEL` kontrollon realisht të gjithë pipeline-in:
+
+| Vlera | Profili | Sjellja |
+|---|---|---|
+| `1` | quality | NanoDecibel, Hybrid + AI, Stigma lossless |
+| `2` | balanced | TideWave, Auto + AI, output high |
+| `3` | lightning | Lightning, CLX fast path, pa faza të kushtueshme |
+
+Shembull:
+
+```bash
+WWWMMM_STIGMA_LEVEL=3 dotnet run -- pipeline document.pdf
+```
+
+Vlerat e pavlefshme refuzohen gjatë nisjes, që konfigurimi të mos dështojë në heshtje.
 
 ## Instalimi i shpejtë
 
@@ -137,7 +155,7 @@ wwwmmm issue-key unlimited admin@company.com "Acme" 10 365 stripe
 - GET /api/health: status i shërbimit
 - GET /api/license/status: status dhe përdorim i licencës
 - POST /api/license/issue: gjenerim licence
-- POST /api/license/activate: aktivizim licence
+- POST /api/license/activate: aktivizim licence\n- POST /api/stripe/webhook: verifikim firme Stripe me secrets legacy/snapshot/thin dhe deduplikim eventesh
 
 Dokumentimi: [Docs/CLOUD_API.md](Docs/CLOUD_API.md)
 
@@ -193,11 +211,11 @@ wwwmmm/
 - Draft
 - Normal
 - High
-- Stigma (premium)
+- Stigma (artifact lossless me Brotli; jo driver printeri fizik)
 
 ## Performanca
 
-Metrikat varen nga hardware, konfigurimi i ekzekutimit dhe madhësia/lloji i input-it. Për referencë lokale, shih:
+Metrikat varen nga hardware, konfigurimi dhe input-i. Objektivat e latencës janë objektiva benchmark-u, jo garanci universale. Rezultatet duhen publikuar me hardware, dataset, konfigurim dhe numër përsëritjesh. Për referencë lokale, shih:
 
 - [SUMMARY.md](SUMMARY.md)
 - [REAL_PROCESSING.md](REAL_PROCESSING.md)
@@ -270,3 +288,10 @@ Duam sa më shumë kontribues aktivë 🚀
 3. Hap PR të vogël + test/dokumentim
 4. Bashkohu në Discussions për ide të reja
 
+
+
+## Kufijtë e versionit 3.14
+
+- Output-i aktual është artifact Brotli `.br` lossless; integrimi me printer fizik kërkon adapter specifik për platformën.
+- Përdorimi mjekësor kërkon validim klinik dhe certifikimet ligjore për tregun ku shpërndahet.
+- ISO, CE, FDA, GDPR dhe HIPAA nuk deklarohen si certifikime të produktit pa evidencë të auditueshme.
