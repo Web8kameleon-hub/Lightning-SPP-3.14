@@ -21,7 +21,7 @@ public class StripeWebhookTests
             Environment.SetEnvironmentVariable("STRIPE_WEBHOOK_SECRET_THIN", null);
 
             var eventId = $"evt_{Guid.NewGuid():N}";
-            var payload = $$"""{"id":"{{eventId}}","object":"event","type":"customer.updated","data":{"object":{}}}""";
+            var payload = "{\"id\":\"" + eventId + "\",\"object\":\"event\",\"type\":\"customer.updated\",\"data\":{\"object\":{}}}";
             var signature = EventUtility.GenerateTestHeaderString(payload, secret);
 
             var valid = StripeBilling.TryVerifyWebhook(
