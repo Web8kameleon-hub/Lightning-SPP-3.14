@@ -1,4 +1,5 @@
-using Stripe;
+using System.Security.Cryptography;
+using System.Text;
 using wwwmmm.Web;
 using Xunit;
 
@@ -22,7 +23,7 @@ public class StripeWebhookTests
 
             var eventId = $"evt_{Guid.NewGuid():N}";
             var payload = "{\"id\":\"" + eventId + "\",\"object\":\"event\",\"type\":\"customer.updated\",\"data\":{\"object\":{}}}";
-            var signature = EventUtility.GenerateTestHeaderString(payload, secret);
+            var signature = CreateSignature(payload, secret);
 
             var valid = StripeBilling.TryVerifyWebhook(
                 payload,
@@ -52,7 +53,7 @@ public class StripeWebhookTests
         try
         {
             const string payload = """{"id":"evt_invalid","object":"event","type":"customer.updated","data":{"object":{}}}""";
-            var signature = EventUtility.GenerateTestHeaderString(payload, "whsec_wrong");
+            var signature = CreateSignature(payload, "whsec_wrong");
 
             Assert.False(StripeBilling.TryVerifyWebhook(
                 payload,
@@ -65,5 +66,14 @@ public class StripeWebhookTests
         {
             Environment.SetEnvironmentVariable("STRIPE_WEBHOOK_SECRET", null);
         }
+    }
+    private static string CreateSignature(string payload, string secret)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var signedPayload = $"{timestamp}.{payload}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var digest = Convert.ToHexString(
+            hmac.ComputeHash(Encoding.UTF8.GetBytes(signedPayload))).ToLowerInvariant();
+        return $"t={timestamp},v1={digest}";
     }
 }
