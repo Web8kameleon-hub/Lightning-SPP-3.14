@@ -117,7 +117,7 @@ public class RealPrintService : IPrintService
         CancellationToken cancellationToken)
     {
         using var owner = MemoryPool<byte>.Shared.Rent(data.Length);
-        data.CopyTo(owner.Memory.Span);
+        data.AsSpan().CopyTo(owner.Memory.Span);
         var payload = owner.Memory[..data.Length];
 
         await using var output = new FileStream(
