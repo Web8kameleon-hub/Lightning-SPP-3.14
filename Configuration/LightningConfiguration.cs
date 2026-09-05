@@ -4,8 +4,7 @@ using wwwmmm.Services.Implementation;
 namespace wwwmmm.Configuration;
 
 /// <summary>
-/// Configuration for Lightning SPP 3.14
-/// REAL services only configuration
+/// Runtime configuration for Lightning SPP 3.14.
 /// </summary>
 public class LightningConfiguration
 {
@@ -14,45 +13,28 @@ public class LightningConfiguration
     public bool UseRealAIProcessing { get; set; } = true;
     public bool UseRealPrinting { get; set; } = true;
     public string? PrintOutputDirectory { get; set; }
-    public int MaxConcurrency { get; set; } = 1000;
+    public int MaxConcurrency { get; set; } = Environment.ProcessorCount;
     public bool EnablePerformanceLogging { get; set; } = true;
     public bool EnableMemoryOptimization { get; set; } = true;
+    public StigmaExecutionProfile StigmaProfile { get; set; } = StigmaProfiles.FromEnvironment();
 
-    public static LightningConfiguration Default => new()
-    {
-        UseRealServices = true,
-        UseRealImageProcessing = true,
-        UseRealAIProcessing = true,
-        UseRealPrinting = true,
-        EnablePerformanceLogging = true,
-        EnableMemoryOptimization = true
-    };
+    public static LightningConfiguration Default => new();
 
     public static LightningConfiguration FastSimulated => new()
     {
-        // Kept for backward compatibility - now routes to real services.
-        UseRealServices = true,
-        UseRealImageProcessing = true,
-        UseRealAIProcessing = true,
-        UseRealPrinting = true,
-        EnablePerformanceLogging = true,
-        EnableMemoryOptimization = true
+        // Backward-compatible name. Simulated services have been removed.
+        StigmaProfile = StigmaExecutionProfile.Lightning
     };
 
     public static LightningConfiguration RealProduction => new()
     {
-        UseRealServices = true,
-        UseRealImageProcessing = true,
-        UseRealAIProcessing = true,
-        UseRealPrinting = true,
-        MaxConcurrency = 10000,
-        EnablePerformanceLogging = true,
-        EnableMemoryOptimization = true
+        MaxConcurrency = Math.Max(1, Environment.ProcessorCount * 2),
+        StigmaProfile = StigmaProfiles.FromEnvironment()
     };
 }
 
 /// <summary>
-/// Service Factory - Creates appropriate services based on configuration
+/// Creates the concrete services used by the public API.
 /// </summary>
 public static class ServiceFactory
 {
@@ -60,30 +42,24 @@ public static class ServiceFactory
 
     public static void Configure(LightningConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
+        if (configuration.MaxConcurrency < 1)
+            throw new ArgumentOutOfRangeException(nameof(configuration.MaxConcurrency));
+
         _config = configuration;
     }
 
-    public static IScanService CreateScanService()
-    {
-        return new wwwmmm.Services.Implementation.RealImageProcessor();
-    }
+    public static IScanService CreateScanService() => new RealImageProcessor();
 
-    public static IProcessingService CreateProcessingService()
-    {
-        return new wwwmmm.Services.Implementation.RealAIProcessor();
-    }
+    public static IProcessingService CreateProcessingService() => new RealAIProcessor();
 
-    public static IPrintService CreatePrintService()
-    {
-        return new wwwmmm.Services.Implementation.RealPrintService(_config.PrintOutputDirectory);
-    }
+    public static IPrintService CreatePrintService() =>
+        new RealPrintService(_config.PrintOutputDirectory);
 
-    public static LightningPipeline CreatePipeline()
-    {
-        return new LightningPipeline(
+    public static LightningPipeline CreatePipeline() =>
+        new(
             CreateScanService(),
             CreateProcessingService(),
-            CreatePrintService()
-        );
-    }
+            CreatePrintService(),
+            _config.StigmaProfile);
 }
