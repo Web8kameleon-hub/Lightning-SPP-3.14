@@ -1,12 +1,12 @@
-using System.Diagnostics;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO.Compression;
 
 namespace wwwmmm.Services.Implementation;
 
 /// <summary>
-/// REAL Print Service - Using actual file I/O and compression
-/// Stigma technology = Real high-quality output optimization
+/// Creates durable, lossless output artifacts. This service does not claim to drive
+/// a physical printer; printer adapters can consume the returned artifact path.
 /// </summary>
 public class RealPrintService : IPrintService
 {
@@ -27,39 +27,33 @@ public class RealPrintService : IPrintService
 
         try
         {
-            if (options.UseStigma && options.Quality == PrintQuality.Stigma)
-            {
-                return await StigmaPrintAsync(data, cancellationToken);
-            }
-
-            // REAL Print: Write to file with quality settings
-            var quality = options.Quality switch
+            Validate(data, options);
+            var usePremium = options.UseStigma && options.Quality == PrintQuality.Stigma;
+            var level = options.Quality switch
             {
                 PrintQuality.Draft => CompressionLevel.Fastest,
                 PrintQuality.Normal => CompressionLevel.Optimal,
-                PrintQuality.High => CompressionLevel.SmallestSize,
-                PrintQuality.Stigma => CompressionLevel.SmallestSize,
+                PrintQuality.High or PrintQuality.Stigma => CompressionLevel.SmallestSize,
                 _ => CompressionLevel.Optimal
             };
 
-            await RealPrintToFileAsync(data, quality, options, cancellationToken);
-
-            if (options.UseResonance)
+            var paths = new List<string>(options.Copies);
+            for (var copy = 0; copy < options.Copies; copy++)
             {
-                await ApplyResonanceEnhancementAsync(data, cancellationToken);
+                var path = BuildArtifactPath(options.Destination, usePremium ? "stigma" : "output", copy);
+                await WriteLosslessArtifactAsync(data, path, level, cancellationToken);
+                paths.Add(path);
             }
 
             sw.Stop();
-
-            var metadata = new PrintMetadata(
-                DateTime.UtcNow,
-                sw.ElapsedMilliseconds,
-                options.UseStigma ? "Stigma-Real" : "Standard-Real",
-                options.Copies,
-                options.Destination
-            );
-
-            return new PrintResult(true, metadata);
+            return new PrintResult(
+                true,
+                new PrintMetadata(
+                    DateTime.UtcNow,
+                    sw.ElapsedMilliseconds,
+                    usePremium ? "Stigma Lossless Artifact" : "Lossless Artifact",
+                    paths.Count,
+                    paths[0]));
         }
         catch (Exception ex)
         {
@@ -67,165 +61,116 @@ public class RealPrintService : IPrintService
             return new PrintResult(
                 false,
                 new PrintMetadata(DateTime.UtcNow, sw.ElapsedMilliseconds, "Error", 0, options.Destination),
-                ex.Message
-            );
+                ex.Message);
         }
     }
 
-    public async Task<PrintResult> StigmaPrintAsync(byte[] data, CancellationToken cancellationToken = default)
-    {
-        var sw = Stopwatch.StartNew();
-
-        try
-        {
-            // REAL Stigma Premium Processing
-
-            // Step 1: Stigma preprocessing with memory pooling
-            using var pool = MemoryPool<byte>.Shared;
-            using var memory = pool.Rent(data.Length);
-            data.CopyTo(memory.Memory.Span);
-
-            // Step 2: Apply Resonance enhancement
-            var enhanced = await ApplyResonanceEnhancementAsync(data, cancellationToken);
-
-            // Step 3: Maximum quality compression
-            var optimized = await CompressWithMaxQualityAsync(enhanced, cancellationToken);
-
-            // Step 4: Write to file with Stigma quality
-            var fileName = $"stigma_output_{DateTime.UtcNow:yyyyMMdd_HHmmss_fffffff}_{Guid.NewGuid():N}.dat";
-            var filePath = Path.Combine(_outputDirectory, fileName);
-
-            await File.WriteAllBytesAsync(filePath, optimized, cancellationToken);
-
-            sw.Stop();
-
-            var metadata = new PrintMetadata(
-                DateTime.UtcNow,
-                sw.ElapsedMilliseconds,
-                "Stigma Premium + Resonance (Real Output)",
-                1,
-                filePath
-            );
-
-            return new PrintResult(true, metadata);
-        }
-        catch (Exception ex)
-        {
-            sw.Stop();
-            return new PrintResult(
-                false,
-                new PrintMetadata(DateTime.UtcNow, sw.ElapsedMilliseconds, "Error", 0, "default"),
-                ex.Message
-            );
-        }
-    }
-
-    private async Task RealPrintToFileAsync(
+    public Task<PrintResult> StigmaPrintAsync(
         byte[] data,
-        CompressionLevel quality,
-        PrintOptions options,
+        CancellationToken cancellationToken = default) =>
+        PrintAsync(
+            data,
+            new PrintOptions(Quality: PrintQuality.Stigma, UseStigma: true, UseResonance: true),
+            cancellationToken);
+
+    private static void Validate(byte[] data, PrintOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        if (data.Length == 0)
+            throw new ArgumentException("Output data cannot be empty.", nameof(data));
+        if (options.Copies < 1)
+            throw new ArgumentOutOfRangeException(nameof(options.Copies), "Copies must be at least one.");
+    }
+
+    private string BuildArtifactPath(string destination, string prefix, int copy)
+    {
+        if (!string.IsNullOrWhiteSpace(destination) &&
+            !string.Equals(destination, "default", StringComparison.OrdinalIgnoreCase))
+        {
+            var requested = Path.GetFullPath(destination);
+            var directory = Path.GetDirectoryName(requested);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            return copy == 0
+                ? EnsureBrotliExtension(requested)
+                : Path.Combine(
+                    directory ?? _outputDirectory,
+                    $"{Path.GetFileNameWithoutExtension(requested)}_copy{copy}.br");
+        }
+
+        var suffix = copy == 0 ? string.Empty : $"_copy{copy}";
+        return Path.Combine(
+            _outputDirectory,
+            $"{prefix}_{DateTime.UtcNow:yyyyMMdd_HHmmss_fffffff}_{Guid.NewGuid():N}{suffix}.br");
+    }
+
+    private static string EnsureBrotliExtension(string path) =>
+        string.Equals(Path.GetExtension(path), ".br", StringComparison.OrdinalIgnoreCase)
+            ? path
+            : path + ".br";
+
+    private static async Task WriteLosslessArtifactAsync(
+        byte[] data,
+        string path,
+        CompressionLevel level,
         CancellationToken cancellationToken)
     {
-        var fileName = $"output_{options.Quality}_{DateTime.UtcNow:yyyyMMdd_HHmmss_fffffff}_{Guid.NewGuid():N}.dat";
-        var filePath = Path.Combine(_outputDirectory, fileName);
+        using var owner = MemoryPool<byte>.Shared.Rent(data.Length);
+        data.CopyTo(owner.Memory.Span);
+        var payload = owner.Memory[..data.Length];
 
-        // REAL: Compress based on quality
-        using var output = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true);
-        using var compressor = new BrotliStream(output, quality);
-        await compressor.WriteAsync(data, cancellationToken);
-        await compressor.FlushAsync(cancellationToken);
-
-        // Create copies if requested
-        for (int i = 1; i < options.Copies; i++)
-        {
-            var copyPath = Path.Combine(_outputDirectory, $"output_{options.Quality}_{DateTime.UtcNow:yyyyMMdd_HHmmss_fffffff}_{Guid.NewGuid():N}_copy{i}.dat");
-            File.Copy(filePath, copyPath);
-        }
+        await using var output = new FileStream(
+            path,
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.None,
+            81920,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        await using var compressor = new BrotliStream(output, level, leaveOpen: false);
+        await compressor.WriteAsync(payload, cancellationToken);
     }
 
-    private async Task<byte[]> ApplyResonanceEnhancementAsync(byte[] data, CancellationToken cancellationToken)
-    {
-        // REAL Resonance: Pattern-based enhancement
-        return await Task.Run(() =>
-        {
-            var enhanced = new byte[data.Length];
-            Buffer.BlockCopy(data, 0, enhanced, 0, data.Length);
-
-            // Resonance algorithm: Enhance data patterns
-            for (int i = 0; i < enhanced.Length - 1; i++)
-            {
-                // Apply resonance smoothing
-                enhanced[i] = (byte)((enhanced[i] + enhanced[i + 1]) / 2);
-            }
-
-            return enhanced;
-        }, cancellationToken);
-    }
-
-    private async Task<byte[]> CompressWithMaxQualityAsync(byte[] data, CancellationToken cancellationToken)
-    {
-        // REAL Maximum quality compression
-        using var output = new MemoryStream();
-        using (var compressor = new BrotliStream(output, CompressionLevel.SmallestSize))
-        {
-            await compressor.WriteAsync(data, cancellationToken);
-        }
-        return output.ToArray();
-    }
-
-    /// <summary>
-    /// Get list of printed files
-    /// </summary>
     public string[] GetPrintedFiles()
     {
         if (!Directory.Exists(_outputDirectory))
             return Array.Empty<string>();
 
-        return Directory.GetFiles(_outputDirectory, "*.dat")
-            .OrderByDescending(f => File.GetCreationTime(f))
+        return Directory.GetFiles(_outputDirectory, "*.br")
+            .OrderByDescending(File.GetCreationTimeUtc)
             .ToArray();
     }
 
-    /// <summary>
-    /// Clear all printed files
-    /// </summary>
     public void ClearPrintQueue()
     {
-        if (Directory.Exists(_outputDirectory))
+        if (!Directory.Exists(_outputDirectory))
+            return;
+
+        foreach (var file in Directory.GetFiles(_outputDirectory, "*.br"))
         {
-            foreach (var file in Directory.GetFiles(_outputDirectory))
-            {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch
-                {
-                    // Ignore errors
-                }
-            }
+            try { File.Delete(file); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
     }
 
-    /// <summary>
-    /// Clean up output files older than the specified number of days (default: 7).
-    /// Should be called periodically to prevent temp directory bloat.
-    /// </summary>
     public void CleanupOldFiles(int olderThanDays = 7)
     {
-        if (!Directory.Exists(_outputDirectory)) return;
+        if (olderThanDays < 0)
+            throw new ArgumentOutOfRangeException(nameof(olderThanDays));
+        if (!Directory.Exists(_outputDirectory))
+            return;
+
         var cutoff = DateTime.UtcNow.AddDays(-olderThanDays);
-        foreach (var file in Directory.GetFiles(_outputDirectory))
+        foreach (var file in Directory.GetFiles(_outputDirectory, "*.br"))
         {
             try
             {
                 if (File.GetLastWriteTimeUtc(file) < cutoff)
                     File.Delete(file);
             }
-            catch
-            {
-                // Ignore individual file errors
-            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
     }
 }
