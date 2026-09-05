@@ -2,22 +2,26 @@ namespace wwwmmm.Services;
 
 internal static class StigmaSchema
 {
-    public const string Version = "1.0.0";
+    public const string Version = "1.1.0";
 
     public static string ToJson()
     {
+        var active = StigmaProfiles.FromEnvironment();
         return $$"""
                 {
-                    "schema": "stigma-language",
+                    "schema": "stigma-execution-profile",
                     "version": "{{Version}}",
-                    "phases": ["scan", "resonance", "imprint", "enhancement", "stabilization", "print"],
-                    "fields": [
-                        {"name":"resonance","type":"float","range":"[0,1]"},
-                        {"name":"ndb","type":"float","formula":"20*log10(max(resonance,1e-12))*1e9"},
-                        {"name":"tideTension","type":"float"},
-                        {"name":"imprintId","type":"string"},
-                        {"name":"stigmaLevel","type":"string","values":["LIGHTNING","NORMAL","CONSERVATIVE"]}
-                    ]
+                    "environmentVariable": "{{StigmaProfiles.EnvironmentVariable}}",
+                    "activeProfile": {
+                        "level": {{(int)active}},
+                        "name": "{{active.ToString().ToLowerInvariant()}}"
+                    },
+                    "profiles": [
+                        {"level":1,"name":"quality","scan":"NanoDecibel","processing":"Hybrid+AI","output":"Stigma lossless"},
+                        {"level":2,"name":"balanced","scan":"TideWave","processing":"Auto+AI","output":"High lossless"},
+                        {"level":3,"name":"lightning","scan":"Lightning","processing":"CLX fast path","output":"Normal lossless"}
+                    ],
+                    "phases": ["scan", "process", "output"]
                 }
                 """;
     }

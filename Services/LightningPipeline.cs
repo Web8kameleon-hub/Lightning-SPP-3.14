@@ -4,22 +4,25 @@ using LightningSPP.Licensing;
 namespace wwwmmm.Services;
 
 /// <summary>
-/// Ultra-fast pipeline combining scan, process, and print in lightning speed
+/// Orchestrates the real Scan-Process-Print services under one explicit Stigma profile.
 /// </summary>
 public class LightningPipeline
 {
     private readonly IScanService _scanService;
     private readonly IProcessingService _processingService;
     private readonly IPrintService _printService;
+    private readonly StigmaExecutionProfile _profile;
 
     public LightningPipeline(
         IScanService scanService,
         IProcessingService processingService,
-        IPrintService printService)
+        IPrintService printService,
+        StigmaExecutionProfile? profile = null)
     {
         _scanService = scanService;
         _processingService = processingService;
         _printService = printService;
+        _profile = profile ?? StigmaProfiles.FromEnvironment();
     }
 
     public async Task<PipelineResult> ExecuteAsync(
@@ -28,10 +31,11 @@ public class LightningPipeline
     {
         var sw = Stopwatch.StartNew();
         var results = new List<string>();
+        request = StigmaProfiles.Apply(request, _profile);
+        results.Add($"Stigma profile: {(int)_profile} ({_profile.ToString().ToLowerInvariant()})");
 
         try
         {
-            // License gate — enforce usage limits before any work is done
             if (!LicenseManager.CheckAndIncrementUsage())
             {
                 LightningMetrics.RecordPipeline(false);
@@ -39,30 +43,26 @@ public class LightningPipeline
                     "Operation limit reached. Please upgrade your Lightning SPP license or wait for the next billing cycle.");
             }
 
-            // Phase 1: Lightning Scan
-            results.Add("⚡ Starting Lightning Scan...");
+            results.Add("Starting scan...");
             var scanResult = await _scanService.ScanAsync(
                 new ScanRequest(
                     request.Source,
                     request.ScanMode,
                     request.Quality,
                     request.UseResonance,
-                    request.UseNanoDecibel
-                ),
-                cancellationToken
-            );
+                    request.UseNanoDecibel),
+                cancellationToken);
 
             if (!scanResult.Success)
             {
                 LightningMetrics.RecordPipeline(false);
                 return new PipelineResult(false, sw.ElapsedMilliseconds, results, scanResult.Error);
             }
+
             LightningMetrics.RecordScan(scanResult.Metadata.ProcessingTimeMs);
+            results.Add($"Scan completed in {scanResult.Metadata.ProcessingTimeMs}ms using {scanResult.Metadata.Technology}");
 
-            results.Add($"✓ Scan completed in {scanResult.Metadata.ProcessingTimeMs}ms using {scanResult.Metadata.Technology}");
-
-            // Phase 2: Advanced Processing
-            results.Add("🔄 Processing with AI engines...");
+            results.Add("Starting processing...");
             var processResult = await _processingService.ProcessAsync(
                 scanResult.Data,
                 new ProcessingOptions(
@@ -70,24 +70,21 @@ public class LightningPipeline
                     request.UseAI,
                     request.UseClisonic,
                     request.OptimizationLevel,
-                    request.UseStigmaMemory
-                ),
-                cancellationToken
-            );
+                    request.UseStigmaMemory),
+                cancellationToken);
 
             if (!processResult.Success)
             {
                 LightningMetrics.RecordPipeline(false);
                 return new PipelineResult(false, sw.ElapsedMilliseconds, results, processResult.Error);
             }
+
             LightningMetrics.RecordProcess(processResult.Metadata.ProcessingTimeMs);
+            results.Add($"Processing completed in {processResult.Metadata.ProcessingTimeMs}ms using {processResult.Metadata.Engine}");
 
-            results.Add($"✓ Processing completed in {processResult.Metadata.ProcessingTimeMs}ms using {processResult.Metadata.Engine}");
-
-            // Phase 3: Stigma Print
             if (request.ShouldPrint)
             {
-                results.Add("🖨️  Printing with Stigma technology...");
+                results.Add("Creating output artifact...");
                 var printResult = await _printService.PrintAsync(
                     processResult.ProcessedData,
                     new PrintOptions(
@@ -95,25 +92,22 @@ public class LightningPipeline
                         request.PrintQuality,
                         request.UseStigma,
                         request.UseResonance,
-                        request.Copies
-                    ),
-                    cancellationToken
-                );
+                        request.Copies),
+                    cancellationToken);
 
                 if (!printResult.Success)
                 {
                     LightningMetrics.RecordPipeline(false);
                     return new PipelineResult(false, sw.ElapsedMilliseconds, results, printResult.Error);
                 }
-                LightningMetrics.RecordPrint(printResult.Metadata.ProcessingTimeMs);
 
-                results.Add($"✓ Print completed in {printResult.Metadata.ProcessingTimeMs}ms");
+                LightningMetrics.RecordPrint(printResult.Metadata.ProcessingTimeMs);
+                results.Add($"Output completed in {printResult.Metadata.ProcessingTimeMs}ms at {printResult.Metadata.Destination}");
             }
 
             sw.Stop();
-            results.Add($"\n⚡ Total pipeline time: {sw.ElapsedMilliseconds}ms");
+            results.Add($"Total pipeline time: {sw.ElapsedMilliseconds}ms");
             LightningMetrics.RecordPipeline(true);
-
             return new PipelineResult(true, sw.ElapsedMilliseconds, results);
         }
         catch (Exception ex)
