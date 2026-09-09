@@ -8,6 +8,9 @@ on:
       - '**/*.csproj'
       - '.github/workflows/**'
       - 'Dockerfile'
+      - '.dockerignore'
+      - 'docker-compose.production.yml'
+      - 'deploy/**'
       - 'README.md'
       - 'CHANGELOG.md'
   pull_request:
@@ -17,6 +20,9 @@ on:
       - '**/*.csproj'
       - '.github/workflows/**'
       - 'Dockerfile'
+      - '.dockerignore'
+      - 'docker-compose.production.yml'
+      - 'deploy/**'
       - 'README.md'
       - 'CHANGELOG.md'
   release:
@@ -26,10 +32,18 @@ env:
   DOTNET_VERSION: '10.0.x'
   DOCKER_IMAGE_NAME: lightning-spp
 
+permissions:
+  contents: read
+
+concurrency:
+  group: lightning-spp-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     steps:
     - name: Checkout code
@@ -45,6 +59,9 @@ jobs:
       
     - name: Build
       run: dotnet build --configuration Release --no-restore
+
+    - name: Validate deployment scripts
+      run: find deploy -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
       
     - name: Run unit tests
       run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal
@@ -62,6 +79,7 @@ jobs:
     name: Docker Build & Test
     runs-on: ubuntu-latest
     needs: build-and-test
+    timeout-minutes: 30
     
     steps:
     - name: Checkout code
@@ -74,6 +92,9 @@ jobs:
       run: |
         docker build -t ${{ env.DOCKER_IMAGE_NAME }}:latest .
         docker build -t ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} .
+
+    - name: Validate production Compose configuration
+      run: cp .env.production.example .env.production && docker compose -f docker-compose.production.yml config --quiet
         
     - name: Test Docker container - Help
       run: docker run --rm ${{ env.DOCKER_IMAGE_NAME }}:latest --help

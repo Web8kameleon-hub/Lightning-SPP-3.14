@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using LightningSPP.Licensing;
 using wwwmmm.Services;
@@ -71,8 +72,7 @@ internal static class LicenseApiServer
 
     private static async Task HandleRequestAsync(HttpListenerContext context)
     {
-        // CORS headers
-        context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+        ApplyCorsHeaders(context);
         context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
         context.Response.Headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Stripe-Signature";
 
@@ -85,7 +85,7 @@ internal static class LicenseApiServer
         }
 
         // Rate limiting
-        var clientIp = context.Request.RemoteEndPoint?.Address?.ToString() ?? "unknown";
+        var clientIp = ResolveClientIp(context.Request);
         if (IsRateLimited(clientIp))
         {
             context.Response.Headers["Retry-After"] = "60";
@@ -378,7 +378,46 @@ internal static class LicenseApiServer
             ? authHeader[7..]
             : null;
 
-        return string.Equals(adminToken, providedToken, StringComparison.Ordinal);
+        if (string.IsNullOrEmpty(providedToken))
+            return false;
+
+        var expected = Encoding.UTF8.GetBytes(adminToken);
+        var provided = Encoding.UTF8.GetBytes(providedToken);
+        return expected.Length == provided.Length &&
+               CryptographicOperations.FixedTimeEquals(expected, provided);
+    }
+
+    private static string ResolveClientIp(HttpListenerRequest request)
+    {
+        var remote = request.RemoteEndPoint?.Address;
+        var trustProxy = string.Equals(
+            Environment.GetEnvironmentVariable("LSPP_TRUST_PROXY"),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (trustProxy && remote is not null && IPAddress.IsLoopback(remote))
+        {
+            var forwarded = request.Headers["X-Forwarded-For"]?.Split(',')[0].Trim();
+            if (IPAddress.TryParse(forwarded, out var forwardedIp))
+                return forwardedIp.ToString();
+        }
+
+        return remote?.ToString() ?? "unknown";
+    }
+
+    private static void ApplyCorsHeaders(HttpListenerContext context)
+    {
+        var origin = context.Request.Headers["Origin"];
+        var configured = Environment.GetEnvironmentVariable("LSPP_ALLOWED_ORIGINS");
+        if (string.IsNullOrWhiteSpace(origin) || string.IsNullOrWhiteSpace(configured))
+            return;
+
+        var allowed = configured.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (!allowed.Contains(origin, StringComparer.OrdinalIgnoreCase))
+            return;
+
+        context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+        context.Response.Headers["Vary"] = "Origin";
     }
 
     private static async Task TextAsync(HttpListenerContext context, HttpStatusCode statusCode, string payload)
