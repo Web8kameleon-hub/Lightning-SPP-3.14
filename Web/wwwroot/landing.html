@@ -255,12 +255,13 @@
       <span class="glyph">w</span><span class="glyph">w</span><span class="glyph">w</span><span class="glyph">m</span><span class="glyph">m</span><span class="glyph">m</span>
     </h1>
     <p class="subtitle">
-      Vala harmonike rrëshqet mbi shkronja, krijon rezonancë dhe i shtyn lehtë poshtë në ritëm.
-      Nën sipërfaqe, nyjet <strong>Stigma</strong> lëvizin fluid si rrjedhë uji duke lidhur Scan → Process → Print.
+      Platformë e thjeshtë për të <strong>skanuar, përpunuar dhe ruajtur</strong> dokumentet shpejt.
+      Një panel i vetëm për kontrollin e punës, licencës dhe integrimeve cloud.
     </p>
     <canvas class="stigma-canvas" id="stigmaCanvas" aria-hidden="true"></canvas>
-    <p class="tagline">Harmonic Wave • Resonance Press • Stigma Fluid Node</p>
-    <div class="beat-chip" id="beatChip"><span class="beat-dot" id="beatDot"></span><span id="beatLabel">Beat Sync: Visual Pulse</span></div>
+    <p class="tagline">Scan • Process • Print</p>
+    <div class="beat-chip" id="beatChip"><span class="beat-dot" id="beatDot"></span><span id="beatLabel">Ritëm: efekt
+        vizual</span></div>
 
     <div class="actions">
       <a class="btn" href="/dashboard">Hap Dashboard</a>
@@ -272,24 +273,24 @@
 
   <section class="features">
     <article class="feature">
-      <h3>Sub-millisecond API</h3>
-      <p>Instant/UltraFast/Lightning modes për throughput të lartë dhe latencë minimale.</p>
+      <h3>Shpejtësi e lartë</h3>
+      <p>Përpunim i shpejtë për volume të larta pa pritje të gjata.</p>
     </article>
     <article class="feature">
-      <h3>License Ops</h3>
-      <p>Aktivizim, gjenerim key dhe audit logging internal në një panel të vetëm.</p>
+      <h3>Menaxhim licence</h3>
+      <p>Aktivizo licencën dhe menaxho çelësat nga dashboard-i.</p>
     </article>
     <article class="feature">
-      <h3>Cloud Integration</h3>
-      <p>REST endpoints për integrim me sisteme SaaS, billing dhe workflows të jashtme.</p>
+      <h3>Integrim me cloud</h3>
+      <p>API të gatshme për lidhje me aplikacione dhe shërbime të tjera.</p>
     </article>
     <article class="feature">
-      <h3>Enterprise Security</h3>
-      <p>Model default Stripe për pagesa, me opsion internal security workflow për raste private.</p>
+      <h3>Siguri e besueshme</h3>
+      <p>Kontrolle sigurie dhe mbështetje për pagesa online me Stripe.</p>
     </article>
   </section>
 
-  <footer>© 2026 Lightning SPP - Resonance Motion Layer.</footer>
+  <footer>© 2026 Lightning SPP - Zgjidhje e thjeshtë për skanim dhe përpunim dokumentesh.</footer>
 
   <script>
     const params = new URLSearchParams(window.location.search);
@@ -348,7 +349,7 @@
         await audioCtx.resume();
       }
       audioEnabled = !audioEnabled;
-      beatLabel.textContent = audioEnabled ? 'Beat Sync: Audio + Visual' : 'Beat Sync: Visual Pulse';
+      beatLabel.textContent = audioEnabled ? 'Ritëm: audio + efekt vizual' : 'Ritëm: efekt vizual';
       audioToggle.textContent = audioEnabled ? 'Ndalo Audio Beat' : 'Aktivizo Audio Beat';
     });
 

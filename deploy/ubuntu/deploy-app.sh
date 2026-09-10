@@ -19,8 +19,8 @@ sudo cp -f /opt/lightning/publish/* /opt/lightning/
 
 # Nginx snippets used by site config
 sudo mkdir -p /etc/nginx/snippets
-sudo cp -f deploy/ubuntu/nginx-lichting.clisonix.com.conf /etc/nginx/sites-available/lichting.clisonix.com
-sudo ln -sf /etc/nginx/sites-available/lichting.clisonix.com /etc/nginx/sites-enabled/lichting.clisonix.com
+sudo cp -f deploy/ubuntu/nginx-lichting.clisonix.com.conf /etc/nginx/sites-available/scanprocessprint.com
+sudo ln -sf /etc/nginx/sites-available/scanprocessprint.com /etc/nginx/sites-enabled/scanprocessprint.com
 sudo rm -f /etc/nginx/sites-enabled/default
 
 # Systemd service
@@ -35,5 +35,5 @@ sudo systemctl reload nginx
 
 echo "Deploy finished."
 echo "Next:"
-echo "  1) sudo certbot --nginx -d lichting.clisonix.com"
+echo "  1) sudo certbot --nginx -d scanprocessprint.com -d www.scanprocessprint.com"
 echo "  2) sudo bash /opt/lightning/deploy/ubuntu/harden-server.sh"

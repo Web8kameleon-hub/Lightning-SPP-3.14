@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using LightningSPP.Licensing;
 using wwwmmm.Services;
@@ -12,6 +13,48 @@ internal static class LicenseApiServer
     private const int RateLimitMaxRequests = 30;
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
     private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _rateLimits = new();
+
+    private static bool UseTrustedProxyHeaders()
+    {
+        var value = Environment.GetEnvironmentVariable("LSPP_TRUST_PROXY_HEADERS");
+        return bool.TryParse(value, out var enabled) && enabled;
+    }
+
+    private static string GetClientIp(HttpListenerRequest request)
+    {
+        var fallback = request.RemoteEndPoint?.Address?.ToString() ?? "unknown";
+        if (!UseTrustedProxyHeaders())
+            return fallback;
+
+        var cfHeader = request.Headers["CF-Connecting-IP"]?.Trim();
+        if (IsValidIp(cfHeader))
+            return cfHeader!;
+
+        var forwardedFor = request.Headers["X-Forwarded-For"];
+        if (!string.IsNullOrWhiteSpace(forwardedFor))
+        {
+            var first = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(v => v.Trim())
+                .FirstOrDefault(IsValidIp);
+            if (!string.IsNullOrWhiteSpace(first))
+                return first;
+        }
+
+        var xRealIp = request.Headers["X-Real-IP"]?.Trim();
+        if (IsValidIp(xRealIp))
+            return xRealIp!;
+
+        return fallback;
+    }
+
+    private static bool IsValidIp(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        return IPAddress.TryParse(value, out var parsed) &&
+               (parsed.AddressFamily == AddressFamily.InterNetwork || parsed.AddressFamily == AddressFamily.InterNetworkV6);
+    }
 
     private static bool IsRateLimited(string ip)
     {
@@ -85,7 +128,7 @@ internal static class LicenseApiServer
         }
 
         // Rate limiting
-        var clientIp = context.Request.RemoteEndPoint?.Address?.ToString() ?? "unknown";
+        var clientIp = GetClientIp(context.Request);
         if (IsRateLimited(clientIp))
         {
             context.Response.Headers["Retry-After"] = "60";
