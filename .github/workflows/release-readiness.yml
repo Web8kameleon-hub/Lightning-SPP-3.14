@@ -21,14 +21,16 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Restore
-        run: dotnet restore
+      - name: Restore application
+        run: dotnet restore wwwmmm.csproj
+      - name: Restore tests
+        run: dotnet restore Tests/LightningSPP.Tests/LightningSPP.Tests.csproj
       - name: Build release
-        run: dotnet build -c Release --no-restore
+        run: dotnet build wwwmmm.csproj -c Release --no-restore
       - name: Run complete test suite
-        run: dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release --no-build --logger "trx;LogFileName=release-readiness.trx"
+        run: dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release --logger "trx;LogFileName=release-readiness.trx"
       - name: Run real pipeline smoke
-        run: dotnet run -c Release --no-build -- test
+        run: dotnet run --project wwwmmm.csproj -c Release --no-build -- test
       - name: Run performance gates
         run: dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release --no-build --filter FullyQualifiedName~PerformanceGateTests
       - name: Validate release companions
