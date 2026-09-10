@@ -1,457 +1,64 @@
 <!doctype html>
-<html lang="sq">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lightning SPP - Resonance Banner</title>
-  <style>
-    :root {
-      --bg-night: #060b14;
-      --bg-ink: #0e1a2a;
-      --bg-aurora: #12394f;
-      --ice: #c8efff;
-      --soft-ice: #9dc8d8;
-      --pulse: #3bd5ff;
-      --amber: #ff9b38;
-      --panel: #0d1a2da3;
-      --line: #89d9ff40;
-      --stigma: #ffb067;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: "Space Grotesk", "Sora", "Avenir Next", sans-serif;
-      color: var(--ice);
-      background:
-        radial-gradient(1300px 600px at 75% 15%, #1d5f7b44 0%, #00000000 65%),
-        radial-gradient(950px 500px at 20% 5%, #1b3a6640 0%, #00000000 60%),
-        linear-gradient(125deg, var(--bg-night) 0%, var(--bg-ink) 45%, #0d2333 100%);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    .hero {
-      position: relative;
-      isolation: isolate;
-      padding: 92px 22px 52px;
-      text-align: center;
-      overflow: hidden;
-    }
-
-    .atmosphere,
-    .scan-wave,
-    .hero-grid {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    .atmosphere {
-      background:
-        radial-gradient(circle at 15% 30%, #3ce5ff2b 0%, #00000000 42%),
-        radial-gradient(circle at 80% 20%, #ffb06726 0%, #00000000 35%);
-      animation: drift 10s ease-in-out infinite alternate;
-      z-index: -3;
-    }
-
-    .hero-grid {
-      background-image:
-        linear-gradient(var(--line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--line) 1px, transparent 1px);
-      background-size: 52px 52px;
-      opacity: 0.32;
-      -webkit-mask-image: linear-gradient(to bottom, #000 20%, #00000065 70%, transparent 100%);
-      mask-image: linear-gradient(to bottom, #000 20%, #00000065 70%, transparent 100%);
-      z-index: -2;
-    }
-
-    .scan-wave {
-      background:
-        linear-gradient(90deg, #00000000 0%, #58ddff25 40%, #ffc48c33 60%, #00000000 100%);
-      width: 45%;
-      transform: skewX(-18deg);
-      filter: blur(2px);
-      animation: scan 5.8s linear infinite;
-      z-index: -1;
-    }
-
-    .brand {
-      margin: 0;
-      font-size: clamp(48px, 12vw, 136px);
-      line-height: 1;
-      letter-spacing: 0.08em;
-      font-weight: 700;
-      text-transform: lowercase;
-      text-shadow:
-        0 0 1px #ffffff,
-        0 0 16px #33ddff5c,
-        0 0 42px #33ddff4d;
-      display: inline-flex;
-      gap: 0.04em;
-      padding: 8px 16px 12px;
-      position: relative;
-    }
-
-    .brand::after {
-      content: "";
-      position: absolute;
-      left: 8%;
-      right: 8%;
-      bottom: 0;
-      height: 2px;
-      background: linear-gradient(90deg, #00000000, #73ddff, #ffc992, #00000000);
-      filter: drop-shadow(0 0 8px #62daff);
-      opacity: 0.8;
-    }
-
-    .glyph {
-      display: inline-block;
-      transform-origin: center 76%;
-      transition: transform 0.05s linear;
-      color: #e8fbff;
-    }
-
-    .subtitle {
-      max-width: 940px;
-      margin: 20px auto;
-      color: var(--soft-ice);
-      font-size: clamp(16px, 2.5vw, 20px);
-      line-height: 1.5;
-    }
-
-    .actions { margin-top: 26px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
-
-    a.btn {
-      text-decoration: none;
-      color: #052230;
-      background: linear-gradient(120deg, var(--pulse), #8df0ff);
-      border-radius: 999px;
-      padding: 12px 22px;
-      font-weight: 700;
-      border: 1px solid #8ae7ff99;
-      box-shadow: 0 10px 28px #1dcaf83d;
-    }
-
-    a.btn.secondary {
-      background: linear-gradient(120deg, var(--amber), #ffd39a);
-      border-color: #ffc17a99;
-      box-shadow: 0 10px 28px #ffb06742;
-    }
-
-    a.btn.ghost {
-      color: #c2edff;
-      background: #0d2a3f8f;
-      border-color: #7fd9ff59;
-      box-shadow: none;
-    }
-
-    .tagline {
-      margin-top: 14px;
-      color: #d9f5ff;
-      font-size: 14px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      opacity: 0.72;
-    }
-
-    .beat-chip {
-      margin: 12px auto 0;
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      font-size: 12px;
-      color: #b3dbeb;
-      background: #072033a3;
-      border: 1px solid #73d5ff4f;
-      border-radius: 999px;
-      padding: 7px 12px;
-    }
-
-    .beat-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #7ce9ff;
-      box-shadow: 0 0 0 0 #7ce9ff66;
-    }
-
-    .stigma-canvas {
-      width: 100%;
-      max-width: 1000px;
-      height: 150px;
-      margin: 20px auto 6px;
-      display: block;
-      opacity: 0.9;
-    }
-
-    .features {
-      max-width: 1080px;
-      margin: 28px auto 70px;
-      padding: 0 20px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px;
-    }
-
-    .feature {
-      background: var(--panel);
-      border: 1px solid #71d7ff30;
-      border-radius: 14px;
-      padding: 16px;
-      -webkit-backdrop-filter: blur(10px);
-      backdrop-filter: blur(10px);
-      box-shadow: inset 0 1px 0 #ffffff1e;
-    }
-
-    .feature h3 { margin: 0 0 8px; }
-    .feature p { color: #c4e3ef; margin: 0; }
-
-    footer {
-      text-align: center;
-      color: #95b8c8;
-      padding: 18px 16px 24px;
-      font-size: 14px;
-    }
-
-    body.capture-mode .features,
-    body.capture-mode footer {
-      display: none;
-    }
-
-    body.capture-mode .hero {
-      min-height: 100vh;
-      display: grid;
-      place-content: center;
-      gap: 6px;
-    }
-
-    @keyframes scan {
-      from { left: -52%; }
-      to { left: 120%; }
-    }
-
-    @keyframes drift {
-      from { transform: translateX(-1.6%) translateY(-1%); }
-      to { transform: translateX(1.6%) translateY(1.2%); }
-    }
-
-    @media (max-width: 640px) {
-      .hero { padding-top: 74px; }
-      .stigma-canvas { height: 110px; }
-      .tagline { font-size: 12px; letter-spacing: 0.04em; }
-    }
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lightning SPP 3.14 | Scan. Process. Print. In milliseconds.</title>
+<meta name="description" content="Real document and image processing with measurable performance, Stripe billing, license activation, REST API and local or cloud deployment.">
+<style>
+:root{--bg:#050a12;--panel:#0d1827;--line:#1f354b;--text:#eefaff;--muted:#9cb9c8;--cyan:#41dbff;--amber:#ffad55;--green:#52e09b}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:16px/1.6 Inter,system-ui,sans-serif;color:var(--text);background:radial-gradient(900px 500px at 80% -10%,#174b62 0,transparent 65%),var(--bg)}
+a{color:inherit}.wrap{width:min(1120px,calc(100% - 36px));margin:auto}nav{position:sticky;top:0;z-index:10;background:#050a12e8;backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.nav{height:68px;display:flex;align-items:center;gap:26px}.logo{font-weight:800;text-decoration:none;margin-right:auto}.logo span{color:var(--amber)}.nav a:not(.logo):not(.btn){color:var(--muted);text-decoration:none}
+.btn{display:inline-block;border:1px solid #65e5ff66;border-radius:10px;padding:11px 18px;text-decoration:none;font-weight:750;background:linear-gradient(125deg,var(--cyan),#9aeeff);color:#03202b}.btn.alt{background:transparent;color:var(--text);border-color:var(--line)}
+.hero{padding:92px 0 72px}.eyebrow{color:var(--cyan);font-weight:700;letter-spacing:.09em;text-transform:uppercase}.hero h1{font-size:clamp(44px,7vw,80px);line-height:1.02;margin:12px 0 22px;max-width:900px}.hero h1 span{color:var(--amber)}.lead{font-size:clamp(18px,2vw,22px);max-width:760px;color:var(--muted)}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}.proof{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:54px}.metric,.card,.plan{background:linear-gradient(145deg,#112238cc,#09131fcc);border:1px solid var(--line);border-radius:16px;padding:22px}.metric strong{display:block;font-size:28px;color:var(--green)}.metric span{color:var(--muted);font-size:14px}
+section{padding:76px 0}h2{font-size:clamp(30px,4vw,46px);margin:0 0 12px}.section-lead{color:var(--muted);max-width:760px;margin:0 0 34px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card h3,.plan h3{margin-top:0}.card p,.plan p,.plan li{color:var(--muted)}
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden}.flow div{background:var(--panel);padding:30px}.flow b{display:block;color:var(--amber);font-size:22px}
+.pricing{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.plan.featured{border-color:var(--amber);box-shadow:0 0 0 1px #ffad5544}.price{font-size:30px;font-weight:850;color:var(--text)}.plan ul{padding-left:18px;min-height:120px}.badge{color:var(--amber);font-size:12px;font-weight:800;text-transform:uppercase}
+.note{border-left:3px solid var(--cyan);padding:12px 16px;background:#0b1a28;color:var(--muted);margin-top:22px}
+footer{border-top:1px solid var(--line);padding:32px 0;color:var(--muted)}
+@media(max-width:850px){.proof,.pricing{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.nav a:not(.logo):not(.btn){display:none}}
+@media(max-width:540px){.proof,.pricing,.flow{grid-template-columns:1fr}.hero{padding-top:60px}.nav .alt{display:none}}
+</style>
 </head>
 <body>
-  <!-- cSpell:ignore rezonance valezime shtypen rrjedhje futuristik -->
-  <section class="hero">
-    <div class="atmosphere" aria-hidden="true"></div>
-    <div class="hero-grid" aria-hidden="true"></div>
-    <div class="scan-wave" aria-hidden="true"></div>
+<nav><div class="wrap nav"><a class="logo" href="/">Lightning<span>SPP</span> 3.14</a><a href="#product">Product</a><a href="#benchmarks">Benchmarks</a><a href="#pricing">Pricing</a><a href="/dashboard">License Dashboard</a><a class="btn" href="#pricing">Choose a plan</a></div></nav>
+<main>
+<header class="hero"><div class="wrap">
+<div class="eyebrow">Real Scan → Process → Print pipeline</div>
+<h1>Scan. Process. Print. <span>In milliseconds.</span></h1>
+<p class="lead">Process documents and images with real SkiaSharp transformations, ML.NET integration, lossless Brotli artifacts, REST APIs, Stripe billing and web license activation.</p>
+<div class="actions"><a class="btn" href="/dashboard">Open License Dashboard</a><a class="btn alt" href="/swagger">Explore REST API</a></div>
+<div class="proof" id="benchmarks">
+<div class="metric"><strong>0.3 ms</strong><span>Instant mode recorded reference</span></div>
+<div class="metric"><strong>3.7 ms</strong><span>UltraFast recorded reference</span></div>
+<div class="metric"><strong>15 ms</strong><span>Lightning recorded reference</span></div>
+<div class="metric"><strong>3.1M/s</strong><span>Cloud throughput recorded reference</span></div>
+</div>
+<p class="note">Reference results from the repository benchmark record. Runtime performance varies by hardware, payload, profile and concurrency. Release evidence publishes the environment and gates used by CI.</p>
+</div></header>
 
-    <h1 class="brand" id="brand" aria-label="wwwmmm">
-      <span class="glyph">w</span><span class="glyph">w</span><span class="glyph">w</span><span class="glyph">m</span><span class="glyph">m</span><span class="glyph">m</span>
-    </h1>
-    <p class="subtitle">
-      Vala harmonike rrëshqet mbi shkronja, krijon rezonancë dhe i shtyn lehtë poshtë në ritëm.
-      Nën sipërfaqe, nyjet <strong>Stigma</strong> lëvizin fluid si rrjedhë uji duke lidhur Scan → Process → Print.
-    </p>
-    <canvas class="stigma-canvas" id="stigmaCanvas" aria-hidden="true"></canvas>
-    <p class="tagline">Harmonic Wave • Resonance Press • Stigma Fluid Node</p>
-    <div class="beat-chip" id="beatChip"><span class="beat-dot" id="beatDot"></span><span id="beatLabel">Beat Sync: Visual Pulse</span></div>
+<section id="product"><div class="wrap"><h2>One pipeline. Four deployment models.</h2><p class="section-lead">Use Lightning SPP locally, inside your application, behind the REST API or in a controlled enterprise environment.</p>
+<div class="flow"><div><b>01 — Scan</b>TideWave, Resonance and NanoDecibel profiles.</div><div><b>02 — Process</b>CLX, hybrid processing, ML and compression.</div><div><b>03 — Print</b>Deterministic lossless output artifacts and audit data.</div></div>
+<div class="grid" style="margin-top:16px">
+<article class="card"><h3>Real processing</h3><p>Actual image transformation, compression and file output. No artificial-delay path in production mode.</p></article>
+<article class="card"><h3>License operations</h3><p>Issue, activate and inspect Free, Pay‑as‑you‑go, Unlimited and Enterprise licenses from one dashboard.</p></article>
+<article class="card"><h3>Stripe billing</h3><p>Signed webhook verification, legacy/snapshot/thin destination support and replay protection.</p></article>
+</div></div></section>
 
-    <div class="actions">
-      <a class="btn" href="/dashboard">Hap Dashboard</a>
-      <a class="btn secondary" href="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14">GitHub Repo</a>
-      <a class="btn ghost" href="/banner.html">Banner Only</a>
-      <a class="btn ghost" href="#" id="audioToggle">Aktivizo Audio Beat</a>
-    </div>
-  </section>
+<section id="pricing"><div class="wrap"><h2>Pricing customers can understand</h2><p class="section-lead">Start free, pay for actual usage, choose a predictable annual license or request an enterprise agreement.</p>
+<div class="pricing">
+<article class="plan"><h3>Free</h3><div class="price">€0</div><p>Developer entry tier</p><ul><li>1,000 operations/month</li><li>1 device</li><li>Community support</li></ul><a class="btn alt" href="/dashboard">Activate</a></article>
+<article class="plan"><h3>Pay as you go</h3><div class="price">€0.001/op</div><p>€9.99 monthly minimum</p><ul><li>Production use</li><li>All processing profiles</li><li>Usage-based Stripe billing</li></ul><a class="btn" href="https://aba-gmbh.de/lightning-spp/pricing">Buy with Stripe</a></article>
+<article class="plan featured"><div class="badge">Predictable cost</div><h3>Unlimited</h3><div class="price">€99.99/year</div><p>Unlimited operations</p><ul><li>Up to 10 devices</li><li>Commercial use</li><li>Priority email support</li></ul><a class="btn" href="https://aba-gmbh.de/lightning-spp/pricing">Buy with Stripe</a></article>
+<article class="plan"><h3>Enterprise</h3><div class="price">Custom</div><p>Contract and deployment options</p><ul><li>Custom SLA</li><li>On-premise option</li><li>Dedicated integration support</li></ul><a class="btn alt" href="mailto:clisonix@pm.me?subject=Lightning%20SPP%20Enterprise">Contact sales</a></article>
+</div></div></section>
 
-  <section class="features">
-    <article class="feature">
-      <h3>Sub-millisecond API</h3>
-      <p>Instant/UltraFast/Lightning modes për throughput të lartë dhe latencë minimale.</p>
-    </article>
-    <article class="feature">
-      <h3>License Ops</h3>
-      <p>Aktivizim, gjenerim key dhe audit logging internal në një panel të vetëm.</p>
-    </article>
-    <article class="feature">
-      <h3>Cloud Integration</h3>
-      <p>REST endpoints për integrim me sisteme SaaS, billing dhe workflows të jashtme.</p>
-    </article>
-    <article class="feature">
-      <h3>Enterprise Security</h3>
-      <p>Model default Stripe për pagesa, me opsion internal security workflow për raste private.</p>
-    </article>
-  </section>
-
-  <footer>© 2026 Lightning SPP - Resonance Motion Layer.</footer>
-
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const captureMode = params.get('capture') === '1';
-    if (captureMode) {
-      document.body.classList.add('capture-mode');
-    }
-
-    const glyphs = Array.from(document.querySelectorAll('.glyph'));
-    const hero = document.querySelector('.hero');
-    const beatDot = document.getElementById('beatDot');
-    const beatLabel = document.getElementById('beatLabel');
-    const audioToggle = document.getElementById('audioToggle');
-    let beatPulse = 0;
-    let beatTime = 0;
-    const bpm = Number(params.get('bpm') || 92);
-    const beatInterval = 60 / Math.max(40, Math.min(220, bpm));
-    let audioCtx = null;
-    let audioEnabled = false;
-
-    function startBeatClock(ts) {
-      const now = ts / 1000;
-      if (beatTime === 0) beatTime = now;
-      if (now - beatTime >= beatInterval) {
-        beatTime = now;
-        beatPulse = 1;
-        beatDot.style.boxShadow = '0 0 0 10px #7ce9ff33';
-        if (audioEnabled && audioCtx) {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.value = 72;
-          gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.1, audioCtx.currentTime + 0.01);
-          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.14);
-          osc.connect(gain).connect(audioCtx.destination);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.16);
-        }
-      }
-    }
-
-    function fadeBeatPulse() {
-      beatPulse *= 0.9;
-      if (beatPulse < 0.02) {
-        beatDot.style.boxShadow = '0 0 0 0 #7ce9ff00';
-      }
-    }
-
-    audioToggle.addEventListener('click', async (e) => {
-      e.preventDefault();
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        await audioCtx.resume();
-      }
-      audioEnabled = !audioEnabled;
-      beatLabel.textContent = audioEnabled ? 'Beat Sync: Audio + Visual' : 'Beat Sync: Visual Pulse';
-      audioToggle.textContent = audioEnabled ? 'Ndalo Audio Beat' : 'Aktivizo Audio Beat';
-    });
-
-    function animateBrand(t) {
-      startBeatClock(t);
-      fadeBeatPulse();
-      const time = t * 0.0022;
-      glyphs.forEach((glyph, i) => {
-        const phase = time * 2.35 - i * 0.62;
-        const press = Math.max(0, Math.sin(phase));
-        const dip = press * (9.2 + beatPulse * 4.5);
-        const spread = Math.cos(phase * 0.5) * 0.8;
-        glyph.style.transform = `translateY(${dip}px) scaleY(${1 - press * 0.09 - beatPulse * 0.03}) scaleX(${1 + press * 0.03 + beatPulse * 0.01})`;
-        glyph.style.letterSpacing = `${spread}px`;
-      });
-    }
-
-    function runBrandLoop(ts) {
-      animateBrand(ts);
-      requestAnimationFrame(runBrandLoop);
-    }
-
-    const canvas = document.getElementById('stigmaCanvas');
-    const ctx = canvas.getContext('2d');
-    const nodes = [];
-
-    function createNodes(count, width, height) {
-      nodes.length = 0;
-      for (let i = 0; i < count; i++) {
-        nodes.push({
-          x: (i / (count - 1)) * width,
-          y: height * (0.45 + Math.random() * 0.22),
-          vx: 0.65 + Math.random() * 0.9,
-          phase: Math.random() * Math.PI * 2,
-          radius: 3.5 + Math.random() * 3.2
-        });
-      }
-    }
-
-    function resizeCanvas() {
-      const rect = hero.getBoundingClientRect();
-      const width = Math.min(1000, Math.floor(rect.width - 44));
-      const height = window.innerWidth < 640 ? 110 : 150;
-      canvas.width = width;
-      canvas.height = height;
-      createNodes(Math.max(10, Math.floor(width / 85)), width, height);
-    }
-
-    function drawFluid(time) {
-      const t = time * 0.0012;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-      gradient.addColorStop(0, 'rgba(61, 218, 255, 0.25)');
-      gradient.addColorStop(0.5, 'rgba(255, 176, 103, 0.30)');
-      gradient.addColorStop(1, 'rgba(61, 218, 255, 0.22)');
-
-      ctx.beginPath();
-      for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i];
-        node.x += node.vx;
-        if (node.x > canvas.width + 18) node.x = -18;
-
-        const yOsc = Math.sin(t * 1.6 + node.phase + node.x * 0.013) * 16;
-        const y = node.y + yOsc;
-
-        if (i === 0) {
-          ctx.moveTo(node.x, y);
-        } else {
-          const prev = nodes[i - 1];
-          const prevY = prev.y + Math.sin(t * 1.6 + prev.phase + prev.x * 0.013) * 16;
-          const cx = (prev.x + node.x) / 2;
-          const cy = (prevY + y) / 2;
-          ctx.quadraticCurveTo(prev.x, prevY, cx, cy);
-        }
-      }
-      ctx.strokeStyle = gradient;
-      ctx.lineWidth = 2.2 + beatPulse * 0.9;
-      ctx.shadowColor = 'rgba(61, 218, 255, 0.55)';
-      ctx.shadowBlur = 14 + beatPulse * 10;
-      ctx.stroke();
-
-      for (const node of nodes) {
-        const yOsc = Math.sin(t * 1.6 + node.phase + node.x * 0.013) * 16;
-        const y = node.y + yOsc;
-
-        const g = ctx.createRadialGradient(node.x, y, 0, node.x, y, node.radius * 2.8);
-        g.addColorStop(0, 'rgba(255, 186, 122, 0.85)');
-        g.addColorStop(0.5, 'rgba(61, 218, 255, 0.45)');
-        g.addColorStop(1, 'rgba(61, 218, 255, 0)');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(node.x, y, node.radius * 2.2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      requestAnimationFrame(drawFluid);
-    }
-
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    requestAnimationFrame(runBrandLoop);
-    requestAnimationFrame(drawFluid);
-  </script>
-</body>
-</html>
+<section><div class="wrap"><h2>Release evidence, not marketing guesses</h2><div class="grid">
+<article class="card"><h3>Benchmark gates</h3><p>Median gates for Instant, UltraFast and Lightning plus a complete real-pipeline gate.</p></article>
+<article class="card"><h3>Negative tests</h3><p>Invalid Stripe signatures, missing secrets, replayed events, unauthorized administration and invalid inputs.</p></article>
+<article class="card"><h3>Deterministic outputs</h3><p>Golden SHA-256 fixtures verify scan, process and Stigma output behavior across releases.</p></article>
+</div><div class="actions"><a class="btn alt" href="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/blob/main/Docs/RELEASE_EVIDENCE.md">Read release evidence</a><a class="btn alt" href="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14">View source</a></div></div></section>
+</main>
+<footer><div class="wrap">© 2026 ABA GmbH · Lightning SPP 3.14 · <a href="/dashboard">Dashboard</a> · <a href="/openapi.json">OpenAPI</a> · <a href="mailto:clisonix@pm.me">Support</a></div></footer>
+</body></html>
