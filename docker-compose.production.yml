@@ -1,0 +1,36 @@
+services:
+  lightning-spp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: lightning-spp:3.14
+    command: ["serve", "8080"]
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      DOTNET_RUNNING_IN_CONTAINER: "true"
+      DOTNET_ENVIRONMENT: Production
+    ports:
+      - "127.0.0.1:11400:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    volumes:
+      - lightning-data:/home/app/.config/LightningSPP
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 2.0
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  lightning-data:

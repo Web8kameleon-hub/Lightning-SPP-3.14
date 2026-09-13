@@ -29,7 +29,6 @@ proxy_set_header Host $host;
 proxy_set_header X-Real-IP $remote_addr;
 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 proxy_set_header X-Forwarded-Proto $scheme;
-proxy_set_header CF-Connecting-IP $http_cf_connecting_ip;
 proxy_connect_timeout 30s;
 proxy_send_timeout 60s;
 proxy_read_timeout 60s;
