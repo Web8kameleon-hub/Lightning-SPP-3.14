@@ -1,0 +1,61 @@
+name: Production Hosting Readiness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.env.production.example'
+      - 'docker-compose.production.yml'
+      - 'deploy/**'
+      - '.github/workflows/hosting-readiness.yml'
+  push:
+    branches: [main]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.env.production.example'
+      - 'docker-compose.production.yml'
+      - 'deploy/**'
+      - '.github/workflows/hosting-readiness.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosting-readiness-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  application:
+    name: Application & Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore
+      - run: dotnet build --configuration Release --no-restore
+      - run: find deploy -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
+      - run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release
+
+  container:
+    name: Container & Compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: application
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.production.example .env.production
+      - run: docker compose -f docker-compose.production.yml config --quiet
+      - run: docker build -t lightning-spp:${{ github.sha }} .
+      - run: docker run --rm lightning-spp:${{ github.sha }} --help
+      - run: docker run --rm lightning-spp:${{ github.sha }} test
+      - run: docker run --rm lightning-spp:${{ github.sha }} real

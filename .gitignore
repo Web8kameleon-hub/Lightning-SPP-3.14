@@ -234,6 +234,8 @@ _pkginfo.txt
 
 # Others
 ClientBin/
+/.env.production
+.env.*.local
 ~$*
 *~
 *.dbmdl
