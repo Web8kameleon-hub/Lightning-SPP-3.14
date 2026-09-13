@@ -44,7 +44,7 @@ jobs:
       - run: dotnet restore
       - run: dotnet build --configuration Release --no-restore
       - run: find deploy -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
-      - run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --no-build
+      - run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release
 
   container:
     name: Container & Compose
