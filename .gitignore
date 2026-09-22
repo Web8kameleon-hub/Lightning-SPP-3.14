@@ -416,3 +416,7 @@ tools/ffmpeg-*-essentials_build/
 
 # Embedded repository (avoid accidental submodule-like add)
 Lightning-SPP-3.14/
+.env
+.env.*
+!.env.example
+artifacts/

@@ -23,8 +23,9 @@
 **/values.dev.yaml
 LICENSE
 README.md
-!**/.gitignore
-!.git/HEAD
-!.git/config
-!.git/packed-refs
-!.git/refs/heads/**
+**/.env.*
+Lightning-SPP-3.14/
+artifacts/
+tools/
+nupkg/
+**/*.mp4

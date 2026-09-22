@@ -26,12 +26,12 @@ internal static class LicenseApiServer
 
     public static async Task RunAsync(int port, CancellationToken cancellationToken = default)
     {
-        var listener = new HttpListener();
+        using var listener = new HttpListener();
         var inContainer = string.Equals(
             Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
             "true",
             StringComparison.OrdinalIgnoreCase);
-        var bindHost = inContainer ? "+" : "localhost";
+        var bindHost = Environment.GetEnvironmentVariable("LSPP_BIND_HOST") ?? (inContainer ? "+" : "localhost");
         listener.Prefixes.Add($"http://{bindHost}:{port}/");
         listener.Start();
 
@@ -86,7 +86,7 @@ internal static class LicenseApiServer
 
         // Rate limiting
         var clientIp = context.Request.RemoteEndPoint?.Address?.ToString() ?? "unknown";
-        if (IsRateLimited(clientIp))
+        if (context.Request.Url?.AbsolutePath != "/api/health" && IsRateLimited(clientIp))
         {
             context.Response.Headers["Retry-After"] = "60";
             await TextAsync(context, HttpStatusCode.TooManyRequests, "ok=false\nerror=Rate limit exceeded");
@@ -101,6 +101,12 @@ internal static class LicenseApiServer
 
         try
         {
+            if (path == "/site.css" || path == "/dashboard.js")
+            {
+                await ServeStaticAsync(context, path[1..], path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8");
+                return;
+            }
+
             if (path == "/" || path == "/index.html")
             {
                 await ServeStaticAsync(context, "landing.html", "text/html; charset=utf-8");
@@ -169,6 +175,12 @@ internal static class LicenseApiServer
 
             if (path == "/api/license/activate" && context.Request.HttpMethod == "POST")
             {
+                if (!IsAdminAuthorized(context.Request))
+                {
+                    context.Response.Headers["WWW-Authenticate"] = "Bearer";
+                    await TextAsync(context, HttpStatusCode.Unauthorized, "ok=false\nerror=Unauthorized");
+                    return;
+                }
                 var form = await ReadFormAsync(context.Request);
                 var key = ValueFromQueryOrForm(context.Request, form, "key");
                 if (string.IsNullOrWhiteSpace(key))

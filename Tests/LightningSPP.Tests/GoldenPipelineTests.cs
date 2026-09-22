@@ -20,6 +20,12 @@ public class GoldenPipelineTests
         var result = await svc.ScanAsync(input, ScanMode.TideWave, 300);
 
         Assert.True(result.Success);
+        // The scanner now uses ImageSharp (the previous baseline used SkiaSharp).
+        using var image = SixLabors.ImageSharp.Image.Load(result.Data);
+        Assert.True(image.Width > 0 && image.Height > 0);
+        var repeated = await svc.ScanAsync(input, ScanMode.TideWave, 300);
+        Assert.True(repeated.Success);
+        Assert.Equal(result.Data, repeated.Data);
         var hash = Sha256Hex(result.Data);
         AssertGolden("scan_tidewave.sha256", hash);
     }

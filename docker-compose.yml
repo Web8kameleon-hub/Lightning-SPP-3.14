@@ -1,23 +1,25 @@
-version: '3.9'
-
 services:
   lightning-spp:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     image: lightning-spp:latest
-    container_name: lightning-spp
+    hostname: lightning-spp
     restart: unless-stopped
+    init: true
     environment:
-      DOTNET_RUNNING_IN_CONTAINER: "true"
-      # Optional admin token for license management endpoints.
-      # LSPP_ADMIN_TOKEN: "${LSPP_ADMIN_TOKEN:-}"
+      LSPP_ADMIN_TOKEN: "${LSPP_ADMIN_TOKEN:?Set LSPP_ADMIN_TOKEN in .env}"
+      LSPP_LICENSE_SIGNING_KEY: "${LSPP_LICENSE_SIGNING_KEY:?Set LSPP_LICENSE_SIGNING_KEY in .env}"
     ports:
-      - "13080:13080"
-    command: ["serve", "13080"]
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://127.0.0.1:13080/api/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 15s
+      - "127.0.0.1:${HOST_PORT:-13080}:13080"
+    volumes:
+      - lightning-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  lightning-data:
