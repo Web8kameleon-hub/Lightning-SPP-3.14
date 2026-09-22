@@ -1,4 +1,4 @@
-﻿using wwwmmm.PublicAPI;
+using wwwmmm.PublicAPI;
 using wwwmmm.Services;
 using wwwmmm.SDK;
 using LightningSPP.Licensing;
@@ -253,15 +253,15 @@ internal class Program
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
         var rng = new Random();
-        var engines = new[] { ProcessingEngine.CLX, ProcessingEngine.Hybrid, ProcessingEngine.TideWave };
-        var scanModes = new[] { ScanMode.Fast, ScanMode.Lightning, ScanMode.Quality };
+        var engines = new[] { ProcessingEngine.CLX, ProcessingEngine.Hybrid, ProcessingEngine.XCL };
+        var scanModes = new[] { ScanMode.TideWave, ScanMode.Lightning, ScanMode.NanoDecibel };
 
         // Adaptive weights — CLX starts neutral
         var engineWeights = new Dictionary<ProcessingEngine, double>
         {
             [ProcessingEngine.CLX] = 1.0,
             [ProcessingEngine.Hybrid] = 1.0,
-            [ProcessingEngine.TideWave] = 1.0
+            [ProcessingEngine.XCL] = 1.0
         };
 
         long cycle = 0;
@@ -299,7 +299,7 @@ internal class Program
                 OptimizationLevel: 5,
                 UseStigmaMemory: true,
                 ShouldPrint: false,
-                PrintQuality: PrintQuality.Standard,
+                PrintQuality: PrintQuality.Normal,
                 Copies: 1
             );
 
@@ -338,7 +338,7 @@ internal class Program
                 Console.WriteLine($"[Cycle {cycle,6}] Success={totalSuccess} Fail={totalFail} Rate={rate:F1}% | " +
                     $"CLX={engineWeights[ProcessingEngine.CLX]:F2} " +
                     $"Hybrid={engineWeights[ProcessingEngine.Hybrid]:F2} " +
-                    $"TideWave={engineWeights[ProcessingEngine.TideWave]:F2}");
+                    $"XCL={engineWeights[ProcessingEngine.XCL]:F2}");
             }
 
             // Small pause to avoid tight-loop CPU saturation
@@ -348,7 +348,7 @@ internal class Program
         Console.WriteLine($"\n🧠 Self-learning stopped after {cycle} cycles.");
         Console.WriteLine($"   Final weights — CLX:{engineWeights[ProcessingEngine.CLX]:F3} " +
             $"Hybrid:{engineWeights[ProcessingEngine.Hybrid]:F3} " +
-            $"TideWave:{engineWeights[ProcessingEngine.TideWave]:F3}");
+            $"XCL:{engineWeights[ProcessingEngine.XCL]:F3}");
     }
 
     private static async Task RunDemo()
@@ -496,11 +496,9 @@ internal class Program
 
     private static async Task StartApiServer(string[] args)
     {
-        var port = 13080;
-        if (args.Length > 1 && int.TryParse(args[1], out var parsedPort))
-        {
-            port = parsedPort;
-        }
+        var portText = args.Length > 1 ? args[1] : Environment.GetEnvironmentVariable("PORT") ?? "13080";
+        if (!int.TryParse(portText, out var port) || port < 1 || port > 65535)
+            throw new ArgumentException("Port must be an integer between 1 and 65535.");
 
         await LicenseApiServer.RunAsync(port);
     }

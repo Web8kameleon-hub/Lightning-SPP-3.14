@@ -2,6 +2,8 @@
 
 Ky udhëzues ofron një rrugë të shkurtër për instalim, verifikim funksional dhe përdorim bazë të API-së.
 
+Në terminal kopjo vetëm komandat brenda blloqeve të kodit, pa shenjat ``` dhe pa tekstin shpjegues të udhëzuesit.
+
 ## Kërkesat
 
 - .NET SDK 10.0+
@@ -36,8 +38,7 @@ Rezultatet ndryshojnë sipas hardware, por komanda duhet të ekzekutohet pa gabi
 ## 3. Demo funksionale
 
 ```bash
-
-
+dotnet run -- demo
 ```
 
 Opsionale:
@@ -79,6 +80,26 @@ docker build -t lightning-spp .
 docker run lightning-spp demo
 ```
 
+Për serverin me Docker Compose, krijo fillimisht `.env` në dosjen e projektit.
+Në Git Bash, komandat më poshtë gjenerojnë dy sekrete të ndryshme dhe ruajnë çdo `.env` ekzistues:
+
+```bash
+if [ ! -e .env ]; then
+  admin_token=$(openssl rand -hex 32) &&
+  signing_key=$(openssl rand -hex 32) &&
+  printf 'LSPP_ADMIN_TOKEN=%s\nLSPP_LICENSE_SIGNING_KEY=%s\nHOST_PORT=13080\n' "$admin_token" "$signing_key" > .env
+fi
+docker compose up -d --build
+docker compose ps
+curl --fail http://localhost:13080/api/health
+```
+
+Nëse `.env` ekziston me vlera bosh, plotëso `LSPP_ADMIN_TOKEN` dhe
+`LSPP_LICENSE_SIGNING_KEY` me dy vlera të ndryshme të gjeneruara me `openssl rand -hex 32`.
+Mos e publiko `.env` dhe ruaje çelësin e nënshkrimit gjatë përditësimeve.
+Serveri hapet në http://localhost:13080. Për log-et përdor `docker compose logs --tail=100`;
+për ndalim përdor `docker compose down`.
+
 ## 7. Hapat e radhës
 
 1. Lexo dokumentimin kryesor në [README.md](README.md).
@@ -92,6 +113,8 @@ dotnet test
 
 ## Diagnostikim i shpejtë
 
+- `bash: ... command not found` pas kopjimit të udhëzuesit: ekzekuto vetëm komandat, jo tekstin Markdown.
+- `required variable ... is missing a value`: krijo ose plotëso `.env` sipas seksionit Docker Compose më sipër.
 - Nëse `dotnet build` dështon: verifiko versionin e SDK-së.
 - Nëse latency është e lartë: provo input më të vogël dhe profile të ndryshme.
 - Nëse ka probleme me memoria në batch: redukto madhësinë e grupit të input-eve.

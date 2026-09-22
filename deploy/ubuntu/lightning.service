@@ -4,12 +4,16 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/lightning
-ExecStart=/usr/bin/dotnet /opt/lightning/wwwmmm.dll serve 11400
+WorkingDirectory=/opt/lightning/publish
+ExecStart=/usr/bin/dotnet /opt/lightning/publish/wwwmmm.dll serve 11400
 Restart=always
 RestartSec=3
 User=www-data
 Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=XDG_CONFIG_HOME=/var/lib/lightning
+Environment=LSPP_BIND_HOST=127.0.0.1
+EnvironmentFile=/etc/lightning.env
+StateDirectory=lightning
 
 # Service hardening
 NoNewPrivileges=true

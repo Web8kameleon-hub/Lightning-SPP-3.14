@@ -1,116 +1,92 @@
-# Lightning SPP 3.14 - Production Deployment
+# Production hosting
 
-This guide describes two production-ready hosting options for `wwwmmm`:
+The web/API service requires .NET 10 or a Linux Docker host. Static-only hosting
+(such as GitHub Pages) cannot run the API. The default deployment uses the managed
+.NET runtime; Native AOT is opt-in and is not validated for these dependencies.
 
-1. Docker Compose container deployment
-2. Ubuntu VM / bare-metal deployment with systemd + nginx reverse proxy
+## Docker Compose
 
-## Option 1: Docker Compose
-
-Use the repository root `docker-compose.yml` to run `wwwmmm` as a container.
-
-```bash
-docker compose build
-docker compose up -d
-```
-
-The service exposes:
-
-- `http://localhost:13080/api/health`
-- `http://localhost:13080/swagger`
-- `http://localhost:13080/openapi.json`
-
-### Verify
+From the repository root:
 
 ```bash
-curl -I http://localhost:13080/api/health
+cp .env.example .env
+# Generate two independent secrets; paste them into the matching .env fields:
+openssl rand -hex 32
+openssl rand -hex 32
+chmod 600 .env
+docker compose config --quiet
+docker compose up -d --build --wait
+curl -fsS http://localhost:13080/api/health
 ```
 
-### Notes
+Set `LSPP_ADMIN_TOKEN` and `LSPP_LICENSE_SIGNING_KEY` before starting. Keep the
+signing key stable across updates and back it up securely. Do not commit `.env`.
+License issuance, activation and signing status require the admin bearer token.
+Open Workspace administration and enter it in the Administrator access code field before activating a license.
 
-- The image is built from `Dockerfile`
-- The container command overrides the default entrypoint and starts the REST API server on port `13080`
-- If you need license administration, provide `LSPP_ADMIN_TOKEN` in your host environment
+The service runs as a non-root user. Compose publishes only to 127.0.0.1, uses a
+persistent `lightning-data` volume for licenses/audit logs, and fixes the hostname
+because license encryption depends on the machine and user names. Keep both
+stable when restoring backups. Do not use `docker compose down -v` during updates.
+This deployment is for one instance: license state and usage are local to it.
 
-## Option 2: Ubuntu host with systemd + nginx
+## Domain and HTTPS
 
-The repository already includes Ubuntu deployment assets under `deploy/ubuntu`.
+Point your domain's DNS at the host. Install nginx and configure a site like this,
+replacing `example.com`:
 
-### Install prerequisites
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+    client_max_body_size 1m;
+    location / {
+        proxy_pass http://127.0.0.1:13080;
+        proxy_set_header Host localhost;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        add_header X-Content-Type-Options nosniff always;
+    }
+}
+```
+
+Run `sudo nginx -t`, reload nginx, then configure TLS with
+`sudo certbot --nginx -d example.com`. Expose ports 80/443 publicly and keep the
+application port private. Check `/`, `/dashboard`, `/swagger`, `/openapi.json`,
+and `/api/health` through HTTPS. The app's limiter currently groups proxied
+requests under the proxy IP (30 requests/minute); health probes are exempt.
+
+## Other container platforms
+
+Build the root Dockerfile. Its default command starts `serve`, listens on all
+container interfaces, and reads `PORT` (default 13080). Set both secrets above.
+Attach persistent storage at `/data` and preserve the hostname/user for encrypted
+license files. Set `LSPP_BIND_HOST=+` if your platform does not set
+`DOTNET_RUNNING_IN_CONTAINER=true`. Configure TLS at the platform ingress.
+
+## Ubuntu with systemd
+
+Review `deploy/ubuntu/install-server.sh` before running it on Ubuntu 24.04. It
+installs the .NET SDK required by the deployment script. Create
+`/etc/lightning.env` with the two secret variables, restrict it to root (0600),
+and customize the domain in `deploy/ubuntu/nginx-lichting.clisonix.com.conf`.
+Run `deploy/ubuntu/deploy-app.sh` from the checkout. It publishes into
+`/opt/lightning/publish`; systemd stores writable state in `/var/lib/lightning`.
+The systemd service listens at `http://127.0.0.1:11400/api/health`.
+
+The deploy script uses fast-forward updates and stops on local/divergent changes.
+It does not discard work. Back up the publish directory and state before updates;
+restore the previous publish directory and restart `lightning` to roll back.
+
+## Validation and updates
 
 ```bash
-cd /tmp
-curl -fsSL https://raw.githubusercontent.com/Web8kameleon-hub/Lightning-SPP-3.14/main/deploy/ubuntu/install-server.sh -o install-server.sh
-chmod +x install-server.sh
-./install-server.sh
+dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release
+dotnet publish wwwmmm.csproj -c Release -o artifacts/publish
+docker compose logs --tail=100
+docker compose ps
 ```
 
-### Deploy the app
-
-```bash
-cd /tmp
-curl -fsSL https://raw.githubusercontent.com/Web8kameleon-hub/Lightning-SPP-3.14/main/deploy/ubuntu/deploy-app.sh -o deploy-app.sh
-chmod +x deploy-app.sh
-./deploy-app.sh
-```
-
-This script publishes the app to `/opt/lightning/publish`, installs a systemd service, and configures nginx.
-
-### Enable HTTPS
-
-```bash
-sudo certbot --nginx -d <your-domain>
-```
-
-### Harden the server
-
-```bash
-sudo bash /opt/lightning/deploy/ubuntu/harden-server.sh
-```
-
-## Systemd service
-
-The Ubuntu deployment uses a service unit at `/etc/systemd/system/lightning.service`.
-
-### Example settings
-
-- Working directory: `/opt/lightning`
-- Command: `/usr/bin/dotnet /opt/lightning/wwwmmm.dll serve 11400`
-- Restart: `always`
-- Environment: `ASPNETCORE_ENVIRONMENT=Production`
-
-## Reverse proxy
-
-A reverse proxy is recommended for production. The repository includes an nginx example at:
-
-- `deploy/ubuntu/nginx-lichting.clisonix.com.conf`
-
-That config forwards traffic to the local app port.
-
-## Healthcheck and monitoring
-
-Use the built-in endpoint for readiness checks:
-
-```bash
-curl -f http://127.0.0.1:13080/api/health
-```
-
-For Ubuntu systemd deployment the healthcheck target is:
-
-```bash
-curl -f http://127.0.0.1:11400/api/health
-```
-
-## What this repo already has
-
-- `Dockerfile` for container builds
-- `deploy/ubuntu/install-server.sh`
-- `deploy/ubuntu/deploy-app.sh`
-- `deploy/ubuntu/lightning.service`
-- `deploy/ubuntu/nginx-lichting.clisonix.com.conf`
-- `deploy/ubuntu/harden-server.sh`
-
-## Recommended next step
-
-- If you want a cloud-ready deployment, use Docker Compose for container hosting.
-- If you want a managed Ubuntu VM host, use the existing `deploy/ubuntu` scripts and update the nginx domain for your environment.
+Keep `.env` and backups outside source control. After each update, verify health,
+static pages, and that an unauthenticated license administration request returns
+401. The CI workflow also checks the built container's HTTP routes.
