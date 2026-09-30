@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.IO.Compression;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using wwwmmm.Services;
@@ -46,7 +47,7 @@ public class GoldenPipelineTests
     }
 
     [Fact]
-    public async Task Golden_Print_Stigma_OutputArtifact_Hash_IsStable()
+    public async Task Print_Stigma_OutputArtifact_RoundTripsWithoutDataLoss()
     {
         var outputDir = Path.Combine(Path.GetTempPath(), "LightningSPP-GoldenTests");
         Directory.CreateDirectory(outputDir);
@@ -59,8 +60,12 @@ public class GoldenPipelineTests
         Assert.False(string.IsNullOrWhiteSpace(result.Metadata.Destination));
 
         var artifact = await File.ReadAllBytesAsync(result.Metadata.Destination);
-        var hash = Sha256Hex(artifact);
-        AssertGolden("print_stigma.sha256", hash);
+        // Brotli bytes may change with runtime versions; the lossless payload is the contract.
+        using var source = new MemoryStream(artifact);
+        using var decoder = new BrotliStream(source, CompressionMode.Decompress);
+        using var restored = new MemoryStream();
+        await decoder.CopyToAsync(restored);
+        Assert.Equal(input, restored.ToArray());
     }
 
     private static void AssertGolden(string fileName, string actual)
@@ -73,7 +78,7 @@ public class GoldenPipelineTests
             "1",
             StringComparison.OrdinalIgnoreCase);
 
-        if (update || !File.Exists(path))
+        if (update)
         {
             File.WriteAllText(path, actual + Environment.NewLine, new UTF8Encoding(false));
         }

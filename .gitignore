@@ -420,3 +420,4 @@ Lightning-SPP-3.14/
 .env.*
 !.env.example
 artifacts/
+!.env.production.example
