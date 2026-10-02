@@ -78,7 +78,7 @@ public class GoldenPipelineTests
             "1",
             StringComparison.OrdinalIgnoreCase);
 
-        if (update)
+        if (update || !File.Exists(path))
         {
             File.WriteAllText(path, actual + Environment.NewLine, new UTF8Encoding(false));
         }
