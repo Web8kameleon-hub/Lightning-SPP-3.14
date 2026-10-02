@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
+      contents: read
     steps:
       - name: Auto assign reviewer
         uses: kentaro-m/auto-assign-action@v2.0.0
