@@ -169,6 +169,25 @@ internal static class LicenseApiServer
                 return;
             }
 
+            if (path == "/favicon.ico")
+            {
+                await ServeStaticAsync(context, "favicon.ico", "image/x-icon");
+                return;
+            }
+
+            if (path is "/favicon-16x16.png" or "/favicon-32x32.png" or "/favicon-48x48.png"
+                or "/apple-touch-icon.png" or "/android-chrome-192x192.png" or "/android-chrome-512x512.png")
+            {
+                await ServeStaticAsync(context, path[1..], "image/png");
+                return;
+            }
+
+            if (path == "/site.webmanifest")
+            {
+                await ServeStaticAsync(context, "site.webmanifest", "application/manifest+json; charset=utf-8");
+                return;
+            }
+
             if (path == "/swagger")
             {
                 await ServeStaticAsync(context, "swagger.html", "text/html; charset=utf-8");
