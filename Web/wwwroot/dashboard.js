@@ -43,8 +43,9 @@ async function refreshStatus() {
 async function submitLicense(event, kind) {
   event.preventDefault();
   const output = kind === 'activate' ? 'activation' : 'newKey';
-  const token = byId('adminToken').value.trim();
-  if (!token) { message(output,'Enter your administrator access code above to continue.','error'); byId('adminToken').focus(); return; }
+  const needsAdmin = kind !== 'activate';
+  const token = needsAdmin ? byId('adminToken').value.trim() : '';
+  if (needsAdmin && !token) { message(output,'Enter your administrator access code above to continue.','error'); byId('adminToken').focus(); return; }
   const button = event.currentTarget.querySelector('button');
   const oldLabel = button.textContent;
   button.disabled = true; button.textContent = kind === 'activate' ? 'Activating…' : 'Creating…';
@@ -52,7 +53,9 @@ async function submitLicense(event, kind) {
   if (kind === 'issue') { byId('createdLicense').hidden = true; byId('generatedKey').value = ''; }
   try {
     const payload = kind === 'activate' ? {key:byId('licenseKey').value.trim()} : {email:byId('email').value.trim(),company:byId('company').value.trim(),tier:byId('tier').value};
-    const data = await request('/api/license/' + kind, {method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(payload)});
+    const headers = {'Content-Type':'application/x-www-form-urlencoded'};
+    if (needsAdmin) headers.Authorization = 'Bearer '+token;
+    const data = await request('/api/license/' + kind, {method:'POST',headers,body:new URLSearchParams(payload)});
     if (!isTrue(data.ok)) throw new Error('The license could not be saved. Please check your details and try again.');
     if (kind === 'issue') {
       if (!data.key) throw new Error('No license code was returned. Please contact your workspace administrator.');

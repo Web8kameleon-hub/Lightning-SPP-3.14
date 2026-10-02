@@ -208,12 +208,9 @@ internal static class LicenseApiServer
 
             if (path == "/api/license/activate" && context.Request.HttpMethod == "POST")
             {
-                if (!IsAdminAuthorized(context.Request))
-                {
-                    context.Response.Headers["WWW-Authenticate"] = "Bearer";
-                    await TextAsync(context, HttpStatusCode.Unauthorized, "ok=false\nerror=Unauthorized");
-                    return;
-                }
+                // Self-service: any customer with a valid, signed license key may activate it.
+                // LicenseManager.ActivateLicense cryptographically validates the key itself,
+                // so no admin credential is required here (unlike /issue and /signing-status).
                 var form = await ReadFormAsync(context.Request);
                 var key = ValueFromQueryOrForm(context.Request, form, "key");
                 if (string.IsNullOrWhiteSpace(key))

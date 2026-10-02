@@ -105,7 +105,7 @@
     "/api/license/activate": {
       "post": {
         "summary": "Activate a license key",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Self-service. Any valid, signed license key may be activated; no administrator token is required.",
         "requestBody": {
           "required": true,
           "content": {
