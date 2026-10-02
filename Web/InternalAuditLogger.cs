@@ -8,8 +8,7 @@ internal static class InternalAuditLogger
     private const int MaxRotatedFiles = 5;
 
     private static readonly string LogDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "LightningSPP",
+        RuntimeSecurity.DataDirectory,
         "logs");
 
     private static readonly string LogFilePath = Path.Combine(LogDirectory, "internal-audit.log");

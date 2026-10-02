@@ -7,7 +7,7 @@
 <style>
 :root{--bg:#050a12;--panel:#0d1827;--line:#1f354b;--text:#eefaff;--muted:#9cb9c8;--cyan:#41dbff;--amber:#ffad55;--green:#52e09b}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:16px/1.6 Inter,system-ui,sans-serif;color:var(--text);background:radial-gradient(900px 500px at 80% -10%,#174b62 0,transparent 65%),var(--bg)}
-a{color:inherit}.wrap{width:min(1120px,calc(100% - 36px));margin:auto}nav{position:sticky;top:0;z-index:10;background:#050a12e8;backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+a{color:inherit}.wrap{width:min(1120px,calc(100% - 36px));margin:auto}nav{position:sticky;top:0;z-index:10;background:#050a12e8;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
 .nav{height:68px;display:flex;align-items:center;gap:26px}.logo{font-weight:800;text-decoration:none;margin-right:auto}.logo span{color:var(--amber)}.nav a:not(.logo):not(.btn){color:var(--muted);text-decoration:none}
 .btn{display:inline-block;border:1px solid #65e5ff66;border-radius:10px;padding:11px 18px;text-decoration:none;font-weight:750;background:linear-gradient(125deg,var(--cyan),#9aeeff);color:#03202b}.btn.alt{background:transparent;color:var(--text);border-color:var(--line)}
 .hero{padding:92px 0 72px}.eyebrow{color:var(--cyan);font-weight:700;letter-spacing:.09em;text-transform:uppercase}.hero h1{font-size:clamp(44px,7vw,80px);line-height:1.02;margin:12px 0 22px;max-width:900px}.hero h1 span{color:var(--amber)}.lead{font-size:clamp(18px,2vw,22px);max-width:760px;color:var(--muted)}
@@ -27,15 +27,9 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--muted)}
 <header class="hero"><div class="wrap">
 <div class="eyebrow">Real Scan → Process → Print pipeline</div>
 <h1>Scan. Process. Print. <span>In milliseconds.</span></h1>
-<p class="lead">Process documents and images with real SkiaSharp transformations, ML.NET integration, lossless Brotli artifacts, REST APIs, Stripe billing and web license activation.</p>
+<p class="lead">Process documents and images with real SkiaSharp transformations, configured ONNX inference, lossless Brotli artifacts, REST APIs, verified Stripe webhook fulfillment and administrator license activation.</p>
 <div class="actions"><a class="btn" href="/dashboard">Open License Dashboard</a><a class="btn alt" href="/swagger">Explore REST API</a></div>
-<div class="proof" id="benchmarks">
-<div class="metric"><strong>0.3 ms</strong><span>Instant mode recorded reference</span></div>
-<div class="metric"><strong>3.7 ms</strong><span>UltraFast recorded reference</span></div>
-<div class="metric"><strong>15 ms</strong><span>Lightning recorded reference</span></div>
-<div class="metric"><strong>3.1M/s</strong><span>Cloud throughput recorded reference</span></div>
-</div>
-<p class="note">Reference results from the repository benchmark record. Runtime performance varies by hardware, payload, profile and concurrency. Release evidence publishes the environment and gates used by CI.</p>
+<p class="note">Processing timings are measured per operation. No throughput or latency guarantee is inferred from synthetic examples. AI inference requires a configured ONNX model and matching input tensor.</p>
 </div></header>
 
 <section id="product"><div class="wrap"><h2>One pipeline. Four deployment models.</h2><p class="section-lead">Use Lightning SPP locally, inside your application, behind the REST API or in a controlled enterprise environment.</p>

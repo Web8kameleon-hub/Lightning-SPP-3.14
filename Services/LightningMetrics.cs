@@ -67,7 +67,7 @@ internal static class LightningMetrics
         lock (_sync)
         {
             var availability = _pipelineRequests == 0
-                ? 100.0
+                ? double.NaN
                 : (_pipelineSuccess * 100.0) / _pipelineRequests;
             var scanAvg = AvgDouble(_scanTotalMs, _scanCalls);
             var processAvg = AvgDouble(_processTotalMs, _processCalls);
@@ -78,6 +78,7 @@ internal static class LightningMetrics
 
             var sb = new StringBuilder();
             sb.AppendLine("ok=true");
+            sb.AppendLine($"hasMeasurements={(_pipelineRequests > 0).ToString().ToLowerInvariant()}");
             sb.AppendLine($"pipelineRequests={_pipelineRequests}");
             sb.AppendLine($"pipelineSuccess={_pipelineSuccess}");
             sb.AppendLine($"pipelineFailure={_pipelineFailure}");
@@ -104,7 +105,7 @@ internal static class LightningMetrics
         lock (_sync)
         {
             var availability = _pipelineRequests == 0
-                ? 100.0
+                ? double.NaN
                 : (_pipelineSuccess * 100.0) / _pipelineRequests;
             var scanAvg = AvgDouble(_scanTotalMs, _scanCalls);
             var processAvg = AvgDouble(_processTotalMs, _processCalls);
@@ -122,6 +123,7 @@ internal static class LightningMetrics
 
             var sb = new StringBuilder();
             sb.AppendLine("ok=true");
+            sb.AppendLine($"hasMeasurements={(_pipelineRequests > 0).ToString().ToLowerInvariant()}");
             sb.AppendLine($"alertsCount={alerts.Count}");
             sb.AppendLine($"alertsActive={(alerts.Count > 0).ToString().ToLowerInvariant()}");
             foreach (var a in alerts)
@@ -140,7 +142,7 @@ internal static class LightningMetrics
 
     private static double AvgDouble(long total, long count)
     {
-        if (count == 0) return 0;
+        if (count == 0) return double.NaN;
         return total / (double)count;
     }
 }

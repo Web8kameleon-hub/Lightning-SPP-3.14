@@ -1,298 +1,99 @@
-using Microsoft.ML;
-using Microsoft.ML.Data;
 using System.Diagnostics;
-using System.Buffers;
-using System.Threading.Channels;
 using System.IO.Compression;
+using Microsoft.ML.OnnxRuntime;
+using Microsoft.ML.OnnxRuntime.Tensors;
 
 namespace wwwmmm.Services.Implementation;
 
-/// <summary>
-/// REAL AI Processing Service - Using Microsoft.ML and ONNX Runtime
-/// Not simulated - Actual ML inference with Clisonic AI
-/// </summary>
+/// <summary>Brotli compression and explicitly configured ONNX float-tensor inference.</summary>
 public class RealAIProcessor : IProcessingService
 {
-    private readonly MLContext _mlContext;
-    private readonly Channel<byte[]> _processingChannel;
-
-    public RealAIProcessor()
+    public async Task<ProcessingResult> ProcessAsync(byte[] data, ProcessingOptions options, CancellationToken cancellationToken = default)
     {
-        _mlContext = new MLContext(seed: 0);
-        
-        // Real high-performance channel for async processing
-        _processingChannel = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(1000)
-        {
-            FullMode = BoundedChannelFullMode.Wait,
-            SingleReader = false,
-            SingleWriter = false
-        });
-    }
-
-    public async Task<ProcessingResult> ProcessAsync(
-        byte[] data,
-        ProcessingOptions options,
-        CancellationToken cancellationToken = default)
-    {
-        var sw = Stopwatch.StartNew();
-
+        var clock = Stopwatch.StartNew();
         try
         {
-            var processedData = options.Engine switch
+            ArgumentNullException.ThrowIfNull(data);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (options.Engine == ProcessingEngine.Clisonic || options.UseAI || options.UseClisonic)
+                return RunInference(data, clock, cancellationToken);
+            return options.Engine switch
             {
                 ProcessingEngine.CLX => await ClxProcessAsync(data, cancellationToken),
                 ProcessingEngine.CLI_I => await CliProcessAsync(data, cancellationToken),
-                ProcessingEngine.XCL => await XclProcessAsync(data, cancellationToken),
-                ProcessingEngine.Clisonic => await ClisonicAIProcessAsync(data, cancellationToken),
-                ProcessingEngine.Hybrid => await HybridRealProcessAsync(data, options, cancellationToken),
-                ProcessingEngine.Auto => await AutoSelectEngineAsync(data, options, cancellationToken),
-                _ => await HybridRealProcessAsync(data, options, cancellationToken)
+                ProcessingEngine.XCL or ProcessingEngine.Hybrid => await XclProcessAsync(data, cancellationToken),
+                ProcessingEngine.Auto => data.Length < 1024 ? await ClxProcessAsync(data, cancellationToken)
+                    : await CliProcessAsync(data, cancellationToken),
+                _ => throw new ArgumentOutOfRangeException(nameof(options.Engine))
             };
-
-            sw.Stop();
-
-            var metadata = new ProcessingMetadata(
-                DateTime.UtcNow,
-                sw.ElapsedMilliseconds,
-                options.Engine.ToString(),
-                options.OptimizationLevel,
-                new Dictionary<string, object>
-                {
-                    ["UseAI"] = options.UseAI,
-                    ["UseClisonic"] = options.UseClisonic,
-                    ["UseStigmaMemory"] = options.UseStigmaMemory,
-                    ["RealProcessing"] = true
-                }
-            );
-
-            return new ProcessingResult(processedData.ProcessedData, metadata, true);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            sw.Stop();
-            return new ProcessingResult(
-                Array.Empty<byte>(),
-                new ProcessingMetadata(
-                    DateTime.UtcNow,
-                    sw.ElapsedMilliseconds,
-                    "Error",
-                    0,
-                    new Dictionary<string, object> { ["Error"] = ex.Message }
-                ),
-                false,
-                ex.Message
-            );
+            return new ProcessingResult([], new ProcessingMetadata(DateTime.UtcNow, clock.ElapsedMilliseconds,
+                "Unavailable", 0, new() { ["Error"] = ex.Message }), false, ex.Message);
         }
     }
 
-    public async Task<ProcessingResult> ClxProcessAsync(byte[] data, CancellationToken cancellationToken = default)
+    public Task<ProcessingResult> ClxProcessAsync(byte[] data, CancellationToken cancellationToken = default) =>
+        CompressAsync(data, CompressionLevel.Fastest, cancellationToken);
+    public Task<ProcessingResult> CliProcessAsync(byte[] data, CancellationToken cancellationToken = default) =>
+        CompressAsync(data, CompressionLevel.Optimal, cancellationToken);
+    public Task<ProcessingResult> XclProcessAsync(byte[] data, CancellationToken cancellationToken = default) =>
+        CompressAsync(data, CompressionLevel.SmallestSize, cancellationToken);
+
+    private static async Task<ProcessingResult> CompressAsync(byte[] data, CompressionLevel level, CancellationToken token)
     {
-        var sw = Stopwatch.StartNew();
-
-        // REAL CLX: Fast compression-based processing
-        var processed = await CompressWithBrotliAsync(data, CompressionLevel.Fastest, cancellationToken);
-
-        sw.Stop();
-
-        var metadata = new ProcessingMetadata(
-            DateTime.UtcNow,
-            sw.ElapsedMilliseconds,
-            "CLX-Real-Compression",
-            3,
-            new Dictionary<string, object> 
-            { 
-                ["CompressionRatio"] = (double)data.Length / processed.Length,
-                ["Algorithm"] = "Brotli-Fastest"
-            }
-        );
-
-        return new ProcessingResult(processed, metadata, true);
-    }
-
-    public async Task<ProcessingResult> CliProcessAsync(byte[] data, CancellationToken cancellationToken = default)
-    {
-        var sw = Stopwatch.StartNew();
-
-        // REAL CLI.I: Optimal compression
-        var processed = await CompressWithBrotliAsync(data, CompressionLevel.Optimal, cancellationToken);
-
-        sw.Stop();
-
-        var metadata = new ProcessingMetadata(
-            DateTime.UtcNow,
-            sw.ElapsedMilliseconds,
-            "CLI.I-Real-Optimal",
-            3,
-            new Dictionary<string, object> 
-            { 
-                ["CompressionRatio"] = (double)data.Length / processed.Length,
-                ["Algorithm"] = "Brotli-Optimal"
-            }
-        );
-
-        return new ProcessingResult(processed, metadata, true);
-    }
-
-    public async Task<ProcessingResult> XclProcessAsync(byte[] data, CancellationToken cancellationToken = default)
-    {
-        var sw = Stopwatch.StartNew();
-
-        // REAL XCL: SmallestSize compression + memory pooling
-        using var pool = MemoryPool<byte>.Shared;
-        var processed = await CompressWithBrotliAsync(data, CompressionLevel.SmallestSize, cancellationToken);
-
-        sw.Stop();
-
-        var metadata = new ProcessingMetadata(
-            DateTime.UtcNow,
-            sw.ElapsedMilliseconds,
-            "XCL-Real-Maximum",
-            3,
-            new Dictionary<string, object> 
-            { 
-                ["CompressionRatio"] = (double)data.Length / processed.Length,
-                ["Algorithm"] = "Brotli-SmallestSize",
-                ["MemoryPooled"] = true
-            }
-        );
-
-        return new ProcessingResult(processed, metadata, true);
-    }
-
-    private async Task<ProcessingResult> ClisonicAIProcessAsync(byte[] data, CancellationToken cancellationToken)
-    {
-        var sw = Stopwatch.StartNew();
-
-        // REAL Clisonic AI: ML-based optimization
-        var processed = await MLOptimizeAsync(data, cancellationToken);
-
-        sw.Stop();
-
-        var metadata = new ProcessingMetadata(
-            DateTime.UtcNow,
-            sw.ElapsedMilliseconds,
-            "Clisonic-AI-Real",
-            5,
-            new Dictionary<string, object> 
-            { 
-                ["MLEngine"] = "Microsoft.ML",
-                ["AIOptimized"] = true,
-                ["ModelVersion"] = "1.0"
-            }
-        );
-
-        return new ProcessingResult(processed, metadata, true);
-    }
-
-    private async Task<ProcessingResult> HybridRealProcessAsync(
-        byte[] data,
-        ProcessingOptions options,
-        CancellationToken cancellationToken)
-    {
-        var sw = Stopwatch.StartNew();
-
-        // REAL Hybrid: Pipeline through all engines
-        var step1 = await CompressWithBrotliAsync(data, CompressionLevel.Fastest, cancellationToken);
-        var step2 = await CompressWithBrotliAsync(step1, CompressionLevel.Optimal, cancellationToken);
-        var step3 = await CompressWithBrotliAsync(step2, CompressionLevel.SmallestSize, cancellationToken);
-
-        byte[] final = step3;
-        if (options.UseClisonic)
-        {
-            final = await MLOptimizeAsync(step3, cancellationToken);
-        }
-
-        if (options.UseStigmaMemory)
-        {
-            final = await MemoryOptimizeAsync(final, cancellationToken);
-        }
-
-        sw.Stop();
-
-        var metadata = new ProcessingMetadata(
-            DateTime.UtcNow,
-            sw.ElapsedMilliseconds,
-            "Hybrid-Real-Pipeline",
-            options.OptimizationLevel,
-            new Dictionary<string, object>
-            {
-                ["Stages"] = "CLX + CLI.I + XCL + AI + Memory",
-                ["FinalCompressionRatio"] = (double)data.Length / final.Length,
-                ["PipelineSteps"] = options.UseClisonic ? 5 : 4
-            }
-        );
-
-        return new ProcessingResult(final, metadata, true);
-    }
-
-    private async Task<ProcessingResult> AutoSelectEngineAsync(
-        byte[] data,
-        ProcessingOptions options,
-        CancellationToken cancellationToken)
-    {
-        // REAL Auto-select based on data characteristics
-        var dataSize = data.Length;
-
-        if (dataSize < 1024) // <1KB
-            return await ClxProcessAsync(data, cancellationToken);
-        else if (dataSize < 1024 * 100) // <100KB
-            return await CliProcessAsync(data, cancellationToken);
-        else if (dataSize < 1024 * 1024) // <1MB
-            return await XclProcessAsync(data, cancellationToken);
-        else
-            return await HybridRealProcessAsync(data, options, cancellationToken);
-    }
-
-    // REAL Helper Methods
-
-    private async Task<byte[]> CompressWithBrotliAsync(
-        byte[] data,
-        CompressionLevel level,
-        CancellationToken cancellationToken)
-    {
+        ArgumentNullException.ThrowIfNull(data);
+        var clock = Stopwatch.StartNew();
         using var output = new MemoryStream();
-        using (var brotli = new BrotliStream(output, level))
-        {
-            await brotli.WriteAsync(data, cancellationToken);
-        }
-        return output.ToArray();
-    }
-
-    private async Task<byte[]> MLOptimizeAsync(byte[] data, CancellationToken cancellationToken)
-    {
-        // REAL ML optimization using pattern recognition
-        return await Task.Run(() =>
-        {
-            // Simple pattern-based optimization
-            // In production, this would use trained ML models
-            var optimized = new byte[data.Length];
-            Buffer.BlockCopy(data, 0, optimized, 0, data.Length);
-
-            // ML-inspired optimization: reduce redundancy
-            for (int i = 1; i < optimized.Length; i++)
+        using (var compressor = new BrotliStream(output, level, leaveOpen: true))
+            await compressor.WriteAsync(data, token);
+        var bytes = output.ToArray();
+        return new ProcessingResult(bytes, new ProcessingMetadata(DateTime.UtcNow, clock.ElapsedMilliseconds,
+            "Brotli-" + level, (int)level, new()
             {
-                if (optimized[i] == optimized[i - 1])
-                {
-                    optimized[i] = (byte)(optimized[i] ^ 0x01); // XOR pattern
-                }
-            }
-
-            return optimized;
-        }, cancellationToken);
+                ["Algorithm"] = "Brotli", ["UseAI"] = false,
+                ["InputBytes"] = data.Length, ["OutputBytes"] = bytes.Length,
+                ["CompressionRatio"] = (double)data.Length / bytes.Length
+            }), true);
     }
 
-    private async Task<byte[]> MemoryOptimizeAsync(byte[] data, CancellationToken cancellationToken)
+    private static ProcessingResult RunInference(byte[] data, Stopwatch clock, CancellationToken token)
     {
-        // REAL Stigma Memory: Use memory pooling for efficiency
-        using var pool = MemoryPool<byte>.Shared;
-        using var memory = pool.Rent(data.Length);
-        
-        data.CopyTo(memory.Memory.Span);
-        
-        var result = new byte[data.Length];
-        memory.Memory.Span.Slice(0, data.Length).CopyTo(result);
-        
-        await Task.CompletedTask;
-        return result;
+        var model = Environment.GetEnvironmentVariable("LSPP_ONNX_MODEL_PATH");
+        if (string.IsNullOrWhiteSpace(model) || !File.Exists(model))
+            throw new InvalidOperationException("AI inference unavailable: configure an existing LSPP_ONNX_MODEL_PATH.");
+        // Explicit raw float32 contract; never reinterpret an image or compressed artifact as model features.
+        var shapeText = Environment.GetEnvironmentVariable("LSPP_ONNX_INPUT_SHAPE");
+        if (string.IsNullOrWhiteSpace(shapeText))
+            throw new InvalidOperationException("Set LSPP_ONNX_INPUT_SHAPE and provide little-endian float32 tensor bytes.");
+        var shape = shapeText.Split(',').Select(int.Parse).ToArray();
+        if (shape.Length == 0 || shape.Any(x => x < 1)) throw new ArgumentException("Invalid ONNX input shape.");
+        var count = shape.Aggregate(1L, (a, b) => checked(a * b));
+        if (checked(count * sizeof(float)) != data.LongLength) throw new ArgumentException("Input bytes do not match the configured float32 tensor shape.");
+        var values = new float[checked((int)count)];
+        for (var i = 0; i < values.Length; i++)
+            values[i] = System.Buffers.Binary.BinaryPrimitives.ReadSingleLittleEndian(data.AsSpan(i * 4, 4));
+        using var session = new InferenceSession(model);
+        if (session.InputMetadata.Count != 1 || session.OutputMetadata.Count != 1)
+            throw new InvalidOperationException("This adapter requires exactly one float tensor input and output.");
+        var input = session.InputMetadata.Single();
+        if (input.Value.ElementType != typeof(float)) throw new InvalidOperationException("Model input must be float32.");
+        using var run = new RunOptions();
+        using var registration = token.Register(() => run.Terminate = true);
+        using var result = session.Run(new[] { NamedOnnxValue.CreateFromTensor(input.Key, new DenseTensor<float>(values, shape)) }, session.OutputNames, run);
+        token.ThrowIfCancellationRequested();
+        var tensor = result.Single().AsTensor<float>();
+        var floats = tensor.ToArray();
+        var bytes = new byte[checked(floats.Length * 4)];
+        for (var i = 0; i < floats.Length; i++)
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(i * 4, 4), floats[i]);
+        return new ProcessingResult(bytes, new ProcessingMetadata(DateTime.UtcNow, clock.ElapsedMilliseconds,
+            "ONNX Runtime", 0, new()
+            {
+                ["UseAI"] = true, ["Model"] = Path.GetFileName(model),
+                ["OutputShape"] = tensor.Dimensions.ToArray(), ["OutputFormat"] = "float32-le"
+            }), true);
     }
 }

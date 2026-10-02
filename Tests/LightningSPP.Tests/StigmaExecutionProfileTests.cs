@@ -14,7 +14,7 @@ public class StigmaExecutionProfileTests
 
         Assert.Equal(ScanMode.NanoDecibel, request.ScanMode);
         Assert.Equal(ProcessingEngine.Hybrid, request.ProcessingEngine);
-        Assert.True(request.UseAI);
+        Assert.False(request.UseAI);
         Assert.True(request.UseStigmaMemory);
         Assert.Equal(PrintQuality.Stigma, request.PrintQuality);
     }
@@ -26,7 +26,7 @@ public class StigmaExecutionProfileTests
 
         Assert.Equal(ScanMode.TideWave, request.ScanMode);
         Assert.Equal(ProcessingEngine.Auto, request.ProcessingEngine);
-        Assert.True(request.UseAI);
+        Assert.False(request.UseAI);
         Assert.False(request.UseNanoDecibel);
         Assert.Equal(PrintQuality.High, request.PrintQuality);
     }

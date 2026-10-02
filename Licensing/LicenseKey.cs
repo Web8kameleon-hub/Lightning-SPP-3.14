@@ -10,7 +10,7 @@ namespace LightningSPP.Licensing;
 /// </summary>
 public class LicenseKey
 {
-    private const string LegacyPrefix = "LSPP";
+    private static readonly string DevelopmentSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     private const string SignedPrefix = "LSP2";
     private const string SigningKeyEnv = "LSPP_LICENSE_SIGNING_KEY";
     private const string SigningKeysEnv = "LSPP_LICENSE_SIGNING_KEYS";
@@ -53,7 +53,7 @@ public class LicenseKey
     /// Generate a new Lightning SPP license key
     /// Format (signed): LSP2-{KID}-{TIER}-{EXP_yyyyMMdd}-{SEG}-{SIGNATURE}
     /// Example: LSP2-k1-UNLTD-20270524-AB12CD34-9F04C4F7AA2E1B5C
-    /// Legacy LSPP-* keys remain supported for backward compatibility.
+    /// Unsigned legacy keys are rejected; reissue them through an authorized administrator.
     /// </summary>
     public static LicenseKey Generate(
         LicenseTier tier,
@@ -125,8 +125,7 @@ public class LicenseKey
         var key = ResolveSigningKeys();
         if (!key.TryGetValue(kid, out var signingSecret))
         {
-            signingSecret = ResolveDefaultSigningSecret();
-            kid = "k1";
+            throw new InvalidOperationException("Active signing KID is not configured.");
         }
 
         if (IsKidExpired(kid, DateTime.UtcNow, out var expiresOn))
@@ -159,11 +158,26 @@ public class LicenseKey
         var secret = Environment.GetEnvironmentVariable(SigningKeyEnv);
         if (string.IsNullOrWhiteSpace(secret))
         {
-            // Dev fallback for local usage. In production set LSPP_LICENSE_SIGNING_KEY.
-            secret = "LSPP-DEV-DEFAULT-CHANGE-IN-PROD";
+            if (wwwmmm.Web.RuntimeSecurity.IsProduction)
+                throw new InvalidOperationException("LSPP_LICENSE_SIGNING_KEY is required in production.");
+            // Ephemeral development key: never a public, reusable signing secret.
+            secret = DevelopmentSecret;
         }
         return secret;
     }
+
+    internal static void ValidateProductionConfiguration()
+    {
+        var keys = ResolveSigningKeys();
+        foreach (var secret in keys.Values)
+            if (Encoding.UTF8.GetByteCount(secret) < 32 || secret.Contains("CHANGE", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Signing secrets must be private random values of at least 32 bytes.");
+        if (!keys.ContainsKey(ResolveActiveKid()) || !IsKidUsableForValidation(ResolveActiveKid(), DateTime.UtcNow))
+            throw new InvalidOperationException("Active signing KID is missing, expired or retired.");
+    }
+
+    private static bool SignatureEquals(string left, string right) =>
+        wwwmmm.Web.RuntimeSecurity.SecretEquals(left.ToUpperInvariant(), right.ToUpperInvariant());
 
     private static string ResolveActiveKid()
     {
@@ -423,7 +437,7 @@ public class LicenseKey
 
             var expectedSig = ComputeSignature(payload, secretForKid);
 
-            if (!string.Equals(signature, expectedSig, StringComparison.OrdinalIgnoreCase))
+            if (!SignatureEquals(signature, expectedSig))
                 return false;
 
             license = new LicenseKey
@@ -436,7 +450,7 @@ public class LicenseKey
                 Features = GetFeaturesForTier(tierSigned.Value)
             };
 
-            return true;
+            return license.IsValid();
         }
 
         // Backward compatibility for earlier signed format without KID:
@@ -465,7 +479,7 @@ public class LicenseKey
             var signingKeys = ResolveSigningKeys();
             var signatureValid = signingKeys
                 .Where(kv => IsKidUsableForValidation(kv.Key, DateTime.UtcNow))
-                .Any(kv => string.Equals(signature, ComputeSignature(payload, kv.Value), StringComparison.OrdinalIgnoreCase));
+                .Any(kv => SignatureEquals(signature, ComputeSignature(payload, kv.Value)));
 
             if (!signatureValid)
                 return false;
@@ -480,36 +494,11 @@ public class LicenseKey
                 Features = GetFeaturesForTier(tierSigned.Value)
             };
 
-            return true;
+            return license.IsValid();
         }
 
-        // Legacy compatibility path
-        if (parts.Length != 6 || !string.Equals(parts[0], LegacyPrefix, StringComparison.Ordinal))
-            return false;
-
-        var tier = parts[1] switch
-        {
-            "FREE" => LicenseTier.Free,
-            "PAYGO" => LicenseTier.PayAsYouGo,
-            "UNLTD" => LicenseTier.Unlimited,
-            "ENTER" => LicenseTier.Enterprise,
-            _ => (LicenseTier?)null
-        };
-
-        if (tier == null)
-            return false;
-
-        license = new LicenseKey
-        {
-            Key = key,
-            Tier = tier.Value,
-            IssueDate = DateTime.UtcNow,
-            ExpirationDate = DateTime.UtcNow.AddYears(1),
-            IsActive = true,
-            Features = GetFeaturesForTier(tier.Value)
-        };
-
-        return true;
+        // The legacy format has no authenticated signature and cannot authorize a license.
+        return false;
     }
 
     /// <summary>
