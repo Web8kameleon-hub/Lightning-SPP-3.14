@@ -229,6 +229,30 @@ HRB 21069 (Registergericht Bochum)
 
 ---
 
+## [3.14.1] - 2026-10-02
+
+### Fixed
+
+- **Customer-facing license activation was broken.** `/api/license/activate` incorrectly required an administrator bearer token, so every real customer submitting their own license key from the public dashboard received `401 Unauthorized`. The endpoint now only requires a valid, cryptographically signed license key — no admin token. `/api/license/issue` and `/api/license/signing-status` remain admin-protected, unchanged.
+
+### Added
+
+- `Tests/LightningSPP.Tests/ApiLicenseActivationIntegrationTests.cs`: edge-case integration coverage for the fix above — valid key with no `Authorization` header (200), invalid/garbage key (400, not an auth bypass), missing `key` field (400), empty `key` value (400), `/issue` with no token (401), wrong token (401), and correct admin token (200 with an issued key).
+- Public, indexable pages: `/features`, `/technology`, `/pricing`, `/benchmarks`, each with Schema.org structured data (`SoftwareApplication`, `TechArticle`, `FAQPage`, `Organization`), canonical tags and Open Graph metadata, sourced only from already-documented, verifiable capabilities.
+- `robots.txt` and `sitemap.xml`; `/dashboard` is explicitly `noindex`/disallowed since it is a per-workspace license screen, not a marketing page.
+- One disclosed, reproducible benchmark measurement on `/benchmarks` (hardware, run count, raw numbers — including the one target that was *not* met on that hardware) instead of no published data at all.
+- GitHub repository hardening: a branch protection ruleset on `main` (blocks force-push and deletion), plus repository description, homepage and topics for discoverability.
+
+### Changed
+
+- `package.info` no longer claims unverified regulatory certifications (FDA 510(k), CE Mark, ISO 13485, HIPAA, GDPR, SOC 2, GxP) or non-existent distribution channels (npm, Maven, CocoaPods). It now accurately reflects NuGet as the only published channel and points to `COMPLIANCE.md` for the real, in-progress certification status.
+
+### Deployed
+
+- Released to production (`scanprocessprint.com`) as build `0f0c654`; health, license status, and every new page verified over public HTTPS before and after cutover. Previous release containers were stopped only after verification, not deleted.
+
+---
+
 ## [Unreleased]
 
 ### Added
@@ -301,7 +325,8 @@ See [Migration Guide](Wiki/Migration-Guide.md) for detailed upgrade instructions
 ---
 
 [3.14.0]: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/releases/tag/v3.14.0>
-[Unreleased]: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/compare/v3.14.0...HEAD>
+[3.14.1]: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/compare/v3.14.0...v3.14.1>
+[Unreleased]: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/compare/v3.14.1...HEAD>
 
 ---
 
