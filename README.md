@@ -260,6 +260,9 @@ Për konsistencë ndërmjet source, package dhe CLI:
 - [Docs/API_Documentation.md](Docs/API_Documentation.md)
 - [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md)
 - [Docs/DEPLOYMENT.md](Docs/DEPLOYMENT.md)
+- [Docs/SLA_SLO.md](Docs/SLA_SLO.md)
+- [Docs/GO_LIVE_CHECKLIST.md](Docs/GO_LIVE_CHECKLIST.md)
+- [deploy/production/README.md](deploy/production/README.md)
 - [Wiki/Home.md](Wiki/Home.md)
 
 ## Licenca
