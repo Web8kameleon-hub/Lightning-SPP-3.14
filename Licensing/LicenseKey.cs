@@ -10,7 +10,6 @@ namespace LightningSPP.Licensing;
 /// </summary>
 public class LicenseKey
 {
-    private const string LegacyPrefix = "LSPP";
     private const string SignedPrefix = "LSP2";
     private const string SigningKeyEnv = "LSPP_LICENSE_SIGNING_KEY";
     private const string SigningKeysEnv = "LSPP_LICENSE_SIGNING_KEYS";
@@ -483,33 +482,11 @@ public class LicenseKey
             return true;
         }
 
-        // Legacy compatibility path
-        if (parts.Length != 6 || !string.Equals(parts[0], LegacyPrefix, StringComparison.Ordinal))
-            return false;
-
-        var tier = parts[1] switch
-        {
-            "FREE" => LicenseTier.Free,
-            "PAYGO" => LicenseTier.PayAsYouGo,
-            "UNLTD" => LicenseTier.Unlimited,
-            "ENTER" => LicenseTier.Enterprise,
-            _ => (LicenseTier?)null
-        };
-
-        if (tier == null)
-            return false;
-
-        license = new LicenseKey
-        {
-            Key = key,
-            Tier = tier.Value,
-            IssueDate = DateTime.UtcNow,
-            ExpirationDate = DateTime.UtcNow.AddYears(1),
-            IsActive = true,
-            Features = GetFeaturesForTier(tier.Value)
-        };
-
-        return true;
+        // The historical unsigned "LSPP-{TIER}-xxxx-xxxx-xxxx-xxxx" format is rejected
+        // outright: LicenseKey.Generate() has never produced it (it always emits the
+        // signed LSP2 format above), so no legitimate customer holds one, and accepting
+        // it here would let anyone self-activate a free, unverified Enterprise license.
+        return false;
     }
 
     /// <summary>

@@ -10,6 +10,11 @@ namespace wwwmmm.Web;
 
 internal static class LicenseApiServer
 {
+    // Upper bound on any request body this server will buffer into memory, enforced
+    // while streaming (not just via the often-absent/spoofable Content-Length header),
+    // so a chunked-transfer request can't exhaust memory before a size check runs.
+    internal const int MaxBodyBytes = 1024 * 1024;
+
     // Rate limiting: max requests per window per IP
     private const int RateLimitMaxRequests = 30;
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
@@ -52,6 +57,7 @@ internal static class LicenseApiServer
 
     public static async Task RunAsync(int port, CancellationToken cancellationToken = default)
     {
+        RuntimeSecurity.ValidateProduction();
         using var listener = new HttpListener();
         var inContainer = string.Equals(
             Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
@@ -232,8 +238,7 @@ internal static class LicenseApiServer
 
             if (path == "/api/stripe/webhook" && context.Request.HttpMethod == "POST")
             {
-                using var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8);
-                var payload = await reader.ReadToEndAsync();
+                var payload = await ReadBodyAsync(context.Request);
                 var signature = context.Request.Headers["Stripe-Signature"] ?? string.Empty;
 
                 if (!StripeBilling.TryVerifyWebhook(
@@ -353,6 +358,10 @@ internal static class LicenseApiServer
             }
 
             await TextAsync(context, HttpStatusCode.NotFound, "ok=false\nerror=Not found");
+        }
+        catch (RequestBodyTooLargeException)
+        {
+            await TextAsync(context, HttpStatusCode.RequestEntityTooLarge, "ok=false\nerror=Request too large");
         }
         catch (Exception ex)
         {
@@ -597,12 +606,35 @@ internal static class LicenseApiServer
         context.Response.Close();
     }
 
+    private sealed class RequestBodyTooLargeException : Exception { }
+
+    /// <summary>
+    /// Reads a request body up to <see cref="MaxBodyBytes"/>, enforced while streaming
+    /// (not just via Content-Length, which a chunked-transfer request can omit or lie about).
+    /// </summary>
+    private static async Task<string> ReadBodyAsync(HttpListenerRequest request)
+    {
+        await using var body = new MemoryStream();
+        var buffer = new byte[8192];
+        int count;
+        while ((count = await request.InputStream.ReadAsync(buffer)) > 0)
+        {
+            if (body.Length + count > MaxBodyBytes)
+            {
+                throw new RequestBodyTooLargeException();
+            }
+
+            body.Write(buffer, 0, count);
+        }
+
+        return Encoding.UTF8.GetString(body.ToArray());
+    }
+
     private static async Task<Dictionary<string, string>> ReadFormAsync(HttpListenerRequest request)
     {
         var form = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        using var reader = new StreamReader(request.InputStream, request.ContentEncoding);
-        var body = await reader.ReadToEndAsync();
+        var body = await ReadBodyAsync(request);
         if (string.IsNullOrWhiteSpace(body))
         {
             return form;
