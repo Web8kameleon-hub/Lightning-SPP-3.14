@@ -1,22 +1,83 @@
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Net.Mail;
 
 namespace wwwmmm.Web;
 
 /// <summary>
-/// Minimal SMTP email sender for license-key fulfillment. Uses the built-in
-/// System.Net.Mail client so no additional NuGet dependency is required.
-/// Configuration is read entirely from environment variables; if any
-/// required variable is missing, sending is skipped and the caller is told
-/// why so it can log/alert instead of silently losing a paid order.
+/// Email sender for license-key fulfillment. Prefers the Resend HTTP API
+/// (officially recommended by Resend over SMTP, and avoids known MIME
+/// quirks in the legacy System.Net.Mail.SmtpClient) when a Resend API key
+/// is configured, falling back to plain SMTP for other providers.
+/// Configuration is read entirely from environment variables; if nothing
+/// is configured, sending is skipped and the caller is told why so it can
+/// log/alert instead of silently losing a paid order.
 /// </summary>
 internal static class EmailService
 {
+    private static readonly HttpClient HttpClient = new() { BaseAddress = new Uri("https://api.resend.com/") };
+
     public static async Task<(bool Sent, string Error)> TrySendLicenseKeyEmailAsync(
         string toEmail,
         string tier,
         string licenseKey,
         DateTime expirationUtc)
+    {
+        if (string.IsNullOrWhiteSpace(toEmail))
+        {
+            return (false, "Recipient email address is missing.");
+        }
+
+        var smtpHost = Environment.GetEnvironmentVariable("SMTP_HOST");
+        var isResend = string.Equals(smtpHost, "smtp.resend.com", StringComparison.OrdinalIgnoreCase);
+        var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY")
+            ?? (isResend ? Environment.GetEnvironmentVariable("SMTP_PASSWORD") : null);
+
+        if (!string.IsNullOrWhiteSpace(resendApiKey))
+        {
+            return await SendViaResendApiAsync(resendApiKey, toEmail, tier, licenseKey, expirationUtc);
+        }
+
+        return await SendViaSmtpAsync(toEmail, tier, licenseKey, expirationUtc);
+    }
+
+    private static async Task<(bool Sent, string Error)> SendViaResendApiAsync(
+        string apiKey, string toEmail, string tier, string licenseKey, DateTime expirationUtc)
+    {
+        var from = Environment.GetEnvironmentVariable("SMTP_FROM") ?? "Lightning SPP <onboarding@resend.dev>";
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "emails");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            request.Content = JsonContent.Create(new
+            {
+                from,
+                to = new[] { toEmail },
+                subject = "Your Lightning SPP license key",
+                text = BuildBody(tier, licenseKey, expirationUtc)
+            });
+
+            using var response = await HttpClient.SendAsync(request);
+            var body = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, string.Empty);
+            }
+
+            return (false, $"Resend API returned {(int)response.StatusCode}: {body}");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
+    private static async Task<(bool Sent, string Error)> SendViaSmtpAsync(
+        string toEmail, string tier, string licenseKey, DateTime expirationUtc)
     {
         var host = Environment.GetEnvironmentVariable("SMTP_HOST");
         var user = Environment.GetEnvironmentVariable("SMTP_USER");
@@ -28,12 +89,7 @@ internal static class EmailService
             string.IsNullOrWhiteSpace(password) ||
             string.IsNullOrWhiteSpace(from))
         {
-            return (false, "SMTP is not configured (missing SMTP_HOST/SMTP_USER/SMTP_PASSWORD/SMTP_FROM).");
-        }
-
-        if (string.IsNullOrWhiteSpace(toEmail))
-        {
-            return (false, "Recipient email address is missing.");
+            return (false, "Email is not configured (missing RESEND_API_KEY, or SMTP_HOST/SMTP_USER/SMTP_PASSWORD/SMTP_FROM).");
         }
 
         var portText = Environment.GetEnvironmentVariable("SMTP_PORT");
