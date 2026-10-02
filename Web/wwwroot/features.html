@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Features — Lightning SPP: Scan, Process, Print Pipeline for .NET</title>
+<meta name="description" content="Lightning SPP is a modular Scan → Process → Print pipeline for .NET 10. Real image processing with SkiaSharp, AI context with Microsoft.ML, lossless Brotli artifacts, and adaptive Stigma profiles.">
+<link rel="canonical" href="https://scanprocessprint.com/features">
+<link rel="stylesheet" href="/site.css">
+<meta property="og:title" content="Lightning SPP — Features">
+<meta property="og:description" content="Modular Scan → Process → Print pipeline for .NET 10, with adaptive Stigma profiles and real image/AI processing.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://scanprocessprint.com/features">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Lightning SPP","applicationCategory":"DeveloperApplication","operatingSystem":"Windows, Linux, macOS","softwareVersion":"3.14","description":"Modular Scan, Process and Print pipeline for .NET 10 with adaptive Stigma profiles, real image processing and lossless compressed output.","offers":{"@type":"AggregateOffer","lowPrice":"0","highPrice":"49.99","priceCurrency":"EUR"}}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header><a class="brand" href="/">Lightning SPP<span aria-hidden="true">.</span></a>
+<nav aria-label="Main navigation"><a href="/features" aria-current="page">Features</a><a href="/technology">Technology</a><a href="/pricing">Pricing</a><a href="/benchmarks">Benchmarks</a><a href="/swagger">API docs</a><a href="/dashboard">Your license</a></nav></header>
+<main id="main">
+<section class="hero"><span class="eyebrow">What Lightning SPP does</span><h1>A modular Scan → Process → Print<br>pipeline for .NET 10.</h1><p class="intro">Lightning SPP runs real image processing, AI-assisted enhancement, and lossless compression — not simulated timers. Pick a profile, run the pipeline, get a real artifact on disk.</p><div class="actions"><a class="button" href="/pricing">See pricing</a><a href="/technology">How it works</a></div></section>
+
+<section aria-labelledby="pipeline-title"><h2 id="pipeline-title">The three stages</h2><div class="grid section">
+<article class="card"><span class="number">1</span><h3>Scan</h3><p>Lightning, TideWave, Resonance and NanoDecibel modes trade off speed, balance, and precision depending on the input and device profile (desktop, mobile, IoT, cloud).</p></article>
+<article class="card"><span class="number">2</span><h3>Process</h3><p>Real transforms via SkiaSharp/ImageSharp (edge detection, sharpening, contrast) plus an Microsoft.ML context for AI-assisted enhancement through the CLX, CLI.I, XCL, Hybrid and Clisonic Global AI engines.</p></article>
+<article class="card"><span class="number">3</span><h3>Print</h3><p>Stigma produces a lossless Brotli-compressed artifact written to disk. Draft, Normal and High quality levels are also available. Physical printer integration requires a platform-specific adapter.</p></article>
+</div></section>
+
+<section class="section" aria-labelledby="stigma-title"><h2 id="stigma-title">Adaptive Stigma profiles</h2><p>A single environment variable, <code>WWWMMM_STIGMA_LEVEL</code>, controls the entire pipeline's behavior end-to-end:</p>
+<table style="width:100%;border-collapse:collapse;margin-top:12px">
+<thead><tr><th style="text-align:left;padding:8px 0;border-bottom:1px solid #dce4dc">Value</th><th style="text-align:left;padding:8px 0;border-bottom:1px solid #dce4dc">Profile</th><th style="text-align:left;padding:8px 0;border-bottom:1px solid #dce4dc">Behavior</th></tr></thead>
+<tbody>
+<tr><td style="padding:8px 0;border-bottom:1px solid #edf1ed">1</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">quality</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">NanoDecibel, Hybrid + AI, lossless Stigma output</td></tr>
+<tr><td style="padding:8px 0;border-bottom:1px solid #edf1ed">2</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">balanced</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">TideWave, Auto + AI, high output quality</td></tr>
+<tr><td style="padding:8px 0">3</td><td style="padding:8px 0">lightning</td><td style="padding:8px 0">Lightning, CLX fast path, skips costly phases</td></tr>
+</tbody></table>
+<p class="muted">Invalid values are rejected at startup rather than silently coerced, so misconfiguration fails loudly instead of degrading quality unnoticed.</p></section>
+
+<section class="section" aria-labelledby="real-title"><h2 id="real-title">Built on real components, not simulations</h2><div class="grid two">
+<article class="card"><h3>Image processing</h3><p>SkiaSharp and SixLabors.ImageSharp perform real transforms — edge detection, Gaussian sharpening, contrast — instead of artificial delays.</p></article>
+<article class="card"><h3>AI context</h3><p>Microsoft.ML and ONNX Runtime provide the AI/ML context used by the Hybrid and Clisonic Global AI engines.</p></article>
+<article class="card"><h3>Compression</h3><p>Brotli produces real, lossless compressed artifacts — the same compression format used in production web and storage systems.</p></article>
+<article class="card"><h3>Output</h3><p>Every run writes a real file to disk. No mocked results, no non-deterministic demo output.</p></article>
+</div></section>
+
+<section class="section" aria-labelledby="interfaces-title"><h2 id="interfaces-title">Multiple ways to integrate</h2><div class="grid">
+<article class="card"><h3>REST API</h3><p>HTTP endpoints for health, license management, and Stripe billing. See the <a href="/swagger">API documentation</a>.</p></article>
+<article class="card"><h3>.NET SDK</h3><p>Call <code>LightningAPI</code> directly from your .NET 10 application for scan, process, print, batch and hybrid operations.</p></article>
+<article class="card"><h3>CLI</h3><p><code>wwwmmm scan|process|print|pipeline|batch|serve|speed</code> — automate from scripts or CI.</p></article>
+</div></section>
+
+<section class="section notice"><p><strong>Current scope:</strong> print output is a lossless Brotli artifact on disk today; physical printer drivers require a platform-specific adapter. Medical use requires clinical validation and the relevant certifications — ISO, CE, FDA, GDPR and HIPAA are not claimed as product certifications without auditable evidence.</p></section>
+</main>
+<footer><span>Lightning SPP</span><a href="/#help">Need help getting started?</a></footer>
+</body></html>

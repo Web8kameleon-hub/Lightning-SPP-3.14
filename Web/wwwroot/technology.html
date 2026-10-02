@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Technology — Lightning SPP Architecture: CLX, Stigma, TideWave, NodeDB Fluid</title>
+<meta name="description" content="Inside Lightning SPP's architecture: the CLX/CLI.I/XCL/Hybrid processing engines, Stigma adaptive control, TideWave/Resonance/NanoDecibel scan modes, and NodeDB Fluid bridging.">
+<link rel="canonical" href="https://scanprocessprint.com/technology">
+<link rel="stylesheet" href="/site.css">
+<meta property="og:title" content="Lightning SPP — Technology">
+<meta property="og:description" content="Architecture deep-dive: processing engines, adaptive Stigma profiles, and NodeDB Fluid.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://scanprocessprint.com/technology">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"Lightning SPP Architecture","about":"Scan-Process-Print pipeline architecture, adaptive profiles and processing engines","url":"https://scanprocessprint.com/technology"}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header><a class="brand" href="/">Lightning SPP<span aria-hidden="true">.</span></a>
+<nav aria-label="Main navigation"><a href="/features">Features</a><a href="/technology" aria-current="page">Technology</a><a href="/pricing">Pricing</a><a href="/benchmarks">Benchmarks</a><a href="/swagger">API docs</a><a href="/dashboard">Your license</a></nav></header>
+<main id="main">
+<section class="hero"><span class="eyebrow">Architecture</span><h1>A pipeline you can<br>reason about and control.</h1><p class="intro">Lightning SPP is built as three strict service boundaries — Scan, Process, Print — orchestrated by a single pipeline, with every stage switchable by a named profile.</p></section>
+
+<section aria-labelledby="engines-title"><h2 id="engines-title">Processing engines</h2><div class="grid section">
+<article class="card"><h3>CLX</h3><p>Core, efficient processing engine. The default fast path for the lightning profile.</p></article>
+<article class="card"><h3>CLI.I</h3><p>Interactive processing with extended control over intermediate steps.</p></article>
+<article class="card"><h3>XCL</h3><p>Extended processing engine for complex, multi-step workloads.</p></article>
+<article class="card"><h3>Hybrid</h3><p>Combines engines for maximum-quality output, used by the quality Stigma profile.</p></article>
+<article class="card"><h3>Clisonic Global AI</h3><p>AI-assisted enhancement layered on top of the processing context.</p></article>
+<article class="card"><h3>Resonance / NanoDecibel</h3><p>Precision-focused and maximum-quality scan modes, selected per device profile.</p></article>
+</div></section>
+
+<section class="section" aria-labelledby="stigma-arch-title"><h2 id="stigma-arch-title">Stigma: adaptive pipeline control</h2><p>Stigma is the control layer that rewrites request parameters across the whole pipeline based on a single profile selection (<code>WWWMMM_STIGMA_LEVEL</code>, resolved in <code>Services/StigmaExecutionProfile.cs</code>). It is not cosmetic — selecting a profile changes which scan mode, processing engine and output quality actually run. Stigma Memory additionally profiles memory usage across runs.</p></section>
+
+<section class="section" aria-labelledby="nodedb-title"><h2 id="nodedb-title">NodeDB Fluid</h2><p>NodeDB Fluid is a low-overhead hybrid node used as an adaptive sink/bridge for compatibility between nodes and execution profiles — useful when mixing device profiles (desktop, mobile, IoT, cloud) in the same deployment.</p></section>
+
+<section class="section" aria-labelledby="boundaries-title"><h2 id="boundaries-title">Strict service boundaries</h2><div class="grid two">
+<article class="card"><h3>IScanService → ScanResult</h3><p>Real scan implementations (e.g. <code>FastScanService</code>) using SkiaSharp with mode-specific transforms.</p></article>
+<article class="card"><h3>IProcessingService → ProcessingResult</h3><p>Brotli compression plus an ML-context pipeline (e.g. <code>HybridProcessingService</code>).</p></article>
+<article class="card"><h3>IPrintService → PrintResult</h3><p><code>RealPrintService</code> / <code>StigmaPrintService</code> create <code>.br</code> output artifacts — not physical printer drivers.</p></article>
+<article class="card"><h3>LightningPipeline</h3><p>The orchestrator: license check → profile application → metrics → optional output artifact, for every request.</p></article>
+</div></section>
+
+<section class="section" aria-labelledby="deploy-title"><h2 id="deploy-title">Runtime and deployment</h2><ul>
+<li>.NET 10, with Native AOT support</li>
+<li>Docker containers, cross-platform (Windows, Linux, macOS)</li>
+<li>Invariant globalization for predictable, locale-independent output</li>
+<li>HTTP API served via <code>HttpListener</code>, with per-IP rate limiting, CORS, and admin bearer-token protected routes</li>
+</ul></section>
+
+<section class="section"><h2>Read the source</h2><p>Lightning SPP's architecture documentation is public: <a href="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/blob/main/Docs/ARCHITECTURE.md">Docs/ARCHITECTURE.md</a> and the full <a href="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14">source on GitHub</a>.</p></section>
+</main>
+<footer><span>Lightning SPP</span><a href="/#help">Need help getting started?</a></footer>
+</body></html>

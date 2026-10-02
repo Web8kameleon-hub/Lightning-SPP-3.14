@@ -119,6 +119,24 @@ internal static class LicenseApiServer
                 return;
             }
 
+            if (path == "/features" || path == "/technology" || path == "/pricing" || path == "/benchmarks")
+            {
+                await ServeStaticAsync(context, path[1..] + ".html", "text/html; charset=utf-8");
+                return;
+            }
+
+            if (path == "/robots.txt")
+            {
+                await ServeStaticAsync(context, "robots.txt", "text/plain; charset=utf-8");
+                return;
+            }
+
+            if (path == "/sitemap.xml")
+            {
+                await ServeStaticAsync(context, "sitemap.xml", "application/xml; charset=utf-8");
+                return;
+            }
+
             if (path == "/swagger")
             {
                 await ServeStaticAsync(context, "swagger.html", "text/html; charset=utf-8");
