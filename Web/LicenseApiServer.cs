@@ -3,6 +3,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using LightningSPP.Licensing;
+using wwwmmm.Configuration;
 using wwwmmm.Services;
 
 namespace wwwmmm.Web;
@@ -14,6 +15,19 @@ internal static class LicenseApiServer
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
     private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _rateLimits = new();
 
+    // A tighter, dedicated limit for /api/try/process: it runs real CPU-bound image
+    // processing for anonymous, unauthenticated visitors, so it must not share the
+    // general 30/min budget that covers lightweight endpoints like /api/health.
+    private const int TryRateLimitMaxRequests = 10;
+    private static readonly TimeSpan TryRateLimitWindow = TimeSpan.FromMinutes(5);
+    private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _tryRateLimits = new();
+    private const long TryMaxUploadBytes = 8 * 1024 * 1024; // 8 MB
+
+    private static readonly HashSet<string> AllowedTryContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/png", "image/jpeg", "image/jpg", "image/bmp", "image/tiff", "image/gif"
+    };
+
     private static bool IsRateLimited(string ip)
     {
         var now = DateTime.UtcNow;
@@ -23,6 +37,17 @@ internal static class LicenseApiServer
         entry = (entry.Count + 1, entry.WindowStart);
         _rateLimits[ip] = entry;
         return entry.Count > RateLimitMaxRequests;
+    }
+
+    private static bool IsTryRateLimited(string ip)
+    {
+        var now = DateTime.UtcNow;
+        var entry = _tryRateLimits.GetOrAdd(ip, _ => (0, now));
+        if (now - entry.WindowStart > TryRateLimitWindow)
+            entry = (0, now);
+        entry = (entry.Count + 1, entry.WindowStart);
+        _tryRateLimits[ip] = entry;
+        return entry.Count > TryRateLimitMaxRequests;
     }
 
     public static async Task RunAsync(int port, CancellationToken cancellationToken = default)
@@ -74,7 +99,7 @@ internal static class LicenseApiServer
     {
         ApplyCorsHeaders(context);
         context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
-        context.Response.Headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Stripe-Signature";
+        context.Response.Headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Stripe-Signature, X-Stigma-Profile";
 
         // Pre-flight
         if (context.Request.HttpMethod == "OPTIONS")
@@ -101,9 +126,10 @@ internal static class LicenseApiServer
 
         try
         {
-            if (path == "/site.css" || path == "/dashboard.js")
+            if (path == "/site.css" || path == "/dashboard.js" || path == "/try.js")
             {
-                await ServeStaticAsync(context, path[1..], path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8");
+                var jsOrCss = path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8";
+                await ServeStaticAsync(context, path[1..], jsOrCss);
                 return;
             }
 
@@ -116,6 +142,12 @@ internal static class LicenseApiServer
             if (path == "/dashboard")
             {
                 await ServeStaticAsync(context, "dashboard.html", "text/html; charset=utf-8");
+                return;
+            }
+
+            if (path == "/try")
+            {
+                await ServeStaticAsync(context, "try.html", "text/html; charset=utf-8");
                 return;
             }
 
@@ -215,6 +247,12 @@ internal static class LicenseApiServer
                     context,
                     HttpStatusCode.OK,
                     $"ok=true\ndestination={destination}\neventType={stripeEvent.Type}");
+                return;
+            }
+
+            if (path == "/api/try/process" && context.Request.HttpMethod == "POST")
+            {
+                await HandleTryProcessAsync(context, clientIp);
                 return;
             }
 
@@ -340,6 +378,160 @@ internal static class LicenseApiServer
             InternalAuditLogger.Error(
                 $"Stripe checkout fulfillment FAILED: session={sessionId}, tier={tier}, email={email}, error={ex.Message}. Manual license issuance required.");
         }
+    }
+
+    /// <summary>
+    /// Public, unauthenticated demo: runs one real Scan + Process job on an uploaded image
+    /// and returns the processed preview plus per-job timing, so a visitor can see Lightning
+    /// SPP work without installing anything. Deliberately image-only: this codebase has no
+    /// PDF renderer, so a PDF upload would otherwise be visualized as raw-byte noise instead
+    /// of real page content, which would be misleading.
+    /// </summary>
+    private static async Task HandleTryProcessAsync(HttpListenerContext context, string clientIp)
+    {
+        if (IsTryRateLimited(clientIp))
+        {
+            context.Response.Headers["Retry-After"] = "300";
+            await JsonAsync(context, HttpStatusCode.TooManyRequests,
+                "{\"ok\":false,\"error\":\"Too many demo requests from this address. Please wait a few minutes and try again.\"}");
+            return;
+        }
+
+        var contentType = (context.Request.ContentType ?? string.Empty).Split(';')[0].Trim();
+        if (!AllowedTryContentTypes.Contains(contentType))
+        {
+            await JsonAsync(context, HttpStatusCode.BadRequest,
+                "{\"ok\":false,\"error\":\"Unsupported file type. Upload a JPEG, PNG, BMP, TIFF or GIF image.\"}");
+            return;
+        }
+
+        if (context.Request.ContentLength64 <= 0 || context.Request.ContentLength64 > TryMaxUploadBytes)
+        {
+            await JsonAsync(context, HttpStatusCode.BadRequest,
+                "{\"ok\":false,\"error\":\"File must be larger than 0 bytes and no more than 8 MB.\"}");
+            return;
+        }
+
+        if (!TryParseScanMode(context.Request.Headers["X-Stigma-Profile"], out var scanMode, out var profileName))
+        {
+            await JsonAsync(context, HttpStatusCode.BadRequest,
+                "{\"ok\":false,\"error\":\"Unknown profile. Use lightning, tidewave, resonance or nanodecibel.\"}");
+            return;
+        }
+
+        byte[] originalBytes;
+        await using (var buffer = new MemoryStream())
+        {
+            await context.Request.InputStream.CopyToAsync(buffer);
+            originalBytes = buffer.ToArray();
+        }
+
+        if (originalBytes.Length == 0 || originalBytes.Length > TryMaxUploadBytes)
+        {
+            await JsonAsync(context, HttpStatusCode.BadRequest,
+                "{\"ok\":false,\"error\":\"File must be larger than 0 bytes and no more than 8 MB.\"}");
+            return;
+        }
+
+        try
+        {
+            var scanService = ServiceFactory.CreateScanService();
+            var processingService = ServiceFactory.CreateProcessingService();
+
+            var scanResult = await scanService.ScanAsync(originalBytes, scanMode, quality: 300);
+            if (!scanResult.Success)
+            {
+                await JsonAsync(context, HttpStatusCode.UnprocessableEntity,
+                    $"{{\"ok\":false,\"error\":{JsonEscape(scanResult.Error ?? "The file could not be read as an image.")}}}");
+                return;
+            }
+
+            var processResult = await processingService.ProcessAsync(
+                scanResult.Data,
+                new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: true, UseClisonic: true, OptimizationLevel: 3, UseStigmaMemory: true));
+
+            var compressedBytes = processResult.Success ? processResult.ProcessedData.Length : 0;
+            var compressionPercent = processResult.Success && scanResult.Data.Length > 0
+                ? Math.Round(100.0 * (1 - (double)compressedBytes / scanResult.Data.Length), 1)
+                : 0.0;
+
+            LightningMetrics.RecordScan(scanResult.Metadata.ProcessingTimeMs);
+            if (processResult.Success)
+            {
+                LightningMetrics.RecordProcess(processResult.Metadata.ProcessingTimeMs);
+            }
+
+            var afterBase64 = Convert.ToBase64String(scanResult.Data);
+            var totalMs = scanResult.Metadata.ProcessingTimeMs + (processResult.Success ? processResult.Metadata.ProcessingTimeMs : 0);
+
+            var json = $$"""
+                {
+                  "ok": true,
+                  "profile": "{{profileName}}",
+                  "scanTimeMs": {{scanResult.Metadata.ProcessingTimeMs}},
+                  "processTimeMs": {{(processResult.Success ? processResult.Metadata.ProcessingTimeMs : 0)}},
+                  "totalTimeMs": {{totalMs}},
+                  "engine": {{JsonEscape(processResult.Success ? processResult.Metadata.Engine : "none")}},
+                  "originalBytes": {{originalBytes.Length}},
+                  "afterBytes": {{scanResult.Data.Length}},
+                  "compressedBytes": {{compressedBytes}},
+                  "compressionPercent": {{compressionPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)}},
+                  "afterImageBase64": "{{afterBase64}}"
+                }
+                """;
+
+            InternalAuditLogger.Info(
+                $"Try-it demo processed: ip={clientIp}, profile={profileName}, originalBytes={originalBytes.Length}, totalTimeMs={totalMs}");
+
+            await JsonAsync(context, HttpStatusCode.OK, json);
+        }
+        catch (Exception ex)
+        {
+            InternalAuditLogger.Error($"Try-it demo failed: ip={clientIp}, error={ex.Message}");
+            await JsonAsync(context, HttpStatusCode.InternalServerError,
+                "{\"ok\":false,\"error\":\"Processing failed unexpectedly. Please try a different file.\"}");
+        }
+    }
+
+    private static bool TryParseScanMode(string? header, out ScanMode mode, out string name)
+    {
+        var value = string.IsNullOrWhiteSpace(header) ? "lightning" : header.Trim().ToLowerInvariant();
+        switch (value)
+        {
+            case "lightning":
+                mode = ScanMode.Lightning;
+                name = "lightning";
+                return true;
+            case "tidewave":
+                mode = ScanMode.TideWave;
+                name = "tidewave";
+                return true;
+            case "resonance":
+                mode = ScanMode.Resonance;
+                name = "resonance";
+                return true;
+            case "nanodecibel":
+                mode = ScanMode.NanoDecibel;
+                name = "nanodecibel";
+                return true;
+            default:
+                mode = ScanMode.Lightning;
+                name = string.Empty;
+                return false;
+        }
+    }
+
+    private static string JsonEscape(string value) =>
+        "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", string.Empty) + "\"";
+
+    private static async Task JsonAsync(HttpListenerContext context, HttpStatusCode statusCode, string json)
+    {
+        var buffer = Encoding.UTF8.GetBytes(json);
+        context.Response.StatusCode = (int)statusCode;
+        context.Response.ContentType = "application/json; charset=utf-8";
+        context.Response.ContentLength64 = buffer.LongLength;
+        await context.Response.OutputStream.WriteAsync(buffer);
+        context.Response.Close();
     }
 
     private static async Task ServeStaticAsync(HttpListenerContext context, string fileName, string contentType)

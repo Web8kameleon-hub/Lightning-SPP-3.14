@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Allow: /features
 Allow: /technology
+Allow: /try
 Allow: /pricing
 Allow: /benchmarks
 Allow: /swagger
