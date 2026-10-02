@@ -2,13 +2,13 @@ namespace wwwmmm.SDK;
 
 /// <summary>
 /// Lightning SPP 3.14 - Ultra-Fast API
-/// Absolute Speed Edition - Optimized for ZERO latency
+/// Lossless Brotli processing; timings depend on input and hardware.
 /// </summary>
 public static class Lightning314
 {
     /// <summary>
-    /// Process in <1ms - ABSOLUTE SPEED
-    /// Perfect for: Real-time medical devices, IoT, embedded
+    /// Measures depend on input and hardware.
+    /// Measures depend on input and hardware.
     /// CLX engine: Brotli Fastest compression pipeline
     /// </summary>
     public static async Task<byte[]> Instant(byte[] data)
@@ -23,7 +23,7 @@ public static class Lightning314
     }
 
     /// <summary>
-    /// Process in <5ms - ULTRA FAST
+    /// Measures depend on input and hardware.
     /// Perfect for: Mobile, web, general purpose
     /// CLI.I engine: Brotli Optimal compression
     /// </summary>
@@ -39,7 +39,7 @@ public static class Lightning314
     }
 
     /// <summary>
-    /// Process in <10ms - LIGHTNING FAST
+    /// Measures depend on input and hardware.
     /// Perfect for: Desktop, complex operations
     /// XCL engine: Brotli SmallestSize + MemoryPool
     /// </summary>
@@ -71,7 +71,8 @@ public static class Lightning314
     /// </summary>
     public static async Task<byte[][]> Parallel(byte[][] inputs, int maxConcurrency = 100)
     {
-        var semaphore = new SemaphoreSlim(maxConcurrency);
+        if (maxConcurrency < 1) throw new ArgumentOutOfRangeException(nameof(maxConcurrency));
+        using var semaphore = new SemaphoreSlim(maxConcurrency);
         var tasks = inputs.Select(async input =>
         {
             await semaphore.WaitAsync();
@@ -91,13 +92,13 @@ public static class Lightning314
 
 /// <summary>
 /// Medical Device Optimized API
-/// Compliant with medical standards
+/// Lossless byte compression; IsValid verifies round-trip integrity, not clinical validity.
 /// </summary>
 public static class MedicalAPI
 {
     /// <summary>
     /// High-precision medical scan processing
-    /// Target: <3ms with validation
+    /// Measures depend on input and hardware.
     /// </summary>
     public static async Task<MedicalResult> ProcessMedicalScan(
         byte[] scanData,
@@ -109,7 +110,11 @@ public static class MedicalAPI
         var processed = await Lightning314.UltraFast(scanData);
 
         // Validate output
-        var isValid = ValidateMedicalData(processed);
+        using var input = new MemoryStream(processed);
+        using var decompressor = new System.IO.Compression.BrotliStream(input, System.IO.Compression.CompressionMode.Decompress);
+        using var restored = new MemoryStream();
+        await decompressor.CopyToAsync(restored);
+        var isValid = scanData.AsSpan().SequenceEqual(restored.ToArray());
 
         var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
 
@@ -121,10 +126,7 @@ public static class MedicalAPI
         );
     }
 
-    private static bool ValidateMedicalData(byte[] data)
-    {
-        return data?.Length > 0;
-    }
+
 }
 
 public record MedicalResult(
@@ -157,30 +159,17 @@ public static class MobileAPI
         byte[] data,
         int batteryLevel)
     {
-        // Adjust speed based on battery
-        if (batteryLevel < 20)
-        {
-            // Conservative mode
-            await Task.Delay(2);
-        }
-        else if (batteryLevel < 50)
-        {
-            // Balanced mode
-            await Task.Delay(1);
-        }
-        // else: Full speed
-
-        return data;
+        if (batteryLevel is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(batteryLevel));
+        return batteryLevel < 50 ? await Lightning314.Instant(data) : await Lightning314.UltraFast(data);
     }
 
     /// <summary>
     /// Background processing for mobile
-    /// Lower priority, battery-friendly
+    /// Uses the fast compression profile; OS priority is unchanged.
     /// </summary>
     public static async Task<byte[]> ProcessBackground(byte[] data)
     {
-        await Task.Delay(5); // Lower priority
-        return data;
+        return await Lightning314.Instant(data);
     }
 }
 
@@ -198,26 +187,13 @@ public static class IoTAPI
         byte[] data,
         int maxMemoryKB = 64)
     {
-        // Check if data fits in memory constraint
-        if (data.Length > maxMemoryKB * 1024)
-        {
-            // Process in chunks
-            return await ProcessChunked(data, maxMemoryKB * 1024);
-        }
-
-        return await Lightning314.Instant(data);
-    }
-
-    private static async Task<byte[]> ProcessChunked(byte[] data, int chunkSize)
-    {
-        var result = new byte[data.Length];
-        for (int i = 0; i < data.Length; i += chunkSize)
-        {
-            var chunk = data.Skip(i).Take(chunkSize).ToArray();
-            var processed = await Lightning314.Instant(chunk);
-            Array.Copy(processed, 0, result, i, processed.Length);
-        }
-        return result;
+        if (maxMemoryKB <= 0) throw new ArgumentOutOfRangeException(nameof(maxMemoryKB));
+        var bufferSize = checked(Math.Min(maxMemoryKB, 1024) * 1024);
+        using var output = new MemoryStream();
+        using (var compressor = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
+            for (var offset = 0; offset < data.Length; offset += Math.Min(bufferSize, data.Length - offset))
+                await compressor.WriteAsync(data.AsMemory(offset, Math.Min(bufferSize, data.Length - offset)));
+        return output.ToArray();
     }
 
     /// <summary>

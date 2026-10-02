@@ -60,8 +60,7 @@ public class ApiSmokeTests
 
     private static string CreateTempSourceFile(string prefix, int size)
     {
-        var bytes = new byte[size];
-        Random.Shared.NextBytes(bytes);
+        var bytes = ImageFixture.Png();
         var filePath = Path.Combine(Path.GetTempPath(), $"lightning-spp-{prefix}-{Guid.NewGuid():N}.bin");
         File.WriteAllBytes(filePath, bytes);
         return filePath;

@@ -14,12 +14,12 @@ public class LicenseManager
     public enum PaymentMode
     {
         StripeOnly,
+        Manual,
         InternalQuantum
     }
 
     private static readonly string LicenseFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "LightningSPP",
+        RuntimeSecurity.DataDirectory,
         "license.json"
     );
 
@@ -36,7 +36,7 @@ public class LicenseManager
             return false;
         }
 
-        if (license == null)
+        if (license == null || !license.IsValid())
         {
             Console.WriteLine("❌ License validation failed.");
             return false;
@@ -116,7 +116,7 @@ public class LicenseManager
     public static bool IsFeatureAvailable(string feature)
     {
         var license = GetActiveLicense();
-        if (license == null)
+        if (license == null || !license.IsValid())
             return false;
 
         var (maxOps, maxDevices, hasAI, hasPremium) = license.GetLimits();
@@ -142,7 +142,7 @@ public class LicenseManager
     public static bool CheckAndIncrementUsage()
     {
         var license = GetActiveLicense();
-        if (license == null)
+        if (license == null || !license.IsValid())
         {
             Console.WriteLine("⚠️  No license found. Running in FREE tier mode (limited to 1,000 ops/month).");
             if (_operationsThisMonth >= 1000)
@@ -179,16 +179,8 @@ public class LicenseManager
         bool useInternalQuantumSecurity,
         PaymentMode paymentMode = PaymentMode.StripeOnly)
     {
-        if (paymentMode == PaymentMode.StripeOnly)
-        {
-            if (!StripeBilling.EnsureConfigured(out var stripeMessage))
-            {
-                InternalAuditLogger.Error($"Stripe configuration error: {stripeMessage}");
-                throw new InvalidOperationException(stripeMessage);
-            }
-
-            InternalAuditLogger.Info("Stripe configuration validated for key issuance.");
-        }
+        if (paymentMode != PaymentMode.Manual || useInternalQuantumSecurity)
+            throw new InvalidOperationException("Use verified Stripe fulfillment for payments or explicit manual administrator provisioning. Quantum payment verification is not implemented.");
 
         var normalizedTier = tier.Trim().ToLowerInvariant();
         var selectedTier = normalizedTier switch
@@ -236,7 +228,7 @@ public class LicenseManager
     {
         var license = GetActiveLicense();
 
-        if (license == null)
+        if (license == null || !license.IsValid())
         {
             Console.WriteLine("""
                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -279,7 +271,9 @@ public class LicenseManager
     // Provides confidentiality at rest without requiring a user-supplied passphrase.
     private static byte[] DeriveKey()
     {
-        var entropy = Encoding.UTF8.GetBytes($"LightningSPP:{Environment.MachineName}:{Environment.UserName}");
+        var storageSecret = Environment.GetEnvironmentVariable("LSPP_STORAGE_KEY");
+        if (RuntimeSecurity.IsProduction) RuntimeSecurity.RequireSecret("LSPP_STORAGE_KEY");
+        var entropy = Encoding.UTF8.GetBytes(storageSecret ?? $"LightningSPP:{Environment.MachineName}:{Environment.UserName}");
         return SHA256.HashData(entropy); // 32 bytes = AES-256
     }
 

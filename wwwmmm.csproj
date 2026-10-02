@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,7 +6,8 @@
     <RootNamespace>wwwmmm</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PublishAot>true</PublishAot>
+    <PublishAot>false</PublishAot>
+    <PublishTrimmed>false</PublishTrimmed>
     <InvariantGlobalization>true</InvariantGlobalization>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
@@ -64,7 +65,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Tests\LightningSPP.Tests\**\*.cs" />
+    <Compile Remove="Tests\**\*.cs" />
     <Compile Remove="VSExtension\**\*.cs" />
     <Compile Remove="Desktop\**\*.cs" />
     <Compile Remove="Lightning-SPP-3.14\**\*.cs" />

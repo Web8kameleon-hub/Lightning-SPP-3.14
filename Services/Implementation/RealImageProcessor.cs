@@ -131,7 +131,7 @@ public class RealImageProcessor : IScanService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var sourceBitmap = LoadBitmapOrCreateFromBinary(sourceData, quality);
+        using var sourceBitmap = DecodeImage(sourceData, quality);
         using var resizedBitmap = ResizeByQuality(sourceBitmap, quality, mode);
         using var processedBitmap = ApplyModeProcessing(resizedBitmap, mode);
         using var image = SKImage.FromBitmap(processedBitmap);
@@ -265,37 +265,10 @@ public class RealImageProcessor : IScanService
         ];
     }
 
-    private static SKBitmap LoadBitmapOrCreateFromBinary(byte[] sourceData, int quality)
+    private static SKBitmap DecodeImage(byte[] sourceData, int quality)
     {
-        try
-        {
-            using var managed = SKData.CreateCopy(sourceData);
-            var decoded = SKBitmap.Decode(managed);
-            if (decoded != null)
-            {
-                return decoded;
-            }
-        }
-        catch
-        {
-            // Fallback below.
-        }
-
-        var width = 512;
-        var targetHeight = Math.Max(128, Math.Min(4096, quality * 2));
-        var height = Math.Max(targetHeight, (int)Math.Ceiling(sourceData.Length / (double)width));
-        var bitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
-
-        for (var y = 0; y < height; y++)
-        {
-            for (var x = 0; x < width; x++)
-            {
-                var index = y * width + x;
-                var value = index < sourceData.Length ? sourceData[index] : (byte)0;
-                bitmap.SetPixel(x, y, new SKColor(value, value, value, 255));
-            }
-        }
-
-        return bitmap;
+        if (sourceData == null || sourceData.Length == 0) throw new ArgumentException("Image data is empty.");
+        using var encoded = SKData.CreateCopy(sourceData);
+        return SKBitmap.Decode(encoded) ?? throw new InvalidDataException("Unsupported or corrupt image; supply a valid PNG, JPEG or supported image file.");
     }
 }

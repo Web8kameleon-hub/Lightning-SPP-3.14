@@ -12,7 +12,7 @@ public class GoldenPipelineTests
     public async Task Scan_TideWave_IsDeterministic()
     {
         var svc = new FastScanService(NullLogger<FastScanService>.Instance);
-        var input = DeterministicPayload(4096);
+        var input = ImageFixture.Png();
 
         var first = await svc.ScanAsync(input, ScanMode.TideWave, 300);
         var second = await svc.ScanAsync(input, ScanMode.TideWave, 300);
@@ -29,8 +29,8 @@ public class GoldenPipelineTests
         var input = DeterministicPayload(2048);
         var options = new ProcessingOptions(
             ProcessingEngine.Hybrid,
-            UseAI: true,
-            UseClisonic: true,
+            UseAI: false,
+            UseClisonic: false,
             OptimizationLevel: 5,
             UseStigmaMemory: true);
 

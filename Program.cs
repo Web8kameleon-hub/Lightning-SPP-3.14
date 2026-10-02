@@ -1,4 +1,4 @@
-﻿using wwwmmm.PublicAPI;
+using wwwmmm.PublicAPI;
 using wwwmmm.Services;
 using wwwmmm.SDK;
 using LightningSPP.Licensing;
@@ -25,7 +25,7 @@ internal class Program
         }
         else
         {
-            await RunDemo();
+            ShowHelp();
         }
     }
 
@@ -44,9 +44,6 @@ internal class Program
                 break;
             case "deactivate":
                 LicenseManager.DeactivateLicense();
-                break;
-            case "generate-license":
-                GenerateSampleLicense(args);
                 break;
             case "issue-key":
                 IssueLicenseKey(args);
@@ -70,28 +67,11 @@ internal class Program
             case "batch":
                 await BatchProcess(args);
                 break;
-            case "demo":
-                await RunDemo();
-                break;
-            case "test":
-                await wwwmmm.Tests.SimpleTests.RunAllTests();
-                break;
-            case "examples":
-                await wwwmmm.Examples.UsageExamples.RunAllExamples();
-                break;
-            case "universal":
-                await wwwmmm.Examples.UniversalExamples.RunAllUniversalExamples();
-                break;
             case "speed":
-                await SpeedTest();
+                await SpeedTest(args);
                 break;
-            case "real":
-                await wwwmmm.Examples.RealVsSimulatedExamples.RunAllComparisons();
-                break;
-            case "simulated":
-                LightningAPI.UseSimulatedServices();
-                Console.WriteLine("✓ Compatibility mode requested. Simulated services are removed; running REAL services.");
-                await RunDemo();
+            case "convert":
+                await ConvertFile(args);
                 break;
             default:
                 ShowHelp();
@@ -129,8 +109,9 @@ internal class Program
     {
         Console.WriteLine("🔄 Processing with Hybrid Multi-Engine...");
 
-        var mockData = new byte[1000];
-        var result = await LightningAPI.HybridProcessAsync(mockData);
+        if (args.Length < 2) throw new ArgumentException("Usage: process <source-file>");
+        var input = await File.ReadAllBytesAsync(args[1]);
+        var result = await LightningAPI.HybridProcessAsync(input);
 
         if (result.Success)
         {
@@ -140,6 +121,7 @@ internal class Program
         }
         else
         {
+            Environment.ExitCode = 1;
             Console.WriteLine($"✗ Processing failed: {result.Error}");
         }
     }
@@ -148,8 +130,9 @@ internal class Program
     {
         Console.WriteLine("🖨️  Printing with Stigma Premium...");
 
-        var mockData = new byte[1000];
-        var result = await LightningAPI.StigmaPrintAsync(mockData);
+        if (args.Length < 2) throw new ArgumentException("Usage: print <source-file>");
+        var input = await File.ReadAllBytesAsync(args[1]);
+        var result = await LightningAPI.StigmaPrintAsync(input);
 
         if (result.Success)
         {
@@ -159,6 +142,7 @@ internal class Program
         }
         else
         {
+            Environment.ExitCode = 1;
             Console.WriteLine($"✗ Print failed: {result.Error}");
         }
     }
@@ -211,11 +195,12 @@ internal class Program
         Console.WriteLine($"  Average: {results.Average(r => r.TotalTimeMs):F2}ms per item");
     }
 
-    private static async Task SpeedTest()
+    private static async Task SpeedTest(string[] args)
     {
         Console.WriteLine("⚡ Lightning 3.14 - Speed Test\n");
 
-        var testData = new byte[1024];
+        if (args.Length < 2) throw new ArgumentException("Usage: speed <source-file>");
+        var testData = await File.ReadAllBytesAsync(args[1]);
 
         Console.WriteLine("Testing speed modes...\n");
 
@@ -237,75 +222,63 @@ internal class Program
         var lightningMs = (DateTime.UtcNow - start).TotalMilliseconds;
         Console.WriteLine($"Lightning:  {lightningMs:F3}ms (target: <10ms) {(lightningMs < 10 ? "✓" : "⚠")}");
 
-        Console.WriteLine($"\n✓ ABSOLUTE SPEED achieved!");
+        Console.WriteLine($"\nMeasurements completed for the supplied file.");
     }
 
-    private static async Task RunDemo()
+    private static async Task ConvertFile(string[] args)
     {
-        Console.WriteLine("🚀 Running Demo...\n");
-
-        // Demo 1: Lightning Pipeline
-        Console.WriteLine("═══════════════════════════════════════");
-        Console.WriteLine("Demo 1: Full Lightning Pipeline");
-        Console.WriteLine("═══════════════════════════════════════");
-
-        var pipelineRequest = new PipelineRequest(
-            Source: "demo-document.pdf",
-            ScanMode: ScanMode.Lightning,
-            Quality: 300,
-            UseResonance: true,
-            UseNanoDecibel: true,
-            ProcessingEngine: ProcessingEngine.Hybrid,
-            UseAI: true,
-            UseClisonic: true,
-            OptimizationLevel: 5,
-            UseStigmaMemory: true,
-            ShouldPrint: true,
-            PrintQuality: PrintQuality.Stigma,
-            Copies: 1
-        );
-
-        var result = await LightningAPI.ExecuteCustomPipelineAsync(pipelineRequest);
-
-        foreach (var step in result.Steps)
+        if (args.Length < 3)
         {
-            Console.WriteLine(step);
+            Console.WriteLine("Usage: wwwmmm convert <input-image> <png|jpeg|bmp|tiff|pdf> [quality 1-100]");
+            return;
         }
 
-        // Demo 2: High-Quality Scan
-        Console.WriteLine("\n═══════════════════════════════════════");
-        Console.WriteLine("Demo 2: High-Quality NanoDecibel Scan");
-        Console.WriteLine("═══════════════════════════════════════");
+        if (!TryParseOutputFormat(args[2], out var format))
+        {
+            Console.WriteLine($"Unknown format '{args[2]}'. Use png, jpeg, bmp, tiff or pdf.");
+            Environment.ExitCode = 1;
+            return;
+        }
 
-        var scanResult = await LightningAPI.HighQualityScanAsync("demo-photo.jpg");
-        Console.WriteLine($"✓ Scanned in {scanResult.Metadata.ProcessingTimeMs}ms");
-        Console.WriteLine($"  Technology: {scanResult.Metadata.Technology}");
-        Console.WriteLine($"  Resolution: {scanResult.Metadata.Resolution} DPI");
+        var quality = args.Length > 3 && int.TryParse(args[3], out var parsedQuality) ? parsedQuality : 90;
+        var input = args[1];
 
-        // Demo 3: AI Processing
-        Console.WriteLine("\n═══════════════════════════════════════");
-        Console.WriteLine("Demo 3: Clisonic Global AI Processing");
-        Console.WriteLine("═══════════════════════════════════════");
+        var scan = await LightningAPI.QuickScanAsync(input);
+        if (!scan.Success)
+        {
+            Environment.ExitCode = 1;
+            Console.WriteLine($"✗ Convert failed: {scan.Error}");
+            return;
+        }
 
-        var processResult = await LightningAPI.AIProcessAsync(scanResult.Data);
-        Console.WriteLine($"✓ Processed in {processResult.Metadata.ProcessingTimeMs}ms");
-        Console.WriteLine($"  Engine: {processResult.Metadata.Engine}");
-        Console.WriteLine($"  AI: {processResult.Metadata.AdditionalInfo["UseAI"]}");
+        var output = LightningAPI.EncodeOutput(scan.Data, format, quality);
+        var extension = format switch
+        {
+            OutputFormat.Jpeg => ".jpg",
+            OutputFormat.Tiff => ".tiff",
+            _ => "." + format.ToString().ToLowerInvariant()
+        };
+        var outputPath = Path.ChangeExtension(input, extension);
+        await File.WriteAllBytesAsync(outputPath, output);
 
-        // Demo 4: Batch Processing
-        Console.WriteLine("\n═══════════════════════════════════════");
-        Console.WriteLine("Demo 4: Batch Processing");
-        Console.WriteLine("═══════════════════════════════════════");
+        Console.WriteLine($"✓ Converted {input} → {outputPath}");
+        Console.WriteLine($"  Format: {format} (quality {quality})");
+        Console.WriteLine($"  Output size: {output.Length} bytes");
+    }
 
-        var batchSources = new List<string> { "doc1.pdf", "doc2.pdf", "doc3.pdf" };
-        var batchResults = await LightningAPI.BatchProcessAsync(batchSources);
-        Console.WriteLine($"✓ Processed {batchResults.Count} documents");
-        Console.WriteLine($"  Total time: {batchResults.Sum(r => r.TotalTimeMs)}ms");
-        Console.WriteLine($"  Average: {batchResults.Average(r => r.TotalTimeMs):F2}ms");
-
-        Console.WriteLine("\n═══════════════════════════════════════");
-        Console.WriteLine("✨ Demo completed! System ready for public use.");
-        Console.WriteLine("═══════════════════════════════════════");
+    private static bool TryParseOutputFormat(string value, out OutputFormat format)
+    {
+        switch (value.Trim().ToLowerInvariant())
+        {
+            case "png": format = OutputFormat.Png; return true;
+            case "jpg":
+            case "jpeg": format = OutputFormat.Jpeg; return true;
+            case "bmp": format = OutputFormat.Bmp; return true;
+            case "tif":
+            case "tiff": format = OutputFormat.Tiff; return true;
+            case "pdf": format = OutputFormat.Pdf; return true;
+            default: format = default; return false;
+        }
     }
 
     private static void ShowHelp()
@@ -315,18 +288,15 @@ internal class Program
         Console.WriteLine("  activate <key>          - Activate a license key");
         Console.WriteLine("  license / status        - Show license status and usage");
         Console.WriteLine("  deactivate              - Deactivate current license");
-        Console.WriteLine("  generate-license <tier> - Generate sample license (dev/testing)");
-        Console.WriteLine("  issue-key <tier> <email> <company> [devices] [days] [stripe|internal]");
+        Console.WriteLine("  issue-key <tier> <email> <company> [devices] [days] [manual]");
         Console.WriteLine("                         - Issue production key with audit log");
         Console.WriteLine("\nProcessing Commands:");
         Console.WriteLine("  scan <source>           - Quick scan using TideWave + Resonance");
-        Console.WriteLine("  process                 - Process using Hybrid Multi-Engine");
-        Console.WriteLine("  print                   - Print with Stigma Premium");
+        Console.WriteLine("  process <source>        - Process using Hybrid Multi-Engine");
+        Console.WriteLine("  print <source>          - Print with Stigma Premium");
         Console.WriteLine("  pipeline <source>       - Run complete Lightning Pipeline");
         Console.WriteLine("  batch <sources...>      - Batch process multiple items");
-        Console.WriteLine("  demo                    - Run demonstration");
-        Console.WriteLine("  test                    - Run system tests");
-        Console.WriteLine("  examples                - Run usage examples");
+        Console.WriteLine("  convert <in> <fmt> [q]  - Encode processed image to png/jpeg/bmp/tiff/pdf");
         Console.WriteLine("  serve [port]            - Start REST API + Web Dashboard");
         Console.WriteLine("\nTechnologies:");
         Console.WriteLine("  • TideWave - Balanced scanning");
@@ -349,10 +319,10 @@ internal class Program
 
     private static void IssueLicenseKey(string[] args)
     {
-        if (args.Length < 5)
+        if (args.Length < 4)
         {
-            Console.WriteLine("Usage: wwwmmm issue-key <tier> <email> <company> [devices] [days] [stripe|internal]");
-            Console.WriteLine("Example: wwwmmm issue-key unlimited admin@aba-gmbh.de \"ABA GmbH\" 10 365 stripe");
+            Console.WriteLine("Usage: wwwmmm issue-key <tier> <email> <company> [devices] [days] [manual]");
+            Console.WriteLine("Example: wwwmmm issue-key unlimited admin@aba-gmbh.de \"ABA GmbH\" 10 365 manual");
             return;
         }
 
@@ -361,10 +331,7 @@ internal class Program
         var company = args[3];
         var devices = args.Length > 4 && int.TryParse(args[4], out var d) ? d : 1;
         var days = args.Length > 5 && int.TryParse(args[5], out var v) ? v : 365;
-        var paymentRaw = args.Length > 6 ? args[6].ToLowerInvariant() : "stripe";
-        var mode = paymentRaw == "internal"
-            ? LicenseManager.PaymentMode.InternalQuantum
-            : LicenseManager.PaymentMode.StripeOnly;
+        var mode = LicenseManager.PaymentMode.Manual;
 
         var license = LicenseManager.CreateLicenseKey(
             email,
@@ -372,7 +339,7 @@ internal class Program
             tier,
             devices,
             days,
-            useInternalQuantumSecurity: mode == LicenseManager.PaymentMode.InternalQuantum,
+            useInternalQuantumSecurity: false,
             paymentMode: mode);
 
         Console.WriteLine("✅ License issued successfully");
@@ -398,7 +365,6 @@ internal class Program
         if (args.Length < 2)
         {
             Console.WriteLine("Usage: wwwmmm activate <LICENSE-KEY>");
-            Console.WriteLine("Example: wwwmmm activate LSPP-UNLTD-A1B2-C3D4-E5F6-1234");
             return;
         }
 
@@ -406,39 +372,4 @@ internal class Program
         LicenseManager.ActivateLicense(licenseKey);
     }
 
-    private static void GenerateSampleLicense(string[] args)
-    {
-        Console.WriteLine("🔑 Lightning SPP License Generator\n");
-
-        if (args.Length < 2)
-        {
-            Console.WriteLine("Usage: wwwmmm generate-license <tier> [email] [company]");
-            Console.WriteLine("\nTiers:");
-            Console.WriteLine("  free       - Free tier (1,000 ops/month, 1 device)");
-            Console.WriteLine("  unlimited  - Unlimited tier (€99.99/year, 10 devices)");
-            Console.WriteLine("  enterprise - Enterprise tier (custom, unlimited devices)");
-            Console.WriteLine("\nExample:");
-            Console.WriteLine("  wwwmmm generate-license unlimited user@company.com \"Acme Corp\"");
-            return;
-        }
-
-        var tier = args[1].ToLower();
-        var email = args.Length > 2 ? args[2] : "demo@example.com";
-        var company = args.Length > 3 ? args[3] : "Demo Company";
-
-        LicenseKey license = tier switch
-        {
-            "free" => LicenseManager.SampleLicenses.GenerateFreeLicense(email),
-            "unlimited" => LicenseManager.SampleLicenses.GenerateUnlimitedLicense(email, company),
-            "enterprise" => LicenseManager.SampleLicenses.GenerateEnterpriseLicense(email, company, -1),
-            _ => throw new ArgumentException($"Unknown tier: {tier}")
-        };
-
-        Console.WriteLine("✅ License generated successfully!\n");
-        Console.WriteLine(license.ToString());
-        Console.WriteLine($"\n💾 License Storage Format:\n{license.ToStorageString()}");
-        Console.WriteLine($"\n🔑 To activate, run:");
-        Console.WriteLine($"   wwwmmm activate {license.Key}");
-    }
 }
-

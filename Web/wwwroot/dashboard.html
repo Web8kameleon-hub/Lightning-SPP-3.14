@@ -80,13 +80,13 @@
       <section class="card">
         <h2>Krijo Key</h2>
         <label for="email">Email</label>
-        <input id="email" value="demo@example.com" />
+        <input id="email" type="email" />
 
         <label for="company">Company</label>
-        <input id="company" value="Demo Company" />
+        <input id="company"  />
 
         <label for="adminToken">Admin Token (Bearer)</label>
-        <input id="adminToken" placeholder="LSPP_ADMIN_TOKEN" />
+        <input id="adminToken" type="password" autocomplete="off" placeholder="LSPP_ADMIN_TOKEN" />
 
         <div class="row">
           <div class="flex-1">
@@ -99,10 +99,9 @@
             </select>
           </div>
           <div class="flex-1">
-            <label for="payment">Pagesa</label>
+            <label for="payment">Provisioning</label>
             <select id="payment">
-              <option value="stripe" selected>stripe</option>
-              <option value="internal">internal quantum</option>
+              <option value="manual" selected>Manual administrator grant (no payment)</option>
             </select>
           </div>
         </div>
@@ -114,7 +113,7 @@
       <section class="card">
         <h2>Aktivizo Key</h2>
         <label for="licenseKey">License key</label>
-        <input id="licenseKey" placeholder="LSPP-UNLTD-..." />
+        <input id="licenseKey" placeholder="Signed license key" />
         <button onclick="activateKey()">Activate</button>
         <p id="activation"></p>
       </section>
@@ -247,7 +246,7 @@
       const key = document.getElementById('licenseKey').value;
       const res = await fetch('/api/license/activate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Authorization': `Bearer ${document.getElementById('adminToken').value || ''}` },
         body: toForm({ key })
       });
       const data = parseKeyValue(await res.text());
