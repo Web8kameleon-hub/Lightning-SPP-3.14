@@ -31,7 +31,7 @@ jobs:
         run: dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release --logger "trx;LogFileName=release-readiness.trx"
       - name: Run real pipeline smoke
         run: dotnet run --project wwwmmm.csproj -c Release --no-build -- test
-      - name: Run performance gates
+      - name: Run performance gates (real payloads only)
         run: dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release --no-build --filter FullyQualifiedName~PerformanceGateTests
       - name: Validate release companions
         shell: bash
