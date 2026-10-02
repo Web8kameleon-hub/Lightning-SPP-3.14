@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Stripe;
+using Stripe.Checkout;
 
 namespace wwwmmm.Web;
 
@@ -97,6 +98,44 @@ internal static class StripeBilling
         }
 
         return ProcessedEvents.TryAdd(eventId, DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Extracts the fields needed to fulfil a completed Checkout Session (issue + email a
+    /// license key). Returns false for any other event type, or for a session that is not
+    /// actually paid yet (e.g. still awaiting an asynchronous payment method).
+    /// </summary>
+    public static bool TryGetCheckoutFulfillment(
+        Event stripeEvent,
+        out string email,
+        out string tier,
+        out string sessionId)
+    {
+        email = string.Empty;
+        tier = string.Empty;
+        sessionId = string.Empty;
+
+        if (!string.Equals(stripeEvent.Type, "checkout.session.completed", StringComparison.Ordinal))
+            return false;
+
+        if (stripeEvent.Data?.Object is not Session session)
+            return false;
+
+        if (!string.Equals(session.PaymentStatus, "paid", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var resolvedEmail = session.CustomerDetails?.Email ?? session.CustomerEmail;
+        if (string.IsNullOrWhiteSpace(resolvedEmail))
+            return false;
+
+        if (session.Metadata is null || !session.Metadata.TryGetValue("tier", out var resolvedTier) ||
+            string.IsNullOrWhiteSpace(resolvedTier))
+            return false;
+
+        email = resolvedEmail;
+        tier = resolvedTier;
+        sessionId = session.Id ?? string.Empty;
+        return true;
     }
 
     private static List<(string Destination, string Secret)> ResolveWebhookSecrets()

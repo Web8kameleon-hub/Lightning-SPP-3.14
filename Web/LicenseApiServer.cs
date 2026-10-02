@@ -205,6 +205,12 @@ internal static class LicenseApiServer
 
                 InternalAuditLogger.Info(
                     $"Stripe webhook verified: destination={destination}, type={stripeEvent.Type}, id={stripeEvent.Id}");
+
+                if (StripeBilling.TryGetCheckoutFulfillment(stripeEvent, out var customerEmail, out var purchasedTier, out var sessionId))
+                {
+                    await FulfillCheckoutAsync(customerEmail, purchasedTier, sessionId);
+                }
+
                 await TextAsync(
                     context,
                     HttpStatusCode.OK,
@@ -295,6 +301,44 @@ internal static class LicenseApiServer
         {
             InternalAuditLogger.Error($"API error on {path}: {ex.Message}");
             await TextAsync(context, HttpStatusCode.InternalServerError, "ok=false\nerror=Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Issues a license key for a paid Checkout Session and emails it to the customer.
+    /// Deliberately swallows and logs all failures: the webhook must still return 200 to
+    /// Stripe (the event is already marked processed, so Stripe will not retry), and a
+    /// failure here must surface as an audit-log alert for manual follow-up rather than
+    /// as an HTTP error that could be misread as "payment rejected".
+    /// </summary>
+    private static async Task FulfillCheckoutAsync(string email, string tier, string sessionId)
+    {
+        try
+        {
+            var license = LicenseManager.CreateLicenseKey(
+                email,
+                company: email,
+                tier,
+                devices: 1,
+                validityDays: tier.Equals("paygo", StringComparison.OrdinalIgnoreCase) ? 30 : 365,
+                useInternalQuantumSecurity: false);
+
+            InternalAuditLogger.Info(
+                $"Stripe checkout fulfilled: session={sessionId}, tier={tier}, email={email}, expires={license.ExpirationDate:yyyy-MM-dd}");
+
+            var (sent, emailError) = await EmailService.TrySendLicenseKeyEmailAsync(
+                email, tier, license.Key, license.ExpirationDate);
+
+            if (!sent)
+            {
+                InternalAuditLogger.Error(
+                    $"Stripe checkout fulfilled but license email FAILED to send: session={sessionId}, email={email}, error={emailError}. Manual delivery required.");
+            }
+        }
+        catch (Exception ex)
+        {
+            InternalAuditLogger.Error(
+                $"Stripe checkout fulfillment FAILED: session={sessionId}, tier={tier}, email={email}, error={ex.Message}. Manual license issuance required.");
         }
     }
 

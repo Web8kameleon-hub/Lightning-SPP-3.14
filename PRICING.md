@@ -38,25 +38,10 @@ Web: https://aba-gmbh.de
 
 ---
 
-### 2. Pay-As-You-Go - Usage Based
+### 2. Pay-As-You-Go
 
-**Price:** €0.001 per processing unit  
-**Billing:** Monthly based on actual usage  
-**Minimum:** €9.99/month
-
-**What's a Processing Unit?**
-- 1 scan operation = 1 unit
-- 1 processing operation = 1 unit  
-- 1 print operation = 1 unit
-- Full pipeline (scan+process+print) = 3 units
-
-**Example Costs:**
-```
-1,000 operations/month   = €1.00
-10,000 operations/month  = €10.00
-100,000 operations/month = €100.00
-500,000 operations/month = €500.00
-```
+**Price:** €19.99/month  
+**Billing:** Monthly subscription
 
 **Included:**
 - ✅ All features unlocked
@@ -74,12 +59,14 @@ Web: https://aba-gmbh.de
 - Testing production load
 - Seasonal businesses
 
+**Subscribe:** [Pay-as-you-go — €19.99/month](https://buy.stripe.com/00w3cv1e8b3t2Ix6lKcjS00)
+
 ---
 
-### 3. Unlimited Annual - Best Value! 🌟
+### 3. Unlimited - Best Value! 🌟
 
-**Price:** €99.99/year  
-**Billing:** Annual (365 days)  
+**Price:** €49.99/month  
+**Billing:** Monthly subscription  
 **Processing:** UNLIMITED  
 
 **Included:**
@@ -89,18 +76,9 @@ Web: https://aba-gmbh.de
 - ✅ Commercial use
 - ✅ Priority email support (24h response)
 - ✅ Quarterly updates
-- ✅ 1 year of upgrades
 - ✅ Usage analytics dashboard
 - ✅ No hidden fees
 - ✅ Cancel anytime (no refund for unused time)
-
-**Savings:**
-```
-Compared to Pay-As-You-Go:
-- Break-even at ~100,000 operations/year
-- Typical clinic: 500,000 ops/year = €400 saved
-- Busy practice: 2M ops/year = €1,900 saved
-```
 
 **Perfect For:**
 - Medical practices
@@ -110,6 +88,8 @@ Compared to Pay-As-You-Go:
 - Long-term projects
 
 **Most Popular Choice!** ⭐
+
+**Subscribe:** [Unlimited — €49.99/month](https://buy.stripe.com/dRm9AT3mg6Nderf4dCcjS01)
 
 ---
 
@@ -167,7 +147,7 @@ Compared to Pay-As-You-Go:
 | **Custom Features** | ❌ | ❌ | ❌ | ✅ |
 | **On-Premise** | ❌ | ❌ | ❌ | ✅ |
 | **Training** | ❌ | ❌ | ❌ | ✅ |
-| **Price** | FREE | From €9.99/mo | €99.99/year | Custom |
+| **Price** | FREE | €19.99/mo | €49.99/mo | Custom |
 
 ---
 
@@ -212,7 +192,7 @@ All technologies are proprietary to ABA GmbH.
 - **Germany:** 19% MwSt.
 
 **Example for German customers:**
-- Unlimited Annual: €99.99 + €19.00 VAT = €118.99 total
+- Unlimited: €49.99 + €9.50 VAT = €59.49 total/month
 
 ### Invoicing
 
@@ -226,9 +206,9 @@ All technologies are proprietary to ABA GmbH.
 
 ### How It Works
 
-1. **Purchase** - Select your plan and complete payment
-2. **Receive License Key** - Sent to your email within 24 hours
-3. **Activate** - Enter key in Lightning SPP settings
+1. **Purchase** - Select your plan and complete payment via Stripe Checkout
+2. **Receive License Key** - Emailed automatically within minutes of payment
+3. **Activate** - Paste the key into your [workspace dashboard](https://scanprocessprint.com/dashboard) — no administrator access code required
 4. **Start Using** - All features unlocked immediately
 
 ### License Key Format
