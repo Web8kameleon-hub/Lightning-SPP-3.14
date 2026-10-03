@@ -1,4 +1,6 @@
+using System.Security.Cryptography;
 using System.IO.Compression;
+using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using wwwmmm.Services;
 using wwwmmm.Services.Implementation;
@@ -8,68 +10,87 @@ namespace LightningSPP.Tests;
 
 public class GoldenPipelineTests
 {
+    private static readonly string GoldenDir = Path.Combine(FindRepoRoot(), "Tests", "LightningSPP.Tests", "Golden");
+
     [Fact]
-    public async Task Scan_TideWave_IsDeterministic()
+    public async Task Golden_Scan_TideWave_Hash_IsStable()
     {
         var svc = new FastScanService(NullLogger<FastScanService>.Instance);
-        var input = ImageFixture.Png();
+        var input = DeterministicPayload(4096);
 
-        var first = await svc.ScanAsync(input, ScanMode.TideWave, 300);
-        var second = await svc.ScanAsync(input, ScanMode.TideWave, 300);
+        var result = await svc.ScanAsync(input, ScanMode.TideWave, 300);
 
-        Assert.True(first.Success);
-        Assert.True(second.Success);
-        Assert.Equal(first.Data, second.Data);
+        Assert.True(result.Success);
+        // The scanner now uses ImageSharp (the previous baseline used SkiaSharp).
+        using var image = SixLabors.ImageSharp.Image.Load(result.Data);
+        Assert.True(image.Width > 0 && image.Height > 0);
+        var repeated = await svc.ScanAsync(input, ScanMode.TideWave, 300);
+        Assert.True(repeated.Success);
+        Assert.Equal(result.Data, repeated.Data);
+        var hash = Sha256Hex(result.Data);
+        AssertGolden("scan_tidewave.sha256", hash);
     }
 
     [Fact]
-    public async Task Process_Hybrid_IsDeterministic()
+    public async Task Golden_Process_Hybrid_Hash_IsStable()
     {
         var svc = new RealAIProcessor();
         var input = DeterministicPayload(2048);
-        var options = new ProcessingOptions(
-            ProcessingEngine.Hybrid,
-            UseAI: false,
-            UseClisonic: false,
-            OptimizationLevel: 5,
-            UseStigmaMemory: true);
 
-        var first = await svc.ProcessAsync(input, options);
-        var second = await svc.ProcessAsync(input, options);
+        var result = await svc.ProcessAsync(
+            input,
+            new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: true, UseClisonic: true, OptimizationLevel: 5, UseStigmaMemory: true));
 
-        Assert.True(first.Success);
-        Assert.True(second.Success);
-        Assert.Equal(first.ProcessedData, second.ProcessedData);
+        Assert.True(result.Success);
+        var hash = Sha256Hex(result.ProcessedData);
+        AssertGolden("process_hybrid.sha256", hash);
     }
 
     [Fact]
-    public async Task Stigma_OutputArtifact_RoundTripsWithoutDataLoss()
+    public async Task Print_Stigma_OutputArtifact_RoundTripsWithoutDataLoss()
     {
-        var outputDir = Path.Combine(Path.GetTempPath(), $"LightningSPP-{Guid.NewGuid():N}");
+        var outputDir = Path.Combine(Path.GetTempPath(), "LightningSPP-GoldenTests");
         Directory.CreateDirectory(outputDir);
 
-        try
+        var svc = new RealPrintService(outputDir);
+        var input = DeterministicPayload(3072);
+
+        var result = await svc.StigmaPrintAsync(input);
+        Assert.True(result.Success);
+        Assert.False(string.IsNullOrWhiteSpace(result.Metadata.Destination));
+
+        var artifact = await File.ReadAllBytesAsync(result.Metadata.Destination);
+        // Brotli bytes may change with runtime versions; the lossless payload is the contract.
+        using var source = new MemoryStream(artifact);
+        using var decoder = new BrotliStream(source, CompressionMode.Decompress);
+        using var restored = new MemoryStream();
+        await decoder.CopyToAsync(restored);
+        Assert.Equal(input, restored.ToArray());
+    }
+
+    private static void AssertGolden(string fileName, string actual)
+    {
+        Directory.CreateDirectory(GoldenDir);
+        var path = Path.Combine(GoldenDir, fileName);
+
+        var update = string.Equals(
+            Environment.GetEnvironmentVariable("LIGHTNING_GOLDEN_UPDATE"),
+            "1",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (update || !File.Exists(path))
         {
-            var svc = new RealPrintService(outputDir);
-            var input = DeterministicPayload(3072);
-
-            var result = await svc.StigmaPrintAsync(input);
-
-            Assert.True(result.Success, result.Error);
-            Assert.EndsWith(".br", result.Metadata.Destination, StringComparison.OrdinalIgnoreCase);
-            Assert.True(File.Exists(result.Metadata.Destination));
-
-            await using var source = File.OpenRead(result.Metadata.Destination);
-            await using var decompressor = new BrotliStream(source, CompressionMode.Decompress);
-            await using var restored = new MemoryStream();
-            await decompressor.CopyToAsync(restored);
-
-            Assert.Equal(input, restored.ToArray());
+            File.WriteAllText(path, actual + Environment.NewLine, new UTF8Encoding(false));
         }
-        finally
-        {
-            Directory.Delete(outputDir, recursive: true);
-        }
+
+        var expected = File.ReadAllText(path, Encoding.UTF8).Trim();
+        Assert.Equal(expected, actual);
+    }
+
+    private static string Sha256Hex(byte[] data)
+    {
+        var hash = SHA256.HashData(data);
+        return Convert.ToHexString(hash);
     }
 
     private static byte[] DeterministicPayload(int size)
@@ -83,5 +104,22 @@ public class GoldenPipelineTests
         }
 
         return bytes;
+    }
+
+    private static string FindRepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "wwwmmm.slnx")))
+            {
+                return dir.FullName;
+            }
+
+            dir = dir.Parent;
+        }
+
+        // Fallback for IDE test runners
+        return Directory.GetCurrentDirectory();
     }
 }

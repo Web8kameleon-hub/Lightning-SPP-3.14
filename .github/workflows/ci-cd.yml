@@ -8,6 +8,11 @@ on:
       - '**/*.csproj'
       - '.github/workflows/**'
       - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - 'Web/**'
+      - 'deploy/**'
+      - 'Scripts/hosting-smoke.sh'
       - 'README.md'
       - 'CHANGELOG.md'
   pull_request:
@@ -17,6 +22,11 @@ on:
       - '**/*.csproj'
       - '.github/workflows/**'
       - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - 'Web/**'
+      - 'deploy/**'
+      - 'Scripts/hosting-smoke.sh'
       - 'README.md'
       - 'CHANGELOG.md'
   release:
@@ -30,31 +40,31 @@ jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-        
+
     - name: Restore dependencies
       run: dotnet restore
-      
+
     - name: Build
       run: dotnet build --configuration Release --no-restore
-      
+
     - name: Run unit tests
       run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal
-      
+
     - name: Run Lightning SPP Demo
       run: dotnet run --no-build --configuration Release -- demo
-      
+
     - name: Run Lightning SPP Tests
       run: dotnet run --no-build --configuration Release -- test
-      
+
     - name: Run Speed Benchmark
       run: dotnet run --no-build --configuration Release -- speed
 
@@ -62,31 +72,34 @@ jobs:
     name: Docker Build & Test
     runs-on: ubuntu-latest
     needs: build-and-test
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      
+
     - name: Build Docker image
       run: |
         docker build -t ${{ env.DOCKER_IMAGE_NAME }}:latest .
         docker build -t ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} .
-        
+
+    - name: Test hosted pages and API
+      run: bash Scripts/hosting-smoke.sh ${{ env.DOCKER_IMAGE_NAME }}:latest
+
     - name: Test Docker container - Help
       run: docker run --rm ${{ env.DOCKER_IMAGE_NAME }}:latest --help
-      
+
     - name: Test Docker container - Demo
       run: docker run --rm ${{ env.DOCKER_IMAGE_NAME }}:latest demo
-      
+
     - name: Test Docker container - Tests
       run: docker run --rm ${{ env.DOCKER_IMAGE_NAME }}:latest test
-      
+
     - name: Test Docker container - Speed
       run: docker run --rm ${{ env.DOCKER_IMAGE_NAME }}:latest speed
-      
+
     - name: Test Docker container - REAL mode
       run: docker run --rm ${{ env.DOCKER_IMAGE_NAME }}:latest real
 
@@ -95,30 +108,30 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-and-test, docker-build]
     if: github.event_name == 'release'
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-        
+
     - name: Restore dependencies
       run: dotnet restore
-      
+
     - name: Build Release
       run: dotnet build --configuration Release --no-restore
-      
+
     - name: Pack NuGet package
       run: dotnet pack --configuration Release --no-build --output ./nupkg
-      
+
     - name: Publish to NuGet.org
       env:
         NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
       run: dotnet nuget push ./nupkg/*.nupkg --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
-      
+
     - name: Upload NuGet package as artifact
       uses: actions/upload-artifact@v4
       with:
@@ -130,24 +143,24 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-and-test, docker-build]
     if: github.event_name == 'release'
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      
+
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        
+
     - name: Extract version from tag
       id: version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       env:
@@ -162,3 +175,47 @@ jobs:
         platforms: linux/amd64,linux/arm64
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+  deploy-production:
+    name: Deploy to Production (zero-downtime)
+    runs-on: ubuntu-latest
+    needs: [build-and-test, docker-build]
+    if: github.event_name == 'release'
+    environment:
+      name: production
+      url: https://scanprocessprint.com
+
+    steps:
+    # Builds the release container on hel-core-01 itself (deploy.sh runs
+    # `docker build` from a server-side checkout), verifies it end-to-end
+    # against its own internal proxy, hot-swaps the shared nginx edge with a
+    # graceful reload, re-verifies over the public domain, then drains and
+    # stops the previous release. See deploy/production/README.md for the
+    # one-time host bootstrap this depends on, and deploy/production/deploy.sh
+    # for the rollback-on-failure behavior - the active release is never
+    # touched until the replacement has proven itself.
+    - name: Deploy via SSH (deploy/production/deploy.sh)
+      uses: appleboy/ssh-action@v1.2.0
+      with:
+        host: ${{ secrets.PROD_SSH_HOST }}
+        username: ${{ secrets.PROD_SSH_USER }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        command_timeout: 15m
+        script: |
+          set -euo pipefail
+          cd /opt/scanprocessprint-src
+          git fetch origin
+          git checkout ${{ github.sha }}
+          deploy/production/deploy.sh deploy ${{ github.sha }}
+
+    - name: Post-deploy public health verification
+      run: |
+        for i in $(seq 1 10); do
+          if curl -fsS https://scanprocessprint.com/api/health; then
+            echo "Public health check passed."
+            exit 0
+          fi
+          sleep 3
+        done
+        echo "Post-deploy public health check failed after deploy.sh reported success." >&2
+        exit 1

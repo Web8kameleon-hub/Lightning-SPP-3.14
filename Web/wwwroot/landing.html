@@ -1,58 +1,32 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lightning SPP 3.14 | Scan. Process. Print. In milliseconds.</title>
-<meta name="description" content="Real document and image processing with measurable performance, Stripe billing, license activation, REST API and local or cloud deployment.">
-<style>
-:root{--bg:#050a12;--panel:#0d1827;--line:#1f354b;--text:#eefaff;--muted:#9cb9c8;--cyan:#41dbff;--amber:#ffad55;--green:#52e09b}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:16px/1.6 Inter,system-ui,sans-serif;color:var(--text);background:radial-gradient(900px 500px at 80% -10%,#174b62 0,transparent 65%),var(--bg)}
-a{color:inherit}.wrap{width:min(1120px,calc(100% - 36px));margin:auto}nav{position:sticky;top:0;z-index:10;background:#050a12e8;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
-.nav{height:68px;display:flex;align-items:center;gap:26px}.logo{font-weight:800;text-decoration:none;margin-right:auto}.logo span{color:var(--amber)}.nav a:not(.logo):not(.btn){color:var(--muted);text-decoration:none}
-.btn{display:inline-block;border:1px solid #65e5ff66;border-radius:10px;padding:11px 18px;text-decoration:none;font-weight:750;background:linear-gradient(125deg,var(--cyan),#9aeeff);color:#03202b}.btn.alt{background:transparent;color:var(--text);border-color:var(--line)}
-.hero{padding:92px 0 72px}.eyebrow{color:var(--cyan);font-weight:700;letter-spacing:.09em;text-transform:uppercase}.hero h1{font-size:clamp(44px,7vw,80px);line-height:1.02;margin:12px 0 22px;max-width:900px}.hero h1 span{color:var(--amber)}.lead{font-size:clamp(18px,2vw,22px);max-width:760px;color:var(--muted)}
-.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}.proof{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:54px}.metric,.card,.plan{background:linear-gradient(145deg,#112238cc,#09131fcc);border:1px solid var(--line);border-radius:16px;padding:22px}.metric strong{display:block;font-size:28px;color:var(--green)}.metric span{color:var(--muted);font-size:14px}
-section{padding:76px 0}h2{font-size:clamp(30px,4vw,46px);margin:0 0 12px}.section-lead{color:var(--muted);max-width:760px;margin:0 0 34px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card h3,.plan h3{margin-top:0}.card p,.plan p,.plan li{color:var(--muted)}
-.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden}.flow div{background:var(--panel);padding:30px}.flow b{display:block;color:var(--amber);font-size:22px}
-.pricing{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.plan.featured{border-color:var(--amber);box-shadow:0 0 0 1px #ffad5544}.price{font-size:30px;font-weight:850;color:var(--text)}.plan ul{padding-left:18px;min-height:120px}.badge{color:var(--amber);font-size:12px;font-weight:800;text-transform:uppercase}
-.note{border-left:3px solid var(--cyan);padding:12px 16px;background:#0b1a28;color:var(--muted);margin-top:22px}
-footer{border-top:1px solid var(--line);padding:32px 0;color:var(--muted)}
-@media(max-width:850px){.proof,.pricing{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.nav a:not(.logo):not(.btn){display:none}}
-@media(max-width:540px){.proof,.pricing,.flow{grid-template-columns:1fr}.hero{padding-top:60px}.nav .alt{display:none}}
-</style>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Lightning SPP is a modular Scan, Process and Print pipeline for .NET 10 with adaptive Stigma profiles, real image processing and lossless output. Free developer tier, pay-as-you-go and Unlimited plans."><title>Lightning SPP — Scan, Process, Print Pipeline for .NET</title><link rel="canonical" href="https://scanprocessprint.com/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap"><link rel="stylesheet" href="/site.css">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta property="og:title" content="Lightning SPP — Scan, Process, Print Pipeline for .NET">
+<meta property="og:description" content="Modular Scan, Process and Print pipeline for .NET 10 with adaptive Stigma profiles and real image/AI processing.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://scanprocessprint.com/">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"ABA GmbH","url":"https://scanprocessprint.com/","email":"clisonix@pm.me","sameAs":["https://github.com/Web8kameleon-hub/Lightning-SPP-3.14"]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Lightning SPP","applicationCategory":"DeveloperApplication","operatingSystem":"Windows, Linux, macOS","softwareVersion":"3.14","offers":{"@type":"AggregateOffer","lowPrice":"0","highPrice":"99.99","priceCurrency":"EUR"}}
+</script>
 </head>
 <body>
-<nav><div class="wrap nav"><a class="logo" href="/">Lightning<span>SPP</span> 3.14</a><a href="#product">Product</a><a href="#benchmarks">Benchmarks</a><a href="#pricing">Pricing</a><a href="/dashboard">License Dashboard</a><a class="btn" href="#pricing">Choose a plan</a></div></nav>
-<main>
-<header class="hero"><div class="wrap">
-<div class="eyebrow">Real Scan → Process → Print pipeline</div>
-<h1>Scan. Process. Print. <span>In milliseconds.</span></h1>
-<p class="lead">Process documents and images with real SkiaSharp transformations, configured ONNX inference, lossless Brotli artifacts, REST APIs, verified Stripe webhook fulfillment and administrator license activation.</p>
-<div class="actions"><a class="btn" href="/dashboard">Open License Dashboard</a><a class="btn alt" href="/swagger">Explore REST API</a></div>
-<p class="note">Processing timings are measured per operation. No throughput or latency guarantee is inferred from synthetic examples. AI inference requires a configured ONNX model and matching input tensor.</p>
-</div></header>
-
-<section id="product"><div class="wrap"><h2>One pipeline. Four deployment models.</h2><p class="section-lead">Use Lightning SPP locally, inside your application, behind the REST API or in a controlled enterprise environment.</p>
-<div class="flow"><div><b>01 — Scan</b>TideWave, Resonance and NanoDecibel profiles.</div><div><b>02 — Process</b>CLX, hybrid processing, ML and compression.</div><div><b>03 — Print</b>Deterministic lossless output artifacts and audit data.</div></div>
-<div class="grid" style="margin-top:16px">
-<article class="card"><h3>Real processing</h3><p>Actual image transformation, compression and file output. No artificial-delay path in production mode.</p></article>
-<article class="card"><h3>License operations</h3><p>Issue, activate and inspect Free, Pay‑as‑you‑go, Unlimited and Enterprise licenses from one dashboard.</p></article>
-<article class="card"><h3>Stripe billing</h3><p>Signed webhook verification, legacy/snapshot/thin destination support and replay protection.</p></article>
-</div></div></section>
-
-<section id="pricing"><div class="wrap"><h2>Pricing customers can understand</h2><p class="section-lead">Start free, pay for actual usage, choose a predictable annual license or request an enterprise agreement.</p>
-<div class="pricing">
-<article class="plan"><h3>Free</h3><div class="price">€0</div><p>Developer entry tier</p><ul><li>1,000 operations/month</li><li>1 device</li><li>Community support</li></ul><a class="btn alt" href="/dashboard">Activate</a></article>
-<article class="plan"><h3>Pay as you go</h3><div class="price">€0.001/op</div><p>€9.99 monthly minimum</p><ul><li>Production use</li><li>All processing profiles</li><li>Usage-based Stripe billing</li></ul><a class="btn" href="https://aba-gmbh.de/lightning-spp/pricing">Buy with Stripe</a></article>
-<article class="plan featured"><div class="badge">Predictable cost</div><h3>Unlimited</h3><div class="price">€99.99/year</div><p>Unlimited operations</p><ul><li>Up to 10 devices</li><li>Commercial use</li><li>Priority email support</li></ul><a class="btn" href="https://aba-gmbh.de/lightning-spp/pricing">Buy with Stripe</a></article>
-<article class="plan"><h3>Enterprise</h3><div class="price">Custom</div><p>Contract and deployment options</p><ul><li>Custom SLA</li><li>On-premise option</li><li>Dedicated integration support</li></ul><a class="btn alt" href="mailto:clisonix@pm.me?subject=Lightning%20SPP%20Enterprise">Contact sales</a></article>
-</div></div></section>
-
-<section><div class="wrap"><h2>Release evidence, not marketing guesses</h2><div class="grid">
-<article class="card"><h3>Benchmark gates</h3><p>Median gates for Instant, UltraFast and Lightning plus a complete real-pipeline gate.</p></article>
-<article class="card"><h3>Negative tests</h3><p>Invalid Stripe signatures, missing secrets, replayed events, unauthorized administration and invalid inputs.</p></article>
-<article class="card"><h3>Deterministic outputs</h3><p>Golden SHA-256 fixtures verify scan, process and Stigma output behavior across releases.</p></article>
-</div><div class="actions"><a class="btn alt" href="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/blob/main/Docs/RELEASE_EVIDENCE.md">Read release evidence</a><a class="btn alt" href="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14">View source</a></div></div></section>
-</main>
-<footer><div class="wrap">© 2026 ABA GmbH · Lightning SPP 3.14 · <a href="/dashboard">Dashboard</a> · <a href="/openapi.json">OpenAPI</a> · <a href="mailto:clisonix@pm.me">Support</a></div></footer>
+<a class="skip" href="#main">Skip to content</a>
+<header><a class="brand" href="/">Lightning SPP<span aria-hidden="true">.</span></a><nav aria-label="Main navigation"><a href="/features">Features</a><a href="/technology">Technology</a><a href="/try">Try it</a><a href="/pricing">Pricing</a><a href="/benchmarks">Benchmarks</a><a href="/dashboard">Your license</a><a href="#help">Help</a></nav></header>
+<main id="main">
+<section class="hero"><span class="eyebrow">Welcome to Lightning SPP</span><h1>A clear starting point<br>for your workspace.</h1><p class="intro">Check your license, understand your plan, and find out what to do next. Everything you need to get started, in plain language.</p><div class="actions"><a class="button" href="/try">Try it now — no install</a><a class="button secondary" href="/dashboard">Check your license</a></div></section>
+<section id="how-it-works" aria-labelledby="steps-title"><h2 id="steps-title">Three simple steps</h2><div class="grid section">
+<article class="card"><span class="number">1</span><h3>Check your plan</h3><p>See whether this workspace has an active license and how much it has been used this month.</p></article>
+<article class="card"><span class="number">2</span><h3>Get access if you need it</h3><p>If your license is missing or has expired, ask the person who set up Lightning SPP for your organization.</p></article>
+<article class="card"><span class="number">3</span><h3>Continue in your connected app</h3><p>Use the app your organization provides to scan, improve, and print documents.</p></article>
+</div></section>
+<section id="help" class="section"><h2>Good to know</h2><details class="card"><summary>Can I scan or print from this website?</summary><p>This website currently manages your workspace license. Document scanning, editing, and printing are available through a connected application, not on this page. Ask your workspace administrator which app to use.</p></details><details class="card"><summary>What is a license?</summary><p>A license gives your workspace access to a plan. The license page shows whether that access is active. You do not need to enter any technical information to check it.</p></details><details class="card"><summary>Who can help me get started?</summary><p>Contact the person or team who set up Lightning SPP for you. They can activate your workspace license and help you find the right application.</p></details></section>
+</main><footer><span>Lightning SPP · Workspace access, made clear.</span><a href="/dashboard#administration">For workspace administrators</a></footer>
 </body></html>

@@ -65,7 +65,7 @@ public class ProductionSecurityTests
     }
 
     [Fact]
-    public async Task ActivationNeedsAdminAndBodyLimitsApplyToChunkedRequests()
+    public async Task ActivationIsSelfServiceAndBodyLimitsApplyToChunkedRequests()
     {
         var probe = new TcpListener(IPAddress.Loopback, 0);
         probe.Start();
@@ -76,9 +76,11 @@ public class ProductionSecurityTests
         try
         {
             using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+            // Self-service: activation needs no admin token (LicenseManager.ActivateLicense
+            // cryptographically validates the key itself), but a cryptographically invalid
+            // key must still be rejected.
             using var activation = await client.PostAsync("/api/license/activate", new StringContent("key=LSPP-ENTER-A-B-C-D"));
-            Assert.Equal(HttpStatusCode.Unauthorized, activation.StatusCode);
-            Assert.False(activation.Headers.Contains("Access-Control-Allow-Origin"));
+            Assert.Equal(HttpStatusCode.BadRequest, activation.StatusCode);
             using var oversized = new HttpRequestMessage(HttpMethod.Post, "/api/stripe/webhook");
             oversized.Headers.TransferEncodingChunked = true;
             oversized.Content = new StreamContent(new MemoryStream(new byte[LicenseApiServer.MaxBodyBytes + 1]));

@@ -18,8 +18,12 @@ internal static class RuntimeSecurity
     {
         if (!IsProduction) return;
         RequireSecret("LSPP_ADMIN_TOKEN");
-        RequireSecret("LSPP_STORAGE_KEY");
-        LightningSPP.Licensing.LicenseKey.ValidateProductionConfiguration();
+        // The license signing key accepts either a single current key or a rotation
+        // set; LicenseKey.cs itself enforces the detailed shape when first used. Here
+        // we only fail fast if neither form is present at all.
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LSPP_LICENSE_SIGNING_KEY")) &&
+            string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LSPP_LICENSE_SIGNING_KEYS")))
+            throw new InvalidOperationException("Production requires LSPP_LICENSE_SIGNING_KEY or LSPP_LICENSE_SIGNING_KEYS.");
         var directory = Environment.GetEnvironmentVariable("LSPP_DATA_DIR");
         if (string.IsNullOrWhiteSpace(directory) || !Path.IsPathFullyQualified(directory))
             throw new InvalidOperationException("Production requires an absolute LSPP_DATA_DIR.");

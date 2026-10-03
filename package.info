@@ -1,15 +1,15 @@
 # Lightning SPP 3.14 - Universal System
-# Package configuration for MASSIVE public distribution
+# Package configuration
 
 [package]
 name = "lightning-spp-universal"
 version = "3.14.0"
-description = "Ultra-fast universal scan, process, and print system - Deploy on ANY device"
+description = "Modular scan, process, and print pipeline for .NET 10"
 authors = ["wwwmmm Team", "Clisonix Global", "Web8 Kameleon Hub"]
 license = "MIT"
-keywords = ["scan", "print", "AI", "processing", "lightning", "universal", "medical", "iot", "mobile", "embedded"]
-repository = "https://github.com/Web8kameleon-hub/lightning-spp"
-homepage = "https://clisonix.com/lightning-spp"
+keywords = ["scan", "print", "AI", "processing", "lightning", ".NET", "document-processing"]
+repository = "https://github.com/Web8kameleon-hub/Lightning-SPP-3.14"
+homepage = "https://scanprocessprint.com"
 
 [features]
 # Core Technologies
@@ -20,96 +20,46 @@ homepage = "https://clisonix.com/lightning-spp"
 - Resonance high-precision scanning
 - NanoDecibel maximum quality scanning
 - Clisonic Global AI processing
-- Stigma premium printing
-- Stigma Memory optimization
+- Stigma adaptive pipeline control, lossless output
+- Stigma Memory usage profiling
 - Hybrid multi-engine processing
 
-# Universal Deployment (NEW in 3.14)
-- Lightning 3.14 API - Absolute Speed
-- Universal SDK for ANY device
-- Medical device support (<3ms)
-- Mobile device optimization (battery-aware)
-- IoT device support (<64KB memory)
-- Embedded systems (<1ms latency)
-- Desktop applications (full-featured)
-- Web applications (WebAssembly)
-- Cloud services (millions/second)
-
-# Device-Specific APIs
-- MedicalAPI - Medical-grade precision
-- MobileAPI - Battery optimization
-- IoTAPI - Minimal memory footprint
-- CloudAPI - Massive parallel processing
-
-# Speed Modes
-- Instant (<1ms) - Sub-millisecond
-- Ultra Fast (<5ms) - Mobile optimized
-- Lightning (<10ms) - Full featured
-- Streaming - Continuous data
-- Parallel Batch - 1000+ concurrent
+# Device-oriented profiles (selected per deployment, not separately certified)
+- Medical, Mobile, IoT, Desktop, Web and Cloud device profiles
+- Universal SDK entry points for each profile (MedicalAPI, MobileAPI, IoTAPI, CloudAPI)
 
 [performance]
-# Lightning 3.14 Performance Targets
-instant_mode = "<1ms"
-ultra_fast_mode = "<5ms"
-lightning_mode = "<10ms"
-
-medical_latency = "<3ms"
-mobile_latency = "<2ms"
-iot_latency = "<1ms"
-embedded_latency = "<1ms"
-desktop_latency = "<5ms"
-web_latency = "<2ms"
-cloud_throughput = ">1M items/sec"
-
-pipeline_time_ms = "~120"
+# Performance is hardware-, input- and configuration-dependent.
+# No fixed latency or throughput numbers are published here.
+# Run `dotnet run -- speed` on your own target hardware and report
+# hardware spec, dataset, configuration and repetition count alongside
+# any result. See https://scanprocessprint.com/benchmarks.
 
 [deployment]
-platforms = ["Windows", "Linux", "macOS", "iOS", "Android", "WebAssembly", "Embedded"]
+platforms = ["Windows", "Linux", "macOS"]
 docker = true
-kubernetes = true
 aot = true
-public_ready = true
-massive_scale = true
-
-# Target Devices
-medical_devices = ["Scanner", "Monitor", "Diagnostic", "Imaging", "Lab Equipment"]
-mobile_devices = ["iOS", "Android", "Tablets", "Smartwatches"]
-iot_devices = ["Sensors", "Smart Home", "Industrial Controllers"]
-embedded_systems = ["Automotive", "Medical Monitors", "Industrial"]
-cloud_platforms = ["Azure", "AWS", "GCP", "Kubernetes"]
 
 [distribution]
+# Lightning SPP is a .NET/C# codebase. The only real, currently published
+# distribution channel is NuGet. There is no Python, Rust, Node.js, Java or
+# mobile (CocoaPods) source in this repository, so no packages are published
+# to PyPI, crates.io, npm, Maven or CocoaPods. Do not list those channels
+# here until real wrapper/binding projects exist and are published.
 nuget = "LightningSPP.Universal 3.14.0"
-npm = "lightning-spp-web"
-maven = "com.lightning-spp:universal:3.14.0"
-cocoapods = "LightningSPP ~> 3.14"
 
 [compliance]
-medical_standards = ["FDA 510(k)", "CE Mark", "ISO 13485"]
-security = ["HIPAA", "GDPR", "SOC 2"]
-quality = ["ISO 9001", "GxP"]
+# No regulatory certifications (FDA, CE, ISO, HIPAA, GDPR, SOC 2, GxP, etc.)
+# are claimed for this product. Medical, healthcare or other regulated use
+# requires independent validation and certification by the deploying
+# organization. See README.md "Kufijtë e versionit 3.14" and PRIVACY.md.
 
 [documentation]
 readme = "README.md"
 api_docs = "Docs/API_Documentation.md"
 architecture = "Docs/ARCHITECTURE.md"
 deployment = "Docs/DEPLOYMENT.md"
-universal = "Docs/UNIVERSAL_DEPLOYMENT.md"
 examples = "Examples/UniversalExamples.cs"
 version_history = "VERSION.md"
-
-[targets]
-# MASSIVE Deployment - Miliona Pajisje
-hospitals = "Global hospital networks"
-mobile_apps = "iOS and Android health apps"
-smart_homes = "IoT sensor networks"
-automotive = "Vehicle diagnostic systems"
-industrial = "Factory automation"
-cloud_services = "Enterprise platforms"
-
-[motto]
-"Epoka e Shpejtësisë Absolute - Zero Latency"
-"Deploy everywhere, run anywhere"
-"From medical scanners to simple phones"
-"NUK ka procese të rënda - NUK ka vonesa"
+pricing = "PRICING.md"
+benchmarks = "https://scanprocessprint.com/benchmarks"

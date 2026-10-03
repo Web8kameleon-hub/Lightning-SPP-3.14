@@ -1,0 +1,25 @@
+services:
+  lightning-spp:
+    build: .
+    image: lightning-spp:latest
+    hostname: lightning-spp
+    restart: unless-stopped
+    init: true
+    environment:
+      LSPP_ADMIN_TOKEN: "${LSPP_ADMIN_TOKEN:?Set LSPP_ADMIN_TOKEN in .env}"
+      LSPP_LICENSE_SIGNING_KEY: "${LSPP_LICENSE_SIGNING_KEY:?Set LSPP_LICENSE_SIGNING_KEY in .env}"
+    ports:
+      - "127.0.0.1:${HOST_PORT:-13080}:13080"
+    volumes:
+      - lightning-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  lightning-data:

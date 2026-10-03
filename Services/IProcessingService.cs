@@ -13,8 +13,8 @@ public interface IProcessingService
 
 public record ProcessingOptions(
     ProcessingEngine Engine = ProcessingEngine.Auto,
-    bool UseAI = false,
-    bool UseClisonic = false,
+    bool UseAI = true,
+    bool UseClisonic = true,
     int OptimizationLevel = 3,
     bool UseStigmaMemory = true
 );

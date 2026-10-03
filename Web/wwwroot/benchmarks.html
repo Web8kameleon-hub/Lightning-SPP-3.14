@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Benchmarks — Lightning SPP Performance Methodology</title>
+<meta name="description" content="How Lightning SPP measures performance: reproducible methodology, hardware disclosure, and the built-in speed command. No universal latency guarantees — only measured, reproducible results.">
+<link rel="canonical" href="https://scanprocessprint.com/benchmarks">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap"><link rel="stylesheet" href="/site.css">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta property="og:title" content="Lightning SPP — Benchmarks">
+<meta property="og:description" content="Reproducible performance methodology for the Scan-Process-Print pipeline.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://scanprocessprint.com/benchmarks">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header><a class="brand" href="/">Lightning SPP<span aria-hidden="true">.</span></a>
+<nav aria-label="Main navigation"><a href="/features">Features</a><a href="/technology">Technology</a><a href="/try">Try it</a><a href="/pricing">Pricing</a><a href="/benchmarks" aria-current="page">Benchmarks</a><a href="/swagger">API docs</a><a href="/dashboard">Your license</a></nav></header>
+<main id="main">
+<section class="hero"><span class="eyebrow">Performance</span><h1>Measured, not marketed.</h1><p class="intro">Performance depends on hardware, input size, and configuration. We publish methodology and reproducible commands rather than universal latency claims.</p></section>
+
+<section class="notice"><p><strong>Numbers below are measured, not guaranteed.</strong> Any benchmark result is only meaningful with its hardware spec, dataset, configuration and repetition count attached — the one example further down this page is a single developer machine, not a universal promise. Run the commands below on your own target hardware for numbers that apply to your deployment.</p></section>
+
+<section class="section" aria-labelledby="run-title"><h2 id="run-title">Run the benchmark yourself</h2><pre style="background:#0d1b14;color:#d9f2e6;padding:18px;border-radius:12px;overflow:auto"><code>dotnet build
+dotnet run -- speed
+dotnet run -- pipeline document.pdf
+WWWMMM_STIGMA_LEVEL=3 dotnet run -- pipeline document.pdf   # lightning profile
+WWWMMM_STIGMA_LEVEL=1 dotnet run -- pipeline document.pdf   # quality profile</code></pre>
+<p>The xUnit suite also includes golden-output and performance-gate tests that run against every change:</p>
+<pre style="background:#0d1b14;color:#d9f2e6;padding:18px;border-radius:12px;overflow:auto"><code>dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj</code></pre></section>
+
+<section class="section" aria-labelledby="example-title"><h2 id="example-title">One example measurement</h2><p>Published <time datetime="2026-10-02">2026-10-02</time>, 3 repetitions, from the <code>speed</code> CLI command (<code>dotnet run -- speed</code>):</p>
+<table style="width:100%;border-collapse:collapse;margin-top:12px">
+<thead><tr><th style="text-align:left;padding:8px 0;border-bottom:1px solid #dce4dc">Mode</th><th style="text-align:left;padding:8px 0;border-bottom:1px solid #dce4dc">Target</th><th style="text-align:left;padding:8px 0;border-bottom:1px solid #dce4dc">Measured (3 runs)</th><th style="text-align:left;padding:8px 0;border-bottom:1px solid #dce4dc">Target met?</th></tr></thead>
+<tbody>
+<tr><td style="padding:8px 0;border-bottom:1px solid #edf1ed">Instant</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">&lt;1ms</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">2.11–2.21ms</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">No, on this hardware</td></tr>
+<tr><td style="padding:8px 0;border-bottom:1px solid #edf1ed">UltraFast</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">&lt;5ms</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">0.36–0.42ms</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">Yes</td></tr>
+<tr><td style="padding:8px 0">Lightning</td><td style="padding:8px 0">&lt;10ms</td><td style="padding:8px 0">1.12–1.32ms</td><td style="padding:8px 0">Yes</td></tr>
+</tbody></table>
+<p class="muted">Hardware: Intel Core i9-14900KF (24 cores/32 threads), Windows 11 Pro 64-bit, .NET 10.0.300, developer workstation. This is one data point from one machine — it is not a guarantee for your hardware, and the Instant mode target was not met here. Run the command yourself for numbers that apply to your deployment.</p></section>
+
+<section class="section" aria-labelledby="methodology-title"><h2 id="methodology-title">What a valid benchmark report includes</h2><div class="grid two">
+<article class="card"><h3>Hardware</h3><p>CPU, RAM, disk type, OS and .NET runtime version used for the run.</p></article>
+<article class="card"><h3>Dataset</h3><p>File types, sizes, and count of documents processed.</p></article>
+<article class="card"><h3>Configuration</h3><p>The Stigma profile (<code>WWWMMM_STIGMA_LEVEL</code>) and any non-default settings.</p></article>
+<article class="card"><h3>Repetitions</h3><p>Number of runs, warm-up handling, and reported variance (not just a single best-case number).</p></article>
+</div></section>
+
+<section class="section"><h2>Why this matters</h2><p>Lightning SPP's own documentation intentionally avoids restating latency targets as guarantees — they are benchmark objectives, not universal promises. See <a href="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/blob/main/SUMMARY.md">SUMMARY.md</a> and <a href="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/blob/main/REAL_PROCESSING.md">REAL_PROCESSING.md</a> for the current state of real (non-simulated) processing.</p></section>
+</main>
+<footer><span>Lightning SPP</span><a href="/#help">Need help getting started?</a></footer>
+</body></html>

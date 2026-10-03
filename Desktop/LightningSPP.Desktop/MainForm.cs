@@ -82,7 +82,7 @@ public class MainForm : Form
 
         try
         {
-            LightningAPI.UseRealServices();
+            LightningAPI.UseSimulatedServices();
             _status.Text = "Processing...";
             var result = await LightningAPI.ExecuteLightningPipelineAsync(source);
             _status.Text = result.Success ? "Success" : $"Failed: {result.Error}";

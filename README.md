@@ -243,6 +243,8 @@ docker build -t lightning-spp .
 docker run lightning-spp demo
 ```
 
+For production hosting, see [Docs/PRODUCTION_DEPLOYMENT.md](Docs/PRODUCTION_DEPLOYMENT.md) for Docker Compose, Ubuntu systemd, and nginx reverse proxy options.
+
 ## Naming convention
 
 Për konsistencë ndërmjet source, package dhe CLI:
@@ -258,6 +260,9 @@ Për konsistencë ndërmjet source, package dhe CLI:
 - [Docs/API_Documentation.md](Docs/API_Documentation.md)
 - [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md)
 - [Docs/DEPLOYMENT.md](Docs/DEPLOYMENT.md)
+- [Docs/SLA_SLO.md](Docs/SLA_SLO.md)
+- [Docs/GO_LIVE_CHECKLIST.md](Docs/GO_LIVE_CHECKLIST.md)
+- [deploy/production/README.md](deploy/production/README.md)
 - [Wiki/Home.md](Wiki/Home.md)
 
 ## Licenca

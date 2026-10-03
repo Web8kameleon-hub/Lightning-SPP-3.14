@@ -14,11 +14,10 @@ public static class LightningAPI
     private static IScanService _scanService = ServiceFactory.CreateScanService();
     private static IProcessingService _processingService = ServiceFactory.CreateProcessingService();
     private static IPrintService _printService = ServiceFactory.CreatePrintService();
-    private static IOutputAdapter _outputAdapter = ServiceFactory.CreateOutputAdapter();
     private static LightningPipeline _pipeline = ServiceFactory.CreatePipeline();
 
     /// <summary>
-    /// Configure the image, compression and output services
+    /// Configure Lightning SPP to use REAL or SIMULATED services
     /// </summary>
     public static void Configure(LightningConfiguration configuration)
     {
@@ -28,7 +27,6 @@ public static class LightningAPI
         _scanService = ServiceFactory.CreateScanService();
         _processingService = ServiceFactory.CreateProcessingService();
         _printService = ServiceFactory.CreatePrintService();
-        _outputAdapter = ServiceFactory.CreateOutputAdapter();
         _pipeline = ServiceFactory.CreatePipeline();
     }
 
@@ -36,6 +34,14 @@ public static class LightningAPI
     /// Use REAL services (default)
     /// </summary>
     public static void UseRealServices()
+    {
+        Configure(LightningConfiguration.RealProduction);
+    }
+
+    /// <summary>
+    /// Compatibility method. Simulated mode has been removed and this now uses real services.
+    /// </summary>
+    public static void UseSimulatedServices()
     {
         Configure(LightningConfiguration.RealProduction);
     }
@@ -121,8 +127,8 @@ public static class LightningAPI
     {
         var options = new ProcessingOptions(
             ProcessingEngine.Hybrid,
-            UseAI: false,
-            UseClisonic: false,
+            UseAI: true,
+            UseClisonic: true,
             OptimizationLevel: 5,
             UseStigmaMemory: true
         );
@@ -149,47 +155,5 @@ public static class LightningAPI
         var tasks = sources.Select(source => ExecuteLightningPipelineAsync(source, cancellationToken));
         var results = await Task.WhenAll(tasks);
         return results.ToList();
-    }
-
-    /// <summary>
-    /// Encode one processed raster image into a real customer-facing format (PNG/JPEG/BMP/TIFF/PDF).
-    /// </summary>
-    public static byte[] EncodeOutput(byte[] rasterImage, OutputFormat format, int quality = 90)
-    {
-        return _outputAdapter.Encode(rasterImage, format, quality);
-    }
-
-    /// <summary>
-    /// Encode several processed raster pages into a multi-page PDF or TIFF.
-    /// </summary>
-    public static byte[] EncodeMultiPageOutput(
-        IReadOnlyList<byte[]> rasterPages,
-        OutputFormat format,
-        int quality = 90)
-    {
-        return _outputAdapter.EncodeMultiPage(rasterPages, format, quality);
-    }
-
-    /// <summary>
-    /// Scan in-memory raster bytes (used by the browser /try demo). Returns the transformed PNG.
-    /// </summary>
-    public static async Task<ScanResult> ScanBytesAsync(
-        byte[] data,
-        ScanMode mode,
-        int quality = 300,
-        CancellationToken cancellationToken = default)
-    {
-        return await _scanService.ScanAsync(data, mode, quality, cancellationToken);
-    }
-
-    /// <summary>
-    /// Run the processing stage in-memory (used by the browser /try demo).
-    /// </summary>
-    public static async Task<ProcessingResult> ProcessBytesAsync(
-        byte[] data,
-        ProcessingOptions options,
-        CancellationToken cancellationToken = default)
-    {
-        return await _processingService.ProcessAsync(data, options, cancellationToken);
     }
 }

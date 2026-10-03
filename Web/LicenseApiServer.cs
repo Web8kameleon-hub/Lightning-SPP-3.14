@@ -1,39 +1,69 @@
-using System.Security.Cryptography;
+using System.Collections.Concurrent;
 using System.Net;
-using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using LightningSPP.Licensing;
+using wwwmmm.Configuration;
 using wwwmmm.Services;
 
 namespace wwwmmm.Web;
 
 internal static class LicenseApiServer
 {
+    // Upper bound on any request body this server will buffer into memory, enforced
+    // while streaming (not just via the often-absent/spoofable Content-Length header),
+    // so a chunked-transfer request can't exhaust memory before a size check runs.
     internal const int MaxBodyBytes = 1024 * 1024;
 
-    private static string GetClientIp(HttpListenerRequest request)
+    // Rate limiting: max requests per window per IP
+    private const int RateLimitMaxRequests = 30;
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
+    private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _rateLimits = new();
+
+    // A tighter, dedicated limit for /api/try/process: it runs real CPU-bound image
+    // processing for anonymous, unauthenticated visitors, so it must not share the
+    // general 30/min budget that covers lightweight endpoints like /api/health.
+    private const int TryRateLimitMaxRequests = 10;
+    private static readonly TimeSpan TryRateLimitWindow = TimeSpan.FromMinutes(5);
+    private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _tryRateLimits = new();
+    private const long TryMaxUploadBytes = 8 * 1024 * 1024; // 8 MB
+
+    private static readonly HashSet<string> AllowedTryContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
-        var address = request.RemoteEndPoint?.Address;
-        var trustProxy = bool.TryParse(Environment.GetEnvironmentVariable("LSPP_TRUST_PROXY_HEADERS"), out var trusted) && trusted;
-        // Only a loopback reverse proxy may supply the client address; never trust CF/XFF from clients.
-        if (trustProxy && address != null && IPAddress.IsLoopback(address) &&
-            IPAddress.TryParse(request.Headers["X-Real-IP"], out var forwarded))
-            return forwarded.ToString();
-        return address?.ToString() ?? "unknown";
+        "image/png", "image/jpeg", "image/jpg", "image/bmp", "image/tiff", "image/gif"
+    };
+
+    private static bool IsRateLimited(string ip)
+    {
+        var now = DateTime.UtcNow;
+        var entry = _rateLimits.GetOrAdd(ip, _ => (0, now));
+        if (now - entry.WindowStart > RateLimitWindow)
+            entry = (0, now);
+        entry = (entry.Count + 1, entry.WindowStart);
+        _rateLimits[ip] = entry;
+        return entry.Count > RateLimitMaxRequests;
+    }
+
+    private static bool IsTryRateLimited(string ip)
+    {
+        var now = DateTime.UtcNow;
+        var entry = _tryRateLimits.GetOrAdd(ip, _ => (0, now));
+        if (now - entry.WindowStart > TryRateLimitWindow)
+            entry = (0, now);
+        entry = (entry.Count + 1, entry.WindowStart);
+        _tryRateLimits[ip] = entry;
+        return entry.Count > TryRateLimitMaxRequests;
     }
 
     public static async Task RunAsync(int port, CancellationToken cancellationToken = default)
     {
         RuntimeSecurity.ValidateProduction();
         using var listener = new HttpListener();
-        var limiter = new RequestRateLimiter();
-        var slots = new SemaphoreSlim(64);
-
         var inContainer = string.Equals(
             Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
             "true",
             StringComparison.OrdinalIgnoreCase);
-        var bindHost = inContainer ? "+" : "localhost";
+        var bindHost = Environment.GetEnvironmentVariable("LSPP_BIND_HOST") ?? (inContainer ? "+" : "localhost");
         listener.Prefixes.Add($"http://{bindHost}:{port}/");
         listener.Start();
 
@@ -56,12 +86,7 @@ internal static class LicenseApiServer
             try
             {
                 ctx = await listener.GetContextAsync();
-                if (!slots.Wait(0))
-                {
-                    await TextAsync(ctx, HttpStatusCode.ServiceUnavailable, "ok=false\nerror=Server busy");
-                    continue;
-                }
-                _ = HandleSafelyAsync(ctx, limiter, slots);
+                _ = Task.Run(() => HandleRequestAsync(ctx), cancellationToken);
             }
             catch (HttpListenerException)
             {
@@ -76,34 +101,23 @@ internal static class LicenseApiServer
         InternalAuditLogger.Info("Server stopped");
     }
 
-    private static async Task HandleSafelyAsync(HttpListenerContext context, RequestRateLimiter limiter, SemaphoreSlim slots)
+    private static async Task HandleRequestAsync(HttpListenerContext context)
     {
-        try { await HandleRequestAsync(context, limiter); }
-        catch (Exception) { context.Response.Abort(); }
-        finally { slots.Release(); }
-    }
+        ApplyCorsHeaders(context);
+        context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
+        context.Response.Headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Stripe-Signature, X-Stigma-Profile";
 
-    private static async Task HandleRequestAsync(HttpListenerContext context, RequestRateLimiter limiter)
-    {
-        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-        context.Response.Headers["Referrer-Policy"] = "no-referrer";
-        context.Response.Headers["Cache-Control"] = "no-store";
-        context.Response.Headers["X-Frame-Options"] = "DENY";
-        // Browser access is same-origin. Do not grant cross-origin access to licensing APIs.
+        // Pre-flight
         if (context.Request.HttpMethod == "OPTIONS")
         {
-            await TextAsync(context, HttpStatusCode.MethodNotAllowed, "ok=false\nerror=Method not allowed");
-            return;
-        }
-        if (context.Request.ContentLength64 > MaxBodyBytes)
-        {
-            await TextAsync(context, HttpStatusCode.RequestEntityTooLarge, "ok=false\nerror=Request too large");
+            context.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            context.Response.Close();
             return;
         }
 
         // Rate limiting
-        var clientIp = GetClientIp(context.Request);
-        if (limiter.IsLimited(clientIp, DateTimeOffset.UtcNow))
+        var clientIp = ResolveClientIp(context.Request);
+        if (context.Request.Url?.AbsolutePath != "/api/health" && IsRateLimited(clientIp))
         {
             context.Response.Headers["Retry-After"] = "60";
             await TextAsync(context, HttpStatusCode.TooManyRequests, "ok=false\nerror=Rate limit exceeded");
@@ -118,6 +132,13 @@ internal static class LicenseApiServer
 
         try
         {
+            if (path == "/site.css" || path == "/dashboard.js" || path == "/try.js")
+            {
+                var jsOrCss = path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8";
+                await ServeStaticAsync(context, path[1..], jsOrCss);
+                return;
+            }
+
             if (path == "/" || path == "/index.html")
             {
                 await ServeStaticAsync(context, "landing.html", "text/html; charset=utf-8");
@@ -127,6 +148,49 @@ internal static class LicenseApiServer
             if (path == "/dashboard")
             {
                 await ServeStaticAsync(context, "dashboard.html", "text/html; charset=utf-8");
+                return;
+            }
+
+            if (path == "/try")
+            {
+                await ServeStaticAsync(context, "try.html", "text/html; charset=utf-8");
+                return;
+            }
+
+            if (path == "/features" || path == "/technology" || path == "/pricing" || path == "/benchmarks")
+            {
+                await ServeStaticAsync(context, path[1..] + ".html", "text/html; charset=utf-8");
+                return;
+            }
+
+            if (path == "/robots.txt")
+            {
+                await ServeStaticAsync(context, "robots.txt", "text/plain; charset=utf-8");
+                return;
+            }
+
+            if (path == "/sitemap.xml")
+            {
+                await ServeStaticAsync(context, "sitemap.xml", "application/xml; charset=utf-8");
+                return;
+            }
+
+            if (path == "/favicon.ico")
+            {
+                await ServeStaticAsync(context, "favicon.ico", "image/x-icon");
+                return;
+            }
+
+            if (path is "/favicon-16x16.png" or "/favicon-32x32.png" or "/favicon-48x48.png"
+                or "/apple-touch-icon.png" or "/android-chrome-192x192.png" or "/android-chrome-512x512.png")
+            {
+                await ServeStaticAsync(context, path[1..], "image/png");
+                return;
+            }
+
+            if (path == "/site.webmanifest")
+            {
+                await ServeStaticAsync(context, "site.webmanifest", "application/manifest+json; charset=utf-8");
                 return;
             }
 
@@ -189,28 +253,30 @@ internal static class LicenseApiServer
                     return;
                 }
 
-                if (stripeEvent is null)
+                if (stripeEvent is null || !StripeBilling.TryMarkEventProcessed(stripeEvent.Id))
                 {
-                    await TextAsync(context, HttpStatusCode.BadRequest, "ok=false\nerror=Missing Stripe event");
+                    await TextAsync(context, HttpStatusCode.OK, "ok=true\nduplicate=true");
                     return;
                 }
-                var outcome = await StripeFulfillment.ProcessAsync(stripeEvent);
-                await TextAsync(context, outcome.Status, outcome.Message);
+
+                InternalAuditLogger.Info(
+                    $"Stripe webhook verified: destination={destination}, type={stripeEvent.Type}, id={stripeEvent.Id}");
+
+                if (StripeBilling.TryGetCheckoutFulfillment(stripeEvent, out var customerEmail, out var purchasedTier, out var sessionId))
+                {
+                    await FulfillCheckoutAsync(customerEmail, purchasedTier, sessionId);
+                }
+
+                await TextAsync(
+                    context,
+                    HttpStatusCode.OK,
+                    $"ok=true\ndestination={destination}\neventType={stripeEvent.Type}");
                 return;
             }
 
-            if (path == "/api/billing/license" && context.Request.HttpMethod == "GET")
+            if (path == "/api/try/process" && context.Request.HttpMethod == "POST")
             {
-                if (!IsAdminAuthorized(context.Request))
-                {
-                    await TextAsync(context, HttpStatusCode.Unauthorized, "ok=false\nerror=Unauthorized");
-                    return;
-                }
-                var paymentId = context.Request.QueryString["paymentId"];
-                if (string.IsNullOrWhiteSpace(paymentId)) throw new ArgumentException("Payment ID required.");
-                var receipt = StripeFulfillment.ReadReceipt(paymentId);
-                await TextAsync(context, receipt == null ? HttpStatusCode.NotFound : HttpStatusCode.OK,
-                    receipt == null ? "ok=false\nerror=License not fulfilled" : $"ok=true\nkey={receipt.LicenseKey}\nexpires={receipt.ExpiresUtc:O}");
+                await HandleTryProcessAsync(context, clientIp);
                 return;
             }
 
@@ -228,11 +294,9 @@ internal static class LicenseApiServer
 
             if (path == "/api/license/activate" && context.Request.HttpMethod == "POST")
             {
-                if (!IsAdminAuthorized(context.Request))
-                {
-                    await TextAsync(context, HttpStatusCode.Unauthorized, "ok=false\nerror=Unauthorized");
-                    return;
-                }
+                // Self-service: any customer with a valid, signed license key may activate it.
+                // LicenseManager.ActivateLicense cryptographically validates the key itself,
+                // so no admin credential is required here (unlike /issue and /signing-status).
                 var form = await ReadFormAsync(context.Request);
                 var key = ValueFromQueryOrForm(context.Request, form, "key");
                 if (string.IsNullOrWhiteSpace(key))
@@ -256,10 +320,8 @@ internal static class LicenseApiServer
                 }
 
                 var form = await ReadFormAsync(context.Request);
-                var email = ValueFromQueryOrForm(context.Request, form, "email");
-                if (string.IsNullOrWhiteSpace(email) || !System.Net.Mail.MailAddress.TryCreate(email, out _))
-                    throw new ArgumentException("Valid customer email required.");
-                var company = ValueFromQueryOrForm(context.Request, form, "company") ?? string.Empty;
+                var email = ValueFromQueryOrForm(context.Request, form, "email") ?? "demo@example.com";
+                var company = ValueFromQueryOrForm(context.Request, form, "company") ?? "Demo Company";
                 var tier = ValueFromQueryOrForm(context.Request, form, "tier") ?? "free";
                 var devices = ParseInt(ValueFromQueryOrForm(context.Request, form, "devices"), 1);
                 var validityDays = ParseInt(ValueFromQueryOrForm(context.Request, form, "validityDays"), 365);
@@ -271,8 +333,7 @@ internal static class LicenseApiServer
                     tier,
                     devices,
                     validityDays,
-                    internalSecurity,
-                    LicenseManager.PaymentMode.Manual);
+                    internalSecurity);
 
                 var issuedText = string.Join('\n',
                     "ok=true",
@@ -302,19 +363,210 @@ internal static class LicenseApiServer
         {
             await TextAsync(context, HttpStatusCode.RequestEntityTooLarge, "ok=false\nerror=Request too large");
         }
-        catch (OperationCanceledException)
-        {
-            await TextAsync(context, HttpStatusCode.RequestTimeout, "ok=false\nerror=Request timed out");
-        }
-        catch (ArgumentException)
-        {
-            await TextAsync(context, HttpStatusCode.BadRequest, "ok=false\nerror=Invalid input");
-        }
         catch (Exception ex)
         {
             InternalAuditLogger.Error($"API error on {path}: {ex.Message}");
             await TextAsync(context, HttpStatusCode.InternalServerError, "ok=false\nerror=Internal server error");
         }
+    }
+
+    /// <summary>
+    /// Issues a license key for a paid Checkout Session and emails it to the customer.
+    /// Deliberately swallows and logs all failures: the webhook must still return 200 to
+    /// Stripe (the event is already marked processed, so Stripe will not retry), and a
+    /// failure here must surface as an audit-log alert for manual follow-up rather than
+    /// as an HTTP error that could be misread as "payment rejected".
+    /// </summary>
+    private static async Task FulfillCheckoutAsync(string email, string tier, string sessionId)
+    {
+        try
+        {
+            var license = LicenseManager.CreateLicenseKey(
+                email,
+                company: email,
+                tier,
+                devices: 1,
+                validityDays: tier.Equals("paygo", StringComparison.OrdinalIgnoreCase) ? 30 : 365,
+                useInternalQuantumSecurity: false);
+
+            InternalAuditLogger.Info(
+                $"Stripe checkout fulfilled: session={sessionId}, tier={tier}, email={email}, expires={license.ExpirationDate:yyyy-MM-dd}");
+
+            var (sent, emailError) = await EmailService.TrySendLicenseKeyEmailAsync(
+                email, tier, license.Key, license.ExpirationDate);
+
+            if (!sent)
+            {
+                InternalAuditLogger.Error(
+                    $"Stripe checkout fulfilled but license email FAILED to send: session={sessionId}, email={email}, error={emailError}. Manual delivery required.");
+            }
+        }
+        catch (Exception ex)
+        {
+            InternalAuditLogger.Error(
+                $"Stripe checkout fulfillment FAILED: session={sessionId}, tier={tier}, email={email}, error={ex.Message}. Manual license issuance required.");
+        }
+    }
+
+    /// <summary>
+    /// Public, unauthenticated demo: runs one real Scan + Process job on an uploaded image
+    /// and returns the processed preview plus per-job timing, so a visitor can see Lightning
+    /// SPP work without installing anything. Deliberately image-only: this codebase has no
+    /// PDF renderer, so a PDF upload would otherwise be visualized as raw-byte noise instead
+    /// of real page content, which would be misleading.
+    /// </summary>
+    private static async Task HandleTryProcessAsync(HttpListenerContext context, string clientIp)
+    {
+        if (IsTryRateLimited(clientIp))
+        {
+            context.Response.Headers["Retry-After"] = "300";
+            await JsonAsync(context, HttpStatusCode.TooManyRequests,
+                "{\"ok\":false,\"error\":\"Too many demo requests from this address. Please wait a few minutes and try again.\"}");
+            return;
+        }
+
+        var contentType = (context.Request.ContentType ?? string.Empty).Split(';')[0].Trim();
+        if (!AllowedTryContentTypes.Contains(contentType))
+        {
+            await JsonAsync(context, HttpStatusCode.BadRequest,
+                "{\"ok\":false,\"error\":\"Unsupported file type. Upload a JPEG, PNG, BMP, TIFF or GIF image.\"}");
+            return;
+        }
+
+        if (context.Request.ContentLength64 <= 0 || context.Request.ContentLength64 > TryMaxUploadBytes)
+        {
+            // Drain (not just reject) the oversized body before closing the response.
+            // Responding and closing the connection while the client is still mid-upload
+            // can reset the TCP connection under it, surfacing as a client-side
+            // SocketException instead of the intended clean 400 - observed intermittently
+            // in CI. Draining up to a bounded cap avoids that without trusting an
+            // unbounded, possibly-spoofed Content-Length header.
+            await DrainRequestBodyAsync(context.Request, TryMaxUploadBytes * 2);
+            await JsonAsync(context, HttpStatusCode.BadRequest,
+                "{\"ok\":false,\"error\":\"File must be larger than 0 bytes and no more than 8 MB.\"}");
+            return;
+        }
+
+        if (!TryParseScanMode(context.Request.Headers["X-Stigma-Profile"], out var scanMode, out var profileName))
+        {
+            await JsonAsync(context, HttpStatusCode.BadRequest,
+                "{\"ok\":false,\"error\":\"Unknown profile. Use lightning, tidewave, resonance or nanodecibel.\"}");
+            return;
+        }
+
+        byte[] originalBytes;
+        await using (var buffer = new MemoryStream())
+        {
+            await context.Request.InputStream.CopyToAsync(buffer);
+            originalBytes = buffer.ToArray();
+        }
+
+        if (originalBytes.Length == 0 || originalBytes.Length > TryMaxUploadBytes)
+        {
+            await JsonAsync(context, HttpStatusCode.BadRequest,
+                "{\"ok\":false,\"error\":\"File must be larger than 0 bytes and no more than 8 MB.\"}");
+            return;
+        }
+
+        try
+        {
+            var scanService = ServiceFactory.CreateScanService();
+            var processingService = ServiceFactory.CreateProcessingService();
+
+            var scanResult = await scanService.ScanAsync(originalBytes, scanMode, quality: 300);
+            if (!scanResult.Success)
+            {
+                await JsonAsync(context, HttpStatusCode.UnprocessableEntity,
+                    $"{{\"ok\":false,\"error\":{JsonEscape(scanResult.Error ?? "The file could not be read as an image.")}}}");
+                return;
+            }
+
+            var processResult = await processingService.ProcessAsync(
+                scanResult.Data,
+                new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: true, UseClisonic: true, OptimizationLevel: 3, UseStigmaMemory: true));
+
+            var compressedBytes = processResult.Success ? processResult.ProcessedData.Length : 0;
+            var compressionPercent = processResult.Success && scanResult.Data.Length > 0
+                ? Math.Round(100.0 * (1 - (double)compressedBytes / scanResult.Data.Length), 1)
+                : 0.0;
+
+            LightningMetrics.RecordScan(scanResult.Metadata.ProcessingTimeMs);
+            if (processResult.Success)
+            {
+                LightningMetrics.RecordProcess(processResult.Metadata.ProcessingTimeMs);
+            }
+
+            var afterBase64 = Convert.ToBase64String(scanResult.Data);
+            var totalMs = scanResult.Metadata.ProcessingTimeMs + (processResult.Success ? processResult.Metadata.ProcessingTimeMs : 0);
+
+            var json = $$"""
+                {
+                  "ok": true,
+                  "profile": "{{profileName}}",
+                  "scanTimeMs": {{scanResult.Metadata.ProcessingTimeMs}},
+                  "processTimeMs": {{(processResult.Success ? processResult.Metadata.ProcessingTimeMs : 0)}},
+                  "totalTimeMs": {{totalMs}},
+                  "engine": {{JsonEscape(processResult.Success ? processResult.Metadata.Engine : "none")}},
+                  "originalBytes": {{originalBytes.Length}},
+                  "afterBytes": {{scanResult.Data.Length}},
+                  "compressedBytes": {{compressedBytes}},
+                  "compressionPercent": {{compressionPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)}},
+                  "afterImageBase64": "{{afterBase64}}"
+                }
+                """;
+
+            InternalAuditLogger.Info(
+                $"Try-it demo processed: ip={clientIp}, profile={profileName}, originalBytes={originalBytes.Length}, totalTimeMs={totalMs}");
+
+            await JsonAsync(context, HttpStatusCode.OK, json);
+        }
+        catch (Exception ex)
+        {
+            InternalAuditLogger.Error($"Try-it demo failed: ip={clientIp}, error={ex.Message}");
+            await JsonAsync(context, HttpStatusCode.InternalServerError,
+                "{\"ok\":false,\"error\":\"Processing failed unexpectedly. Please try a different file.\"}");
+        }
+    }
+
+    private static bool TryParseScanMode(string? header, out ScanMode mode, out string name)
+    {
+        var value = string.IsNullOrWhiteSpace(header) ? "lightning" : header.Trim().ToLowerInvariant();
+        switch (value)
+        {
+            case "lightning":
+                mode = ScanMode.Lightning;
+                name = "lightning";
+                return true;
+            case "tidewave":
+                mode = ScanMode.TideWave;
+                name = "tidewave";
+                return true;
+            case "resonance":
+                mode = ScanMode.Resonance;
+                name = "resonance";
+                return true;
+            case "nanodecibel":
+                mode = ScanMode.NanoDecibel;
+                name = "nanodecibel";
+                return true;
+            default:
+                mode = ScanMode.Lightning;
+                name = string.Empty;
+                return false;
+        }
+    }
+
+    private static string JsonEscape(string value) =>
+        "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", string.Empty) + "\"";
+
+    private static async Task JsonAsync(HttpListenerContext context, HttpStatusCode statusCode, string json)
+    {
+        var buffer = Encoding.UTF8.GetBytes(json);
+        context.Response.StatusCode = (int)statusCode;
+        context.Response.ContentType = "application/json; charset=utf-8";
+        context.Response.ContentLength64 = buffer.LongLength;
+        await context.Response.OutputStream.WriteAsync(buffer);
+        context.Response.Close();
     }
 
     private static async Task ServeStaticAsync(HttpListenerContext context, string fileName, string contentType)
@@ -363,17 +615,49 @@ internal static class LicenseApiServer
 
     private sealed class RequestBodyTooLargeException : Exception { }
 
+    /// <summary>
+    /// Reads and discards up to <paramref name="maxBytesToDrain"/> bytes of a request body
+    /// that is being rejected, so the response can close cleanly without resetting the
+    /// underlying TCP connection out from under a client that is still uploading. Best
+    /// effort: any failure here must not prevent the caller from still sending its response.
+    /// </summary>
+    private static async Task DrainRequestBodyAsync(HttpListenerRequest request, long maxBytesToDrain)
+    {
+        try
+        {
+            var buffer = new byte[8192];
+            long total = 0;
+            int count;
+            while (total < maxBytesToDrain && (count = await request.InputStream.ReadAsync(buffer)) > 0)
+            {
+                total += count;
+            }
+        }
+        catch
+        {
+            // Ignore - this is a best-effort drain before an error response.
+        }
+    }
+
+    /// <summary>
+    /// Reads a request body up to <see cref="MaxBodyBytes"/>, enforced while streaming
+    /// (not just via Content-Length, which a chunked-transfer request can omit or lie about).
+    /// </summary>
     private static async Task<string> ReadBodyAsync(HttpListenerRequest request)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        using var body = new MemoryStream();
+        await using var body = new MemoryStream();
         var buffer = new byte[8192];
         int count;
-        while ((count = await request.InputStream.ReadAsync(buffer, timeout.Token)) > 0)
+        while ((count = await request.InputStream.ReadAsync(buffer)) > 0)
         {
-            if (body.Length + count > MaxBodyBytes) throw new RequestBodyTooLargeException();
+            if (body.Length + count > MaxBodyBytes)
+            {
+                throw new RequestBodyTooLargeException();
+            }
+
             body.Write(buffer, 0, count);
         }
+
         return Encoding.UTF8.GetString(body.ToArray());
     }
 
@@ -439,7 +723,46 @@ internal static class LicenseApiServer
             ? authHeader[7..]
             : null;
 
-        return providedToken != null && RuntimeSecurity.SecretEquals(adminToken, providedToken);
+        if (string.IsNullOrEmpty(providedToken))
+            return false;
+
+        var expected = Encoding.UTF8.GetBytes(adminToken);
+        var provided = Encoding.UTF8.GetBytes(providedToken);
+        return expected.Length == provided.Length &&
+               CryptographicOperations.FixedTimeEquals(expected, provided);
+    }
+
+    private static string ResolveClientIp(HttpListenerRequest request)
+    {
+        var remote = request.RemoteEndPoint?.Address;
+        var trustProxy = string.Equals(
+            Environment.GetEnvironmentVariable("LSPP_TRUST_PROXY_HEADERS"),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (trustProxy && remote is not null && IPAddress.IsLoopback(remote))
+        {
+            var forwarded = request.Headers["X-Forwarded-For"]?.Split(',')[0].Trim();
+            if (IPAddress.TryParse(forwarded, out var forwardedIp))
+                return forwardedIp.ToString();
+        }
+
+        return remote?.ToString() ?? "unknown";
+    }
+
+    private static void ApplyCorsHeaders(HttpListenerContext context)
+    {
+        var origin = context.Request.Headers["Origin"];
+        var configured = Environment.GetEnvironmentVariable("LSPP_ALLOWED_ORIGINS");
+        if (string.IsNullOrWhiteSpace(origin) || string.IsNullOrWhiteSpace(configured))
+            return;
+
+        var allowed = configured.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (!allowed.Contains(origin, StringComparer.OrdinalIgnoreCase))
+            return;
+
+        context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+        context.Response.Headers["Vary"] = "Origin";
     }
 
     private static async Task TextAsync(HttpListenerContext context, HttpStatusCode statusCode, string payload)

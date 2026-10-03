@@ -46,12 +46,13 @@ Përdor këtë listë si **go/no-go gate** para publikimit në production.
 - [ ] Baseline metrika: success/failure rate, p50/p95/p99 latency, throughput.
 - [ ] Alerting pragje të përcaktuara për `pipelineFailure` dhe degradim performance.
 - [ ] Dashboard operacional ka akses për ekipin on-call.
+- [ ] Shih [Docs/SLA_SLO.md](/Docs/SLA_SLO.md) për SLI/SLO/SLA konkrete, error budget, dhe planin e eskalimit.
 
 ## 7) Data & Recovery
 
 - [ ] Backup policy ekziston (database/artifacts + retention).
 - [ ] Restore test është provuar të paktën 1 herë para go-live.
-- [ ] Procedurë rollback e dokumentuar dhe testuar (rollback target + owner).
+- [ ] Procedurë rollback e dokumentuar dhe testuar (rollback target + owner) — shih `deploy/production/deploy.sh rollback` dhe [deploy/production/README.md](/deploy/production/README.md).
 
 ## 8) Legal/Customer-Facing Claims
 

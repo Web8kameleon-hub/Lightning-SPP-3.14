@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /features
+Allow: /technology
+Allow: /try
+Allow: /pricing
+Allow: /benchmarks
+Allow: /swagger
+Allow: /openapi.json
+Disallow: /dashboard
+Disallow: /api/
+
+Sitemap: https://scanprocessprint.com/sitemap.xml

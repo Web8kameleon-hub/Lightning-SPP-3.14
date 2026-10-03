@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,14 +7,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PublishAot>false</PublishAot>
-    <PublishTrimmed>false</PublishTrimmed>
     <InvariantGlobalization>true</InvariantGlobalization>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
 
     <!-- NuGet Package Metadata -->
     <PackageId>LightningSPP</PackageId>
-    <Version>3.14.0</Version>
+    <Version>3.14.1</Version>
     <Authors>Ledjan Ahmati, ABA GmbH</Authors>
     <Company>ABA GmbH</Company>
     <Product>Lightning Scan-Process-Print System</Product>
@@ -27,11 +26,11 @@
     <PackageTags>scan;process;output;lightning;image-processing;ai;ml;iot;embedded;tidewave;clx;resonance;nanodecibel;clisonic;stigma</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>
-      Version 3.14.0
-      - Real image, processing, compression, and file-output implementations
-      - Adaptive Stigma profiles: quality, balanced, and lightning
-      - Lossless Brotli output artifacts with round-trip tests
-      - SDK profiles for desktop, web, edge, and cloud integration
+      Version 3.14.1
+      - Self-service license activation: no admin token required for a valid, signed key
+      - New edge-case integration tests for license activation/issuance auth boundaries
+      - Public features/technology/pricing/benchmarks pages with Schema.org data
+      - Corrected package.info to remove unverified certification and distribution claims
       - Compliance-sensitive deployments require independent validation and certification
     </PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
@@ -61,11 +60,12 @@
     <None Include="PRICING.md" Pack="true" PackagePath="\" />
     <Content Include="Web\wwwroot\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Tests\**\*.cs" />
+    <Compile Remove="Tests\LightningSPP.Tests\**\*.cs" />
     <Compile Remove="VSExtension\**\*.cs" />
     <Compile Remove="Desktop\**\*.cs" />
     <Compile Remove="Lightning-SPP-3.14\**\*.cs" />
@@ -79,6 +79,7 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
 
     <!-- Real Image Processing -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="SkiaSharp" Version="2.88.8" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
 

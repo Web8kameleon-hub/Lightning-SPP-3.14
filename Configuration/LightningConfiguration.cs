@@ -20,9 +20,9 @@ public class LightningConfiguration
 
     public static LightningConfiguration Default => new();
 
-    public static LightningConfiguration FastCompression => new()
+    public static LightningConfiguration FastSimulated => new()
     {
-        // Fast compression profile.
+        // Backward-compatible name. Simulated services have been removed.
         StigmaProfile = StigmaExecutionProfile.Lightning
     };
 
@@ -55,8 +55,6 @@ public static class ServiceFactory
 
     public static IPrintService CreatePrintService() =>
         new RealPrintService(_config.PrintOutputDirectory);
-
-    public static IOutputAdapter CreateOutputAdapter() => new OutputAdapter();
 
     public static LightningPipeline CreatePipeline() =>
         new(
