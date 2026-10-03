@@ -10,10 +10,13 @@ done
 for path in / /dashboard /site.css /dashboard.js /swagger /openapi.json /api/health; do
   docker exec "$container" curl -fsS "http://localhost:13080$path" >/dev/null
 done
-for endpoint in issue activate; do
-  code=$(docker exec "$container" curl -s -o /dev/null -w '%{http_code}' -d key=invalid "http://localhost:13080/api/license/$endpoint")
-  test "$code" = 401
-done
+# /issue requires an admin bearer token; without one it must stay 401 regardless of body.
+code=$(docker exec "$container" curl -s -o /dev/null -w '%{http_code}' -d key=invalid "http://localhost:13080/api/license/issue")
+test "$code" = 401
+# /activate is deliberately self-service (no admin token): LicenseManager.ActivateLicense
+# validates the key itself, so an invalid key returns 400, not 401.
+code=$(docker exec "$container" curl -s -o /dev/null -w '%{http_code}' -d key=invalid "http://localhost:13080/api/license/activate")
+test "$code" = 400
 # Monitoring must still work when normal requests exhaust the rate limit.
 for attempt in $(seq 1 35); do
   docker exec "$container" curl -s -o /dev/null http://localhost:13080/api/license/status
