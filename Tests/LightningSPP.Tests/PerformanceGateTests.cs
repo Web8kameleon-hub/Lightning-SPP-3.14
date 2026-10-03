@@ -39,6 +39,16 @@ public class PerformanceGateTests
         var filePath = Path.Combine(Path.GetTempPath(), $"lightning-perf-{Guid.NewGuid():N}.bin");
         await File.WriteAllBytesAsync(filePath, DeterministicPayload(8192));
 
+        // One untimed warm-up run absorbs JIT tiering/first-call costs (assembly load,
+        // method compilation, file-system caching) so the timed run below measures
+        // steady-state pipeline latency rather than process cold-start - the same
+        // reason the other gates in this file use a median over several runs instead
+        // of a single sample. Without this, a loaded/variable CI runner can blow an
+        // otherwise-comfortable budget on first-call overhead alone (observed: a
+        // passing ~300ms locally vs. an intermittent >2000ms cold first call in CI).
+        var warmup = await LightningAPI.ExecuteLightningPipelineAsync(filePath);
+        Assert.True(warmup.Success, warmup.Error ?? "Warm-up pipeline run failed");
+
         var sw = Stopwatch.StartNew();
         var result = await LightningAPI.ExecuteLightningPipelineAsync(filePath);
         sw.Stop();
