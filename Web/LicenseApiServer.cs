@@ -435,6 +435,13 @@ internal static class LicenseApiServer
 
         if (context.Request.ContentLength64 <= 0 || context.Request.ContentLength64 > TryMaxUploadBytes)
         {
+            // Drain (not just reject) the oversized body before closing the response.
+            // Responding and closing the connection while the client is still mid-upload
+            // can reset the TCP connection under it, surfacing as a client-side
+            // SocketException instead of the intended clean 400 - observed intermittently
+            // in CI. Draining up to a bounded cap avoids that without trusting an
+            // unbounded, possibly-spoofed Content-Length header.
+            await DrainRequestBodyAsync(context.Request, TryMaxUploadBytes * 2);
             await JsonAsync(context, HttpStatusCode.BadRequest,
                 "{\"ok\":false,\"error\":\"File must be larger than 0 bytes and no more than 8 MB.\"}");
             return;
@@ -607,6 +614,30 @@ internal static class LicenseApiServer
     }
 
     private sealed class RequestBodyTooLargeException : Exception { }
+
+    /// <summary>
+    /// Reads and discards up to <paramref name="maxBytesToDrain"/> bytes of a request body
+    /// that is being rejected, so the response can close cleanly without resetting the
+    /// underlying TCP connection out from under a client that is still uploading. Best
+    /// effort: any failure here must not prevent the caller from still sending its response.
+    /// </summary>
+    private static async Task DrainRequestBodyAsync(HttpListenerRequest request, long maxBytesToDrain)
+    {
+        try
+        {
+            var buffer = new byte[8192];
+            long total = 0;
+            int count;
+            while (total < maxBytesToDrain && (count = await request.InputStream.ReadAsync(buffer)) > 0)
+            {
+                total += count;
+            }
+        }
+        catch
+        {
+            // Ignore - this is a best-effort drain before an error response.
+        }
+    }
 
     /// <summary>
     /// Reads a request body up to <see cref="MaxBodyBytes"/>, enforced while streaming
