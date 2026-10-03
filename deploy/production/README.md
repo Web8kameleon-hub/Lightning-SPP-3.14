@@ -65,6 +65,17 @@ this repository (`git clone` once; the CI job only runs `git fetch` +
 `git checkout <sha>` there) so `deploy.sh` can build from source at the
 released commit.
 
+For CI, install `ci-entrypoint.sh` as root-owned `/usr/local/sbin/spp-ci-deploy`
+with mode `0755`. Give the dedicated Actions public key this authorized_keys
+prefix: `restrict,command="/usr/local/sbin/spp-ci-deploy"`. The key can only
+request `deploy <40-character SHA>`; the entrypoint verifies a clean checkout,
+requires the current `origin/main` commit, locks concurrent deployments and
+invokes the existing application deployment script. Published releases must
+therefore point at the current verified `main` commit.
+For a private repository, the host uses a separate read-only repository deploy
+key at `/root/.ssh/spp-repository-read` and GitHub's verified host key at
+`/root/.ssh/spp-github-known-hosts`. This key cannot write to the repository.
+
 ## Manual flow (what the script automates)
 
 Build each committed revision as `scanprocessprint:<commit>`. Set `RELEASE_ID`

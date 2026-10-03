@@ -54,6 +54,14 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
+    - name: Validate restricted deployment entrypoint
+      run: |
+        bash -n deploy/production/ci-entrypoint.sh
+        if SSH_ORIGINAL_COMMAND='deploy invalid' bash deploy/production/ci-entrypoint.sh; then
+          echo "Restricted deployment entrypoint accepted an invalid commit." >&2
+          exit 1
+        fi
+
     - name: Build
       run: dotnet build --configuration Release --no-restore
 
@@ -245,11 +253,7 @@ jobs:
         key: ${{ secrets.PROD_SSH_KEY }}
         command_timeout: 15m
         script: |
-          set -euo pipefail
-          cd /opt/scanprocessprint-src
-          git fetch origin
-          git checkout ${{ github.sha }}
-          deploy/production/deploy.sh deploy ${{ github.sha }}
+          deploy ${{ github.sha }}
 
     - name: Post-deploy public health verification
       run: |

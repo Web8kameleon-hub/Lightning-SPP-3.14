@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Require the NO FAKE, PRODUCTION GRADE acceptance gate for a service in production since 2 October 2026.
 - Validate CLI `real` and `demo` runs against explicitly generated PNG fixtures and require successful processing and nonempty output files. CLI test failures now fail the process; speed output reports missed targets honestly.
 - Retain CI test and benchmark evidence and support a gated application-only Docker deployment through workflow dispatch, without NuGet or Docker Hub publication.
+- Restrict the Actions SSH key to deployment of the current `main` commit, with a host lock and a separate read-only repository key.
 
 ### Validation
 
