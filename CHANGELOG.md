@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Retain CI test and benchmark evidence and support a gated application-only Docker deployment through workflow dispatch, without NuGet or Docker Hub publication.
 - Restrict the Actions SSH key to deployment of the current `main` commit, with a host lock and a separate read-only repository key.
 - Send a valid form POST in production authorization checks so HTTP framing errors cannot mask the expected 401 rejection; verify invalid self-service activation returns 400 and all changed public pages are reachable before promotion.
+- Add GHCR publication of the exact tested linux/amd64 image using repository-scoped Actions authentication. Publication validates a registry pull against the tested image and does not deploy the service.
 
 ### Validation
 

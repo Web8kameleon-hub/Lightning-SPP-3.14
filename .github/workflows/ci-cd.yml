@@ -32,6 +32,11 @@ on:
   release:
     types: [ published ]
   workflow_dispatch:
+    inputs:
+      publish_ghcr:
+        description: Publish the validated linux/amd64 image to GHCR without deploying
+        type: boolean
+        default: false
 
 env:
   DOTNET_VERSION: '10.0.x'
@@ -111,8 +116,9 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t ${{ env.DOCKER_IMAGE_NAME }}:latest .
-        docker build -t ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} .
+        docker build -t ${{ env.DOCKER_IMAGE_NAME }}:latest -t ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} \
+          --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
+          --label org.opencontainers.image.revision=${{ github.sha }} .
 
     - name: Test hosted pages and API
       run: bash Scripts/hosting-smoke.sh ${{ env.DOCKER_IMAGE_NAME }}:latest
@@ -138,6 +144,74 @@ jobs:
           echo "REAL validation incorrectly succeeded without writable fixture/output storage." >&2
           exit 1
         fi
+
+    - name: Export the tested image for publication
+      if: github.event_name == 'workflow_dispatch' && inputs.publish_ghcr
+      run: |
+        mkdir -p artifacts
+        docker save ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} | gzip > artifacts/docker-validated.tar.gz
+
+    - name: Preserve the tested image
+      if: github.event_name == 'workflow_dispatch' && inputs.publish_ghcr
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-validated-${{ github.sha }}
+        path: artifacts/docker-validated.tar.gz
+        compression-level: 0
+        retention-days: 7
+        if-no-files-found: error
+
+  publish-ghcr:
+    name: Publish validated Docker image to GHCR
+    runs-on: ubuntu-latest
+    needs: [build-and-test, docker-build]
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_ghcr && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: lightning-spp-ghcr-publication
+      cancel-in-progress: false
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        name: docker-validated-${{ github.sha }}
+        path: artifacts
+    - name: Determine registry path and package version
+      id: metadata
+      run: |
+        owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+        version=$(python3 -c "import xml.etree.ElementTree as E; print(E.parse('wwwmmm.csproj').findtext('PropertyGroup/Version'))")
+        [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+        echo "image=ghcr.io/$owner/${{ env.DOCKER_IMAGE_NAME }}" >> "$GITHUB_OUTPUT"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Publish the exact tested image
+      env:
+        IMAGE: ${{ steps.metadata.outputs.image }}
+        VERSION: ${{ steps.metadata.outputs.version }}
+      run: |
+        gunzip -c artifacts/docker-validated.tar.gz | docker load
+        for tag in "$VERSION" "sha-${{ github.sha }}" latest; do
+          docker tag ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} "$IMAGE:$tag"
+          docker push "$IMAGE:$tag"
+        done
+    - name: Verify the registry serves the tested image
+      env:
+        IMAGE: ${{ steps.metadata.outputs.image }}
+        VERSION: ${{ steps.metadata.outputs.version }}
+      run: |
+        tested=$(docker image inspect ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} --format '{{.Id}}')
+        docker pull "$IMAGE:$VERSION"
+        published=$(docker image inspect "$IMAGE:$VERSION" --format '{{.Id}}')
+        test "$tested" = "$published"
+        docker image inspect "$IMAGE:$VERSION" --format '{{json .RepoDigests}}' >> "$GITHUB_STEP_SUMMARY"
 
   publish-nuget:
     name: Publish to NuGet
@@ -216,7 +290,7 @@ jobs:
     name: Deploy to Production (zero-downtime)
     runs-on: ubuntu-latest
     needs: [build-and-test, docker-build]
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.publish_ghcr)
     concurrency:
       group: scanprocessprint-production
       cancel-in-progress: false
