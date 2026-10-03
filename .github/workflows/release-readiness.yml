@@ -40,16 +40,23 @@ jobs:
           test -s Docs/EDGE_CASES_AND_NEGATIVE_TESTS.md
           test -s Docs/RELEASE_EVIDENCE.md
           test -s Web/wwwroot/landing.html
-          grep -q "Buy with Stripe" Web/wwwroot/landing.html
-          grep -q "€99.99/year" Web/wwwroot/landing.html
+          test -s Web/wwwroot/pricing.html
+          # Pricing moved off the landing page onto its own indexable /pricing page
+          # (see "Add indexable product pages for SEO" and "Allow self-service license
+          # activation without admin token"); verify the real, live Stripe checkout
+          # links and current prices there instead of stale placeholder copy.
+          grep -q "buy.stripe.com" Web/wwwroot/pricing.html
+          grep -q "€49.99" Web/wwwroot/pricing.html
           grep -q "Counter-tests" Docs/EDGE_CASES_AND_NEGATIVE_TESTS.md
       - name: Block unsubstantiated customer claims
         shell: bash
         run: |
-          if grep -Eqi "4x faster than Adobe|50% cheaper than Google" Web/wwwroot/landing.html; then
-            echo "Comparative claim requires an external benchmark protocol"
-            exit 1
-          fi
+          for page in Web/wwwroot/*.html; do
+            if grep -Eqi "4x faster than Adobe|50% cheaper than Google" "$page"; then
+              echo "Comparative claim in $page requires an external benchmark protocol"
+              exit 1
+            fi
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
