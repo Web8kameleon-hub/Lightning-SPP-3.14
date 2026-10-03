@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validate CLI `real` and `demo` runs against explicitly generated PNG fixtures and require successful processing and nonempty output files. CLI test failures now fail the process; speed output reports missed targets honestly.
 - Retain CI test and benchmark evidence and support a gated application-only Docker deployment through workflow dispatch, without NuGet or Docker Hub publication.
 - Restrict the Actions SSH key to deployment of the current `main` commit, with a host lock and a separate read-only repository key.
+- Send a valid form POST in production authorization checks so HTTP framing errors cannot mask the expected 401 rejection; verify invalid self-service activation returns 400 and all changed public pages are reachable before promotion.
 
 ### Validation
 

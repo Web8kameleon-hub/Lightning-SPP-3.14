@@ -88,6 +88,12 @@ verify_release() {
   docker run --rm --network neurosonic_default curlimages/curl:8.10.1 \
     -fsS "http://$backend/dashboard" >/dev/null 2>&1 || { log "release $release: /dashboard not reachable"; return 1; }
 
+  local path
+  for path in / /features /technology /pricing /benchmarks /try /swagger /robots.txt /sitemap.xml /site.css /try.js; do
+    docker run --rm --network neurosonic_default curlimages/curl:8.10.1 \
+      -fsS "http://$backend$path" >/dev/null 2>&1 || { log "release $release: $path not reachable"; return 1; }
+  done
+
   # License status endpoint responds.
   docker run --rm --network neurosonic_default curlimages/curl:8.10.1 \
     -fsS "http://$backend/api/license/status" >/dev/null 2>&1 || { log "release $release: /api/license/status failed"; return 1; }
@@ -95,8 +101,12 @@ verify_release() {
   # Admin-only endpoint must reject unauthenticated requests (expect 401).
   local status
   status=$(docker run --rm --network neurosonic_default curlimages/curl:8.10.1 \
-    -s -o /dev/null -w '%{http_code}' -X POST "http://$backend/api/license/issue") || status="000"
+    -s -o /dev/null -w '%{http_code}' --data 'key=invalid' "http://$backend/api/license/issue") || status="000"
   [ "$status" = "401" ] || { log "release $release: expected 401 from unauthenticated /api/license/issue, got $status"; return 1; }
+
+  status=$(docker run --rm --network neurosonic_default curlimages/curl:8.10.1 \
+    -s -o /dev/null -w '%{http_code}' --data 'key=invalid' "http://$backend/api/license/activate") || status="000"
+  [ "$status" = "400" ] || { log "release $release: expected 400 from invalid license activation, got $status"; return 1; }
 
   log "release $release passed all internal checks"
 }
