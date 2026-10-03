@@ -241,7 +241,9 @@ internal class Program
         var lightningMs = (DateTime.UtcNow - start).TotalMilliseconds;
         Console.WriteLine($"Lightning:  {lightningMs:F3}ms (target: <10ms) {(lightningMs < 10 ? "✓" : "⚠")}");
 
-        Console.WriteLine($"\n✓ ABSOLUTE SPEED achieved!");
+        Console.WriteLine(instantMs < 1 && ultraMs < 5 && lightningMs < 10
+            ? "\nAll speed targets met in this run."
+            : "\nSome speed targets were not met in this run. CI regression gates are defined in PerformanceGateTests.");
     }
 
     private static async Task RunSelfLearning()
@@ -353,70 +355,8 @@ internal class Program
 
     private static async Task RunDemo()
     {
-        Console.WriteLine("🚀 Running Demo...\n");
-
-        // Demo 1: Lightning Pipeline
-        Console.WriteLine("═══════════════════════════════════════");
-        Console.WriteLine("Demo 1: Full Lightning Pipeline");
-        Console.WriteLine("═══════════════════════════════════════");
-
-        var pipelineRequest = new PipelineRequest(
-            Source: "demo-document.pdf",
-            ScanMode: ScanMode.Lightning,
-            Quality: 300,
-            UseResonance: true,
-            UseNanoDecibel: true,
-            ProcessingEngine: ProcessingEngine.Hybrid,
-            UseAI: true,
-            UseClisonic: true,
-            OptimizationLevel: 5,
-            UseStigmaMemory: true,
-            ShouldPrint: true,
-            PrintQuality: PrintQuality.Stigma,
-            Copies: 1
-        );
-
-        var result = await LightningAPI.ExecuteCustomPipelineAsync(pipelineRequest);
-
-        foreach (var step in result.Steps)
-        {
-            Console.WriteLine(step);
-        }
-
-        // Demo 2: High-Quality Scan
-        Console.WriteLine("\n═══════════════════════════════════════");
-        Console.WriteLine("Demo 2: High-Quality NanoDecibel Scan");
-        Console.WriteLine("═══════════════════════════════════════");
-
-        var scanResult = await LightningAPI.HighQualityScanAsync("demo-photo.jpg");
-        Console.WriteLine($"✓ Scanned in {scanResult.Metadata.ProcessingTimeMs}ms");
-        Console.WriteLine($"  Technology: {scanResult.Metadata.Technology}");
-        Console.WriteLine($"  Resolution: {scanResult.Metadata.Resolution} DPI");
-
-        // Demo 3: AI Processing
-        Console.WriteLine("\n═══════════════════════════════════════");
-        Console.WriteLine("Demo 3: Clisonic Global AI Processing");
-        Console.WriteLine("═══════════════════════════════════════");
-
-        var processResult = await LightningAPI.AIProcessAsync(scanResult.Data);
-        Console.WriteLine($"✓ Processed in {processResult.Metadata.ProcessingTimeMs}ms");
-        Console.WriteLine($"  Engine: {processResult.Metadata.Engine}");
-        Console.WriteLine($"  AI: {processResult.Metadata.AdditionalInfo["UseAI"]}");
-
-        // Demo 4: Batch Processing
-        Console.WriteLine("\n═══════════════════════════════════════");
-        Console.WriteLine("Demo 4: Batch Processing");
-        Console.WriteLine("═══════════════════════════════════════");
-
-        var batchSources = new List<string> { "doc1.pdf", "doc2.pdf", "doc3.pdf" };
-        var batchResults = await LightningAPI.BatchProcessAsync(batchSources);
-        Console.WriteLine($"✓ Processed {batchResults.Count} documents");
-        Console.WriteLine($"  Total time: {batchResults.Sum(r => r.TotalTimeMs)}ms");
-        Console.WriteLine($"  Average: {batchResults.Average(r => r.TotalTimeMs):F2}ms");
-
-        Console.WriteLine("\n═══════════════════════════════════════");
-        Console.WriteLine("✨ Demo completed! System ready for public use.");
-        Console.WriteLine("═══════════════════════════════════════");
+        Console.WriteLine("Running the real image-processing validation demo. Generated fixtures are explicitly identified.");
+        await wwwmmm.Examples.RealVsSimulatedExamples.RunAllComparisons();
     }
 
     private static void ShowHelp()

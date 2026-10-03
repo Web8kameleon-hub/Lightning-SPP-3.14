@@ -77,6 +77,8 @@ public static class SimpleTests
 
         Console.WriteLine($"\n📊 Test Results: {passed} passed, {failed} failed");
         Console.WriteLine(failed == 0 ? "✓ All tests passed!" : "⚠️  Some tests failed");
+        if (failed > 0)
+            throw new InvalidOperationException($"CLI validation failed: {failed} tests failed.");
     }
 
     private static async Task<bool> TestScanService()

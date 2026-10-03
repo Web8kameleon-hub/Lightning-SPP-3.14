@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- Improve public-page SEO metadata, structured data, internal links and product descriptions; correct pricing metadata and refresh the sitemap.
+- Keep public GET/HEAD requests outside the API rate-limit budget, redirect `/index.html` to `/`, and mark dashboard/API responses `noindex`.
+- Require the NO FAKE, PRODUCTION GRADE acceptance gate for a service in production since 2 October 2026.
+- Validate CLI `real` and `demo` runs against explicitly generated PNG fixtures and require successful processing and nonempty output files. CLI test failures now fail the process; speed output reports missed targets honestly.
+- Retain CI test and benchmark evidence and support a gated application-only Docker deployment through workflow dispatch, without NuGet or Docker Hub publication.
+
+### Validation
+
+- Automated SEO integration coverage verifies public-page access after API rate-limit exhaustion, HEAD responses, redirect and indexing headers.
+- Production acceptance still requires successful CI/container checks and configured production SSH access; an unpublished change is not a completed deployment.
+
 ## [3.14.0] - 2026-05-14
 
 ### 🎉 Initial Public Release

@@ -22,5 +22,12 @@ for attempt in $(seq 1 35); do
   docker exec "$container" curl -s -o /dev/null http://localhost:13080/api/license/status
 done
 docker exec "$container" curl -fsS http://localhost:13080/api/health >/dev/null
+# Search crawlers must retain access after the API budget is exhausted.
+for path in / /features /technology /pricing /benchmarks /try /swagger /robots.txt /sitemap.xml /site.css /try.js; do
+  docker exec "$container" curl -fsS "http://localhost:13080$path" >/dev/null
+done
+code=$(docker exec "$container" curl -s -o /dev/null -w '%{http_code}' http://localhost:13080/index.html)
+test "$code" = 301
+docker exec "$container" curl -fsSI http://localhost:13080/features >/dev/null
 docker exec "$container" sh -c 'test "$(id -u)" != 0 && test -w /data'
 echo 'Container HTTP, authorization, health and storage checks passed.'

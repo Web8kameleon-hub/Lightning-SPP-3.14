@@ -4,6 +4,10 @@ First off, thank you for considering contributing to Lightning SPP! 🎉
 
 Lightning SPP is a professional-grade open-source project, and we welcome contributions from the community.
 
+## Mandatory production rule
+
+Lightning SPP has been in production since **2 October 2026**. Every contribution must meet the **NO FAKE, PRODUCTION GRADE** acceptance gate in [AGENTS.md](AGENTS.md). Changes with known errors, failing required checks, unresolved regressions, simulated production behavior, or unsupported public claims must not be accepted, merged, or deployed. Fix and verify them first, and include evidence of the checks performed.
+
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)

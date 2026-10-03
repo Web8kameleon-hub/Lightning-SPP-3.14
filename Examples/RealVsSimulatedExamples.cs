@@ -1,6 +1,8 @@
 using wwwmmm.PublicAPI;
 using wwwmmm.Configuration;
 using System.Diagnostics;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace wwwmmm.Examples;
 
@@ -12,6 +14,7 @@ public static class RealVsSimulatedExamples
 {
     public static async Task CompareRealVsSimulated()
     {
+        using var input = new ValidationImage();
         Console.WriteLine("╔═══════════════════════════════════════════════════╗");
         Console.WriteLine("║  REAL Processing Path Validation                 ║");
         Console.WriteLine("╚═══════════════════════════════════════════════════╝\n");
@@ -21,7 +24,8 @@ public static class RealVsSimulatedExamples
         LightningAPI.UseSimulatedServices();
 
         var compatibilityStart = Stopwatch.StartNew();
-        var compatibilityResult = await LightningAPI.ExecuteLightningPipelineAsync("test-compatibility.dat");
+        var compatibilityResult = await LightningAPI.ExecuteLightningPipelineAsync(input.Path);
+        Require(compatibilityResult.Success, compatibilityResult.Error ?? "Compatibility pipeline failed");
         compatibilityStart.Stop();
 
         Console.WriteLine("COMPATIBILITY Path Results:");
@@ -34,7 +38,8 @@ public static class RealVsSimulatedExamples
         LightningAPI.UseRealServices();
 
         var realStart = Stopwatch.StartNew();
-        var realResult = await LightningAPI.ExecuteLightningPipelineAsync("test-real.dat");
+        var realResult = await LightningAPI.ExecuteLightningPipelineAsync(input.Path);
+        Require(realResult.Success, realResult.Error ?? "Real pipeline failed");
         realStart.Stop();
 
         Console.WriteLine("REAL Path Results:");
@@ -54,6 +59,7 @@ public static class RealVsSimulatedExamples
 
     public static async Task DemonstrateRealImageProcessing()
     {
+        using var input = new ValidationImage();
         Console.WriteLine("\n╔═══════════════════════════════════════════════════╗");
         Console.WriteLine("║  REAL Image Processing with ImageSharp           ║");
         Console.WriteLine("╚═══════════════════════════════════════════════════╝\n");
@@ -76,13 +82,14 @@ public static class RealVsSimulatedExamples
             var sw = Stopwatch.StartNew();
             
             var request = new Services.ScanRequest(
-                "test.jpg",
+                input.Path,
                 mode,
                 Quality: 300
             );
 
             // This will use RealImageProcessor with actual ImageSharp processing!
             var result = await ServiceFactory.CreateScanService().ScanAsync(request);
+            Require(result.Success && result.Data.Length > 0, result.Error ?? $"{name} scan returned no data");
             sw.Stop();
 
             Console.WriteLine($"{name} Mode:");
@@ -124,6 +131,7 @@ public static class RealVsSimulatedExamples
 
             // This will use RealAIProcessor with actual compression and ML!
             var result = await ServiceFactory.CreateProcessingService().ProcessAsync(testData, options);
+            Require(result.Success && result.ProcessedData.Length > 0, $"{name} processing failed or returned no data");
             sw.Stop();
 
             var compressionRatio = (double)testData.Length / result.ProcessedData.Length;
@@ -133,7 +141,7 @@ public static class RealVsSimulatedExamples
             Console.WriteLine($"  Original: {testData.Length:N0} bytes");
             Console.WriteLine($"  Processed: {result.ProcessedData.Length:N0} bytes");
             Console.WriteLine($"  Compression: {compressionRatio:F2}x");
-            Console.WriteLine($"  Real AI: ✓");
+            Console.WriteLine("  Processing service completed: ✓ (not a model accuracy evaluation)");
             Console.WriteLine();
         }
     }
@@ -169,6 +177,8 @@ public static class RealVsSimulatedExamples
             );
 
             var result = await printService!.PrintAsync(testData, options);
+            Require(result.Success && File.Exists(result.Metadata.Destination) && new FileInfo(result.Metadata.Destination).Length > 0,
+                $"{quality} print failed or did not create a nonempty file");
             sw.Stop();
 
             Console.WriteLine($"{quality} Quality:");
@@ -180,7 +190,7 @@ public static class RealVsSimulatedExamples
 
         // Show created files
         var files = printService!.GetPrintedFiles();
-        Console.WriteLine($"📁 Created {files.Length} real output files:");
+        Console.WriteLine($"📁 Output directory currently contains {files.Length} files (including previous runs):");
         foreach (var file in files.Take(5))
         {
             var info = new FileInfo(file);
@@ -197,6 +207,7 @@ public static class RealVsSimulatedExamples
 
     public static async Task FullRealWorkflowDemo()
     {
+        using var input = new ValidationImage();
         Console.WriteLine("\n╔═══════════════════════════════════════════════════╗");
         Console.WriteLine("║  COMPLETE REAL WORKFLOW - End to End             ║");
         Console.WriteLine("╚═══════════════════════════════════════════════════╝\n");
@@ -211,11 +222,12 @@ public static class RealVsSimulatedExamples
         // Step 1: REAL Scan with ImageSharp
         Console.WriteLine("Step 1: REAL Image Scan (ImageSharp)...");
         var scanRequest = new Services.ScanRequest(
-            "document.jpg",
+            input.Path,
             Services.ScanMode.Resonance,
             Quality: 600
         );
         var scanResult = await ServiceFactory.CreateScanService().ScanAsync(scanRequest);
+        Require(scanResult.Success && scanResult.Data.Length > 0, scanResult.Error ?? "Workflow scan returned no data");
         Console.WriteLine($"  ✓ Scanned {scanResult.Data.Length:N0} bytes in {scanResult.Metadata.ProcessingTimeMs}ms");
 
         // Step 2: REAL AI Processing with ML
@@ -230,12 +242,15 @@ public static class RealVsSimulatedExamples
             scanResult.Data,
             processOptions
         );
+        Require(processResult.Success && processResult.ProcessedData.Length > 0, "Workflow processing failed or returned no data");
         var ratio = (double)scanResult.Data.Length / processResult.ProcessedData.Length;
         Console.WriteLine($"  ✓ Processed with {ratio:F2}x compression in {processResult.Metadata.ProcessingTimeMs}ms");
 
         // Step 3: REAL Print to file
         Console.WriteLine("\nStep 3: REAL Print to File (Stigma Premium)...");
         var printResult = await LightningAPI.StigmaPrintAsync(processResult.ProcessedData);
+        Require(printResult.Success && File.Exists(printResult.Metadata.Destination) && new FileInfo(printResult.Metadata.Destination).Length > 0,
+            "Workflow print failed or did not create a nonempty file");
         Console.WriteLine($"  ✓ Printed to: {printResult.Metadata.Destination}");
         Console.WriteLine($"  ✓ Quality: {printResult.Metadata.Technology}");
 
@@ -253,6 +268,30 @@ public static class RealVsSimulatedExamples
         var data = new byte[size];
         Random.Shared.NextBytes(data);
         return data;
+    }
+
+    private static void Require(bool condition, string error)
+    {
+        if (!condition)
+            throw new InvalidOperationException(error);
+    }
+
+    private sealed class ValidationImage : IDisposable
+    {
+        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"spp-validation-{Guid.NewGuid():N}.png");
+
+        public ValidationImage()
+        {
+            // An explicitly generated validation fixture, processed by real services.
+            using var image = new Image<Rgba32>(128, 128);
+            for (var y = 0; y < image.Height; y++)
+                for (var x = 0; x < image.Width; x++)
+                    image[x, y] = new Rgba32((byte)x, (byte)y, (byte)(x ^ y), 255);
+            image.SaveAsPng(Path);
+            Console.WriteLine("Input: generated 128x128 PNG validation fixture; processing and outputs are real.");
+        }
+
+        public void Dispose() => File.Delete(Path);
     }
 
     public static async Task RunAllComparisons()

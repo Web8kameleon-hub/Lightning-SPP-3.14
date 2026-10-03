@@ -11,7 +11,7 @@ This document is the release companion for code, UI, billing, licensing, benchma
 - Stripe webhooks use signed payload verification with legacy, snapshot and thin destination secrets.
 - Event IDs are deduplicated to prevent immediate replay processing.
 - License tiers are Free, Pay as you go, Unlimited and Enterprise.
-- The landing page displays the repository pricing model: Free; €0.001/operation with €9.99 monthly minimum; €99.99/year Unlimited; custom Enterprise.
+- The public `/pricing` page displays Free development/testing, €19.99/month Pay-as-you-go, €49.99/month Unlimited and custom Enterprise. Actual Stripe checkout terms must be verified before release acceptance.
 
 ## Evidence index
 

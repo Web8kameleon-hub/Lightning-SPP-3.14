@@ -46,11 +46,19 @@ usage.
 ### Required GitHub Actions secrets
 
 The `deploy-production` job in `.github/workflows/ci-cd.yml` runs on every
-published release and needs:
+published release or an explicit CI/CD dispatch on `main` and needs:
 
 - `PROD_SSH_HOST` - hel-core-01's address.
 - `PROD_SSH_USER` - SSH user with Docker access on that host.
 - `PROD_SSH_KEY` - private key for that user (deploy-only key, not a personal one).
+
+For an application-only Docker deployment, use
+`gh workflow run ci-cd.yml --ref main` after the required secrets are configured.
+The dispatch runs the build, complete test suite, CLI benchmark, Docker build,
+container checks and blue-green deployment. NuGet and Docker Hub publication
+remain restricted to published releases. Validation logs are retained as a
+commit-specific Actions artifact; benchmark targets are not performance guarantees.
+Production deployments are serialized and are not cancelled midway by a newer run.
 
 On the host itself, `/opt/scanprocessprint-src` must be a working clone of
 this repository (`git clone` once; the CI job only runs `git fetch` +

@@ -115,23 +115,44 @@ internal static class LicenseApiServer
             return;
         }
 
-        // Rate limiting
-        var clientIp = ResolveClientIp(context.Request);
-        if (context.Request.Url?.AbsolutePath != "/api/health" && IsRateLimited(clientIp))
-        {
-            context.Response.Headers["Retry-After"] = "60";
-            await TextAsync(context, HttpStatusCode.TooManyRequests, "ok=false\nerror=Rate limit exceeded");
-            return;
-        }
-
         var path = context.Request.Url?.AbsolutePath?.TrimEnd('/') ?? "/";
         if (string.IsNullOrWhiteSpace(path))
         {
             path = "/";
         }
 
+        if (path == "/dashboard" || path.StartsWith("/api/", StringComparison.Ordinal))
+        {
+            context.Response.Headers["X-Robots-Tag"] = "noindex";
+        }
+
+        // Public pages and their assets must remain crawlable without consuming
+        // the API budget. Unknown paths still have the general abuse limit.
+        var isPublicRead = (context.Request.HttpMethod is "GET" or "HEAD") && path is
+            "/" or "/index.html" or "/features" or "/technology" or "/try" or
+            "/pricing" or "/benchmarks" or "/swagger" or "/openapi.json" or
+            "/robots.txt" or "/sitemap.xml" or "/site.css" or "/try.js" or
+            "/favicon.ico" or "/favicon-16x16.png" or "/favicon-32x32.png" or
+            "/apple-touch-icon.png" or "/site.webmanifest";
+
+        // Rate limiting
+        var clientIp = ResolveClientIp(context.Request);
+        if (!isPublicRead && path != "/api/health" && IsRateLimited(clientIp))
+        {
+            context.Response.Headers["Retry-After"] = "60";
+            await TextAsync(context, HttpStatusCode.TooManyRequests, "ok=false\nerror=Rate limit exceeded");
+            return;
+        }
+
         try
         {
+            if (path == "/index.html" && context.Request.HttpMethod is "GET" or "HEAD")
+            {
+                context.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
+                context.Response.RedirectLocation = "/";
+                context.Response.Close();
+                return;
+            }
             if (path == "/site.css" || path == "/dashboard.js" || path == "/try.js")
             {
                 var jsOrCss = path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8";
@@ -609,7 +630,10 @@ internal static class LicenseApiServer
         context.Response.StatusCode = (int)HttpStatusCode.OK;
         context.Response.ContentType = contentType;
         context.Response.ContentLength64 = bytes.LongLength;
-        await context.Response.OutputStream.WriteAsync(bytes);
+        if (context.Request.HttpMethod != "HEAD")
+        {
+            await context.Response.OutputStream.WriteAsync(bytes);
+        }
         context.Response.Close();
     }
 

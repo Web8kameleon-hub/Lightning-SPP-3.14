@@ -31,6 +31,7 @@ on:
       - 'CHANGELOG.md'
   release:
     types: [ published ]
+  workflow_dispatch:
 
 env:
   DOTNET_VERSION: '10.0.x'
@@ -57,7 +58,7 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: Run unit tests
-      run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal
+      run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=ci-tests.trx"
 
     - name: Run Lightning SPP Demo
       run: dotnet run --no-build --configuration Release -- demo
@@ -66,7 +67,27 @@ jobs:
       run: dotnet run --no-build --configuration Release -- test
 
     - name: Run Speed Benchmark
-      run: dotnet run --no-build --configuration Release -- speed
+      run: |
+        mkdir -p artifacts
+        dotnet --info > artifacts/benchmark-environment.txt
+        git rev-parse HEAD >> artifacts/benchmark-environment.txt
+        date -u >> artifacts/benchmark-environment.txt
+        uname -a >> artifacts/benchmark-environment.txt
+        lscpu >> artifacts/benchmark-environment.txt
+        free -m >> artifacts/benchmark-environment.txt
+        echo 'Speed CLI: 1024 zero-filled bytes; 0 warm-up runs; 1 measured run per mode. Raw observations, not median/p95/p99 or throughput claims. Regression gates run in the test suite.' >> artifacts/benchmark-environment.txt
+        dotnet run --no-build --configuration Release -- speed | tee artifacts/speed-benchmark.txt
+
+    - name: Preserve test and benchmark evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: validation-${{ github.sha }}
+        path: |
+          Tests/LightningSPP.Tests/TestResults/*.trx
+          artifacts/benchmark-environment.txt
+          artifacts/speed-benchmark.txt
+        if-no-files-found: error
 
   docker-build:
     name: Docker Build & Test
@@ -102,6 +123,13 @@ jobs:
 
     - name: Test Docker container - REAL mode
       run: docker run --rm ${{ env.DOCKER_IMAGE_NAME }}:latest real
+
+    - name: Counter-test - REAL validation must fail on read-only storage
+      run: |
+        if docker run --rm --read-only ${{ env.DOCKER_IMAGE_NAME }}:latest real; then
+          echo "REAL validation incorrectly succeeded without writable fixture/output storage." >&2
+          exit 1
+        fi
 
   publish-nuget:
     name: Publish to NuGet
@@ -180,12 +208,27 @@ jobs:
     name: Deploy to Production (zero-downtime)
     runs-on: ubuntu-latest
     needs: [build-and-test, docker-build]
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    concurrency:
+      group: scanprocessprint-production
+      cancel-in-progress: false
     environment:
       name: production
       url: https://scanprocessprint.com
 
     steps:
+    - name: Validate production SSH configuration
+      env:
+        PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+        PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+        PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+      run: |
+        for name in PROD_SSH_HOST PROD_SSH_USER PROD_SSH_KEY; do
+          if [ -z "${!name}" ]; then
+            echo "Missing required production secret: $name" >&2
+            exit 1
+          fi
+        done
     # Builds the release container on hel-core-01 itself (deploy.sh runs
     # `docker build` from a server-side checkout), verifies it end-to-end
     # against its own internal proxy, hot-swaps the shared nginx edge with a
