@@ -46,10 +46,11 @@ public class ApiTryProcessIntegrationTests
         var r3 = await PostImageAsync(client, RandomBytes(1024), "image/png", profile: "not-a-real-profile");
         Assert.Equal(HttpStatusCode.BadRequest, r3.StatusCode);
 
-        // 4. Unsupported content type (e.g. a PDF) -> 400, clear reason.
-        var r4 = await PostImageAsync(client, RandomBytes(1024), "application/pdf", profile: null);
+        // 4. PDF MIME is accepted, but an invalid PDF is rejected by the real PDF validator
+        // before native Poppler tools are invoked.
+        var r4 = await PostImageAsync(client, "invalid pdf"u8.ToArray(), "application/pdf", profile: null);
         Assert.Equal(HttpStatusCode.BadRequest, r4.StatusCode);
-        Assert.Contains("Unsupported file type", await r4.Content.ReadAsStringAsync());
+        Assert.DoesNotContain("Unsupported file type", await r4.Content.ReadAsStringAsync());
 
         // 5. Empty body -> 400, not a 500 or hang.
         var r5 = await PostImageAsync(client, Array.Empty<byte>(), "image/png", profile: null);

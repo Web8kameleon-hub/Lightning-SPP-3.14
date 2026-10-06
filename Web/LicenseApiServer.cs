@@ -3,6 +3,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using LightningSPP.Licensing;
+using wwwmmm.Documents;
 using wwwmmm.Configuration;
 using wwwmmm.Services;
 
@@ -30,7 +31,8 @@ internal static class LicenseApiServer
 
     private static readonly HashSet<string> AllowedTryContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "image/png", "image/jpeg", "image/jpg", "image/bmp", "image/tiff", "image/gif"
+        "image/png", "image/jpeg", "image/jpg", "image/bmp", "image/tiff", "image/gif",
+        "application/pdf"
     };
 
     private static bool IsRateLimited(string ip)
@@ -430,11 +432,10 @@ internal static class LicenseApiServer
     }
 
     /// <summary>
-    /// Public, unauthenticated demo: runs one real Scan + Process job on an uploaded image
-    /// and returns the processed preview plus per-job timing, so a visitor can see Lightning
-    /// SPP work without installing anything. Deliberately image-only: this codebase has no
-    /// PDF renderer, so a PDF upload would otherwise be visualized as raw-byte noise instead
-    /// of real page content, which would be misleading.
+    /// Public, unauthenticated demo: runs one real document/image processing job and returns
+    /// the processed preview plus per-job timing, so a visitor can see Lightning SPP work
+    /// without installing anything. PDF input is validated and rendered through the real
+    /// document core before page 1 enters the Scan + Process pipeline.
     /// </summary>
     private static async Task HandleTryProcessAsync(HttpListenerContext context, string clientIp)
     {
@@ -450,7 +451,7 @@ internal static class LicenseApiServer
         if (!AllowedTryContentTypes.Contains(contentType))
         {
             await JsonAsync(context, HttpStatusCode.BadRequest,
-                "{\"ok\":false,\"error\":\"Unsupported file type. Upload a JPEG, PNG, BMP, TIFF or GIF image.\"}");
+                "{\"ok\":false,\"error\":\"Unsupported file type. Upload a PDF, JPEG, PNG, BMP, TIFF or GIF file.\"}");
             return;
         }
 
@@ -494,7 +495,40 @@ internal static class LicenseApiServer
             var scanService = ServiceFactory.CreateScanService();
             var processingService = ServiceFactory.CreateProcessingService();
 
-            var scanResult = await scanService.ScanAsync(originalBytes, scanMode, quality: 300);
+            var inputType = "image";
+            var inputPage = 0;
+            var totalPages = 0;
+            var scanInput = originalBytes;
+
+            if (contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var pdfService = new PdfDocumentService();
+                    var rendered = await pdfService.RenderPageAsync(originalBytes, page: 1);
+                    scanInput = rendered.Png;
+                    inputType = "pdf";
+                    inputPage = rendered.Page;
+                    totalPages = rendered.TotalPages;
+                }
+                catch (ArgumentException ex)
+                {
+                    InternalAuditLogger.Error(
+                        $"Try-it PDF validation failed: ip={clientIp}, error={ex.Message}");
+                    await JsonAsync(context, HttpStatusCode.BadRequest,
+                        "{\"ok\":false,\"error\":\"Invalid PDF document.\"}");
+                    return;
+                }
+                catch (DocumentException ex)
+                {
+                    InternalAuditLogger.Error(
+                        $"Try-it PDF rendering failed: ip={clientIp}, error={ex.Message}");
+                    await JsonAsync(context, HttpStatusCode.UnprocessableEntity,
+                        "{\"ok\":false,\"error\":\"The PDF could not be validated or rendered.\"}");
+                    return;
+                }
+            }
+            var scanResult = await scanService.ScanAsync(scanInput, scanMode, quality: 300);
             if (!scanResult.Success)
             {
                 await JsonAsync(context, HttpStatusCode.UnprocessableEntity,
@@ -531,6 +565,9 @@ internal static class LicenseApiServer
                 {
                   "ok": true,
                   "profile": "{{profileName}}",
+                  "inputType": "{{inputType}}",
+                  "page": {{inputPage}},
+                  "totalPages": {{totalPages}},
                   "scanTimeMs": {{scanResult.Metadata.ProcessingTimeMs}},
                   "processTimeMs": {{(processResult.Success ? processResult.Metadata.ProcessingTimeMs : 0)}},
                   "totalTimeMs": {{totalMs}},

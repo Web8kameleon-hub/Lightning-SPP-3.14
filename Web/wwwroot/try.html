@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Online Image Processing Demo | Lightning SPP</title>
-<meta name="description" content="Try Lightning SPP image processing online. Upload a JPEG, PNG, BMP, TIFF or GIF up to 8 MB, compare before and after, and see timing. No install or account.">
+<title>Online Document Processing Demo | Lightning SPP</title>
+<meta name="description" content="Try Lightning SPP document processing online. Upload a PDF, JPEG, PNG, BMP, TIFF or GIF up to 8 MB, run the real pipeline, and see the result and timing. No install or account.">
 <link rel="canonical" href="https://scanprocessprint.com/try">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap"><link rel="stylesheet" href="/site.css">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -11,17 +11,17 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <script src="/try.js" defer></script>
-<meta property="og:title" content="Online Image Processing Demo | Lightning SPP">
-<meta property="og:description" content="Try Lightning SPP image processing online. Upload a JPEG, PNG, BMP, TIFF or GIF up to 8 MB, compare before and after, and see timing. No install or account.">
+<meta property="og:title" content="Online Document Processing Demo | Lightning SPP">
+<meta property="og:description" content="Try Lightning SPP document processing online. Upload a PDF, JPEG, PNG, BMP, TIFF or GIF up to 8 MB, run the real pipeline, and see the result and timing. No install or account.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://scanprocessprint.com/try">
 <meta property="og:site_name" content="Lightning SPP">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Online Image Processing Demo | Lightning SPP">
-<meta name="twitter:description" content="Try Lightning SPP image processing online. Upload a JPEG, PNG, BMP, TIFF or GIF up to 8 MB, compare before and after, and see timing. No install or account.">
+<meta name="twitter:title" content="Online Document Processing Demo | Lightning SPP">
+<meta name="twitter:description" content="Try Lightning SPP document processing online. Upload a PDF, JPEG, PNG, BMP, TIFF or GIF up to 8 MB, run the real pipeline, and see the result and timing. No install or account.">
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "WebPage", "@id": "https://scanprocessprint.com/try#webpage", "url": "https://scanprocessprint.com/try", "name": "Online Image Processing Demo | Lightning SPP", "description": "Try Lightning SPP image processing online. Upload a JPEG, PNG, BMP, TIFF or GIF up to 8 MB, compare before and after, and see timing. No install or account.", "inLanguage": "en", "isPartOf": {"@id": "https://scanprocessprint.com/#website"}, "breadcrumb": {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Lightning SPP", "item": "https://scanprocessprint.com/"}, {"@type": "ListItem", "position": 2, "name": "Image processing demo", "item": "https://scanprocessprint.com/try"}]}}
+{"@context": "https://schema.org", "@type": "WebPage", "@id": "https://scanprocessprint.com/try#webpage", "url": "https://scanprocessprint.com/try", "name": "Online Document Processing Demo | Lightning SPP", "description": "Try Lightning SPP document processing online. Upload a PDF, JPEG, PNG, BMP, TIFF or GIF up to 8 MB, run the real pipeline, and see the result and timing. No install or account.", "inLanguage": "en", "isPartOf": {"@id": "https://scanprocessprint.com/#website"}, "breadcrumb": {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Lightning SPP", "item": "https://scanprocessprint.com/"}, {"@type": "ListItem", "position": 2, "name": "Document processing demo", "item": "https://scanprocessprint.com/try"}]}}
 </script>
 </head>
 <body>
@@ -29,14 +29,14 @@
 <header><a class="brand" href="/">Lightning SPP<span aria-hidden="true">.</span></a>
 <nav aria-label="Main navigation"><a href="/features">Features</a><a href="/technology">Technology</a><a href="/try" aria-current="page">Try it</a><a href="/pricing">Pricing</a><a href="/benchmarks">Benchmarks</a><a href="/dashboard">Your license</a></nav></header>
 <main id="main">
-<nav aria-label="Breadcrumb"><a href="/">Lightning SPP</a><span aria-hidden="true"> / </span><span>Image processing demo</span></nav>
-<section class="hero"><span class="eyebrow">No install required</span><h1>Try the real pipeline<br>on your own image.</h1><p class="intro">Upload a JPEG, PNG, BMP, TIFF or GIF (up to 8 MB). We run the actual Scan and Process stages on our server — the same code described on the <a href="/technology">technology page</a> — and show you the result and the timing for your specific file.</p></section>
+<nav aria-label="Breadcrumb"><a href="/">Lightning SPP</a><span aria-hidden="true"> / </span><span>Document processing demo</span></nav>
+<section class="hero"><span class="eyebrow">No install required</span><h1>Try the real pipeline<br>on your own document.</h1><p class="intro">Upload a PDF, JPEG, PNG, BMP, TIFF or GIF (up to 8 MB). PDF files are rendered through the real document core before the actual Scan and Process stages run on our server — the same code described on the <a href="/technology">technology page</a> — and show you the result and the timing for your specific file.</p></section>
 
 <section class="card" aria-labelledby="try-title">
-<h2 id="try-title">Upload an image</h2>
+<h2 id="try-title">Upload a document</h2>
 <form id="tryForm">
-  <label for="fileInput">Image file</label>
-  <input id="fileInput" type="file" accept="image/png,image/jpeg,image/bmp,image/tiff,image/gif" required>
+  <label for="fileInput">Document or image file</label>
+  <input id="fileInput" type="file" accept="application/pdf,image/png,image/jpeg,image/bmp,image/tiff,image/gif" required>
   <label for="profileSelect">Profile</label>
   <select id="profileSelect">
     <option value="lightning">Lightning — fastest</option>
@@ -44,7 +44,7 @@
     <option value="resonance">Resonance — high precision</option>
     <option value="nanodecibel">NanoDecibel — maximum quality</option>
   </select>
-  <button type="submit">Process this image</button>
+  <button type="submit">Process this file</button>
   <p id="tryStatus" class="message" role="status" aria-live="polite"></p>
 </form>
 </section>
@@ -52,12 +52,13 @@
 <section id="results" class="section" hidden>
   <h2>Result</h2>
   <div class="grid two">
-    <article class="card"><h3>Before</h3><img id="beforeImage" alt="Original uploaded image" style="max-width:100%;border-radius:8px"></article>
+    <article class="card"><h3>Before</h3><img id="beforeImage" alt="Original uploaded image" style="max-width:100%;border-radius:8px"><p id="beforeDocumentInfo" class="muted" hidden></p></article>
     <article class="card"><h3>After</h3><img id="afterImage" alt="Processed image" style="max-width:100%;border-radius:8px"><p><a id="downloadLink" class="button secondary" download="processed.png">Download processed image</a></p></article>
   </div>
   <article class="card section">
     <h3>Timing and size for this job</h3>
     <dl>
+      <dt>Input</dt><dd id="metaInput">—</dd>
       <dt>Profile used</dt><dd id="metaProfile">—</dd>
       <dt>Scan time</dt><dd id="metaScanTime">—</dd>
       <dt>Process time</dt><dd id="metaProcessTime">—</dd>
@@ -71,7 +72,7 @@
   <p>Like what you see? <a href="/pricing">Check plans and pricing</a> to use this in production.</p>
 </section>
 
-<section class="section notice"><p><strong>Scope of this demo:</strong> accepts image files only (JPEG/PNG/BMP/TIFF/GIF). There is no PDF renderer in Lightning SPP today, so PDF upload is not offered here — see <a href="/features">Features</a> for the current print-artifact scope. Demo requests are rate-limited per visitor.</p></section>
+<section class="section notice"><p><strong>Scope of this demo:</strong> accepts PDF, JPEG, PNG, BMP, TIFF and GIF files up to 8 MB. PDFs are validated and rendered by the Lightning document core; the first page is then passed through the real Scan and Process pipeline. The downloadable result in this demo is the processed PNG preview. Demo requests are rate-limited per visitor.</p></section>
 </main>
 <footer><span>Lightning SPP</span><a href="/#help">Need help getting started?</a></footer>
 </body></html>
