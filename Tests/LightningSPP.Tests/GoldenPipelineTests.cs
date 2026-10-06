@@ -42,6 +42,21 @@ public class GoldenPipelineTests
             new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: false, UseClisonix: false, OptimizationLevel: 5, UseStigmaMemory: false));
 
         Assert.True(result.Success);
+        var restored = result.ProcessedData;
+        // Hybrid's contract is three lossless Brotli stages, with AI and memory disabled.
+        for (var stage = 0; stage < 3; stage++)
+        {
+            using var source = new MemoryStream(restored);
+            using var decoder = new BrotliStream(source, CompressionMode.Decompress);
+            using var output = new MemoryStream();
+            await decoder.CopyToAsync(output);
+            restored = output.ToArray();
+        }
+        Assert.Equal(input, restored);
+        var repeated = await svc.ProcessAsync(input,
+            new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: false, UseClisonix: false, OptimizationLevel: 5, UseStigmaMemory: false));
+        Assert.True(repeated.Success);
+        Assert.Equal(result.ProcessedData, repeated.ProcessedData);
         var hash = Sha256Hex(result.ProcessedData);
         AssertGolden("process_hybrid.sha256", hash);
     }

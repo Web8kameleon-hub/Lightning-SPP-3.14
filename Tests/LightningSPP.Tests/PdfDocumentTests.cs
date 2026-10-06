@@ -88,7 +88,7 @@ public class PdfDocumentTests
     {
         var before = Directory.GetDirectories(Path.GetTempPath(), "spp-pdf-*").ToHashSet();
         await Assert.ThrowsAsync<DocumentException>(() => new PdfDocumentService().RenderPageAsync("%PDF-1.7\nbroken fixture"u8.ToArray()));
-        Assert.Empty(Directory.GetDirectories(Path.GetTempPath(), "spp-pdf-*").Where(path => !before.Contains(path)));
+        Assert.DoesNotContain(Directory.GetDirectories(Path.GetTempPath(), "spp-pdf-*"), path => !before.Contains(path));
     }
 
     internal static byte[] Image(SKColor color)
