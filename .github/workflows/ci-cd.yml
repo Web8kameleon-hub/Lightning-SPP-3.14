@@ -295,7 +295,7 @@ jobs:
     name: Deploy to Production (zero-downtime)
     runs-on: ubuntu-latest
     needs: [build-and-test, docker-build]
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.publish_ghcr)
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.publish_ghcr)
     concurrency:
       group: scanprocessprint-production
       cancel-in-progress: false
