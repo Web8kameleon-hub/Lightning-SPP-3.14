@@ -504,7 +504,14 @@ internal static class LicenseApiServer
 
             var processResult = await processingService.ProcessAsync(
                 scanResult.Data,
-                new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: true, UseClisonix: true, OptimizationLevel: 3, UseStigmaMemory: true));
+                new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: false, UseClisonix: false, OptimizationLevel: 3, UseStigmaMemory: false));
+
+            if (!processResult.Success)
+            {
+                await JsonAsync(context, HttpStatusCode.UnprocessableEntity,
+                    "{\"ok\":false,\"error\":\"Image processing failed.\"}");
+                return;
+            }
 
             var compressedBytes = processResult.Success ? processResult.ProcessedData.Length : 0;
             var compressionPercent = processResult.Success && scanResult.Data.Length > 0

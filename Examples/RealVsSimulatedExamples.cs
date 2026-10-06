@@ -103,7 +103,7 @@ public static class RealVsSimulatedExamples
     public static async Task DemonstrateRealAIProcessing()
     {
         Console.WriteLine("\n╔═══════════════════════════════════════════════════╗");
-        Console.WriteLine("║  REAL AI Processing with Microsoft.ML            ║");
+        Console.WriteLine("║  REAL Lossless Brotli Processing                ║");
         Console.WriteLine("╚═══════════════════════════════════════════════════╝\n");
 
         LightningAPI.UseRealServices();
@@ -115,7 +115,6 @@ public static class RealVsSimulatedExamples
             ("CLX - Fast Compression", Services.ProcessingEngine.CLX),
             ("CLX.i - Optimal Compression", Services.ProcessingEngine.CLX_I),
             ("XCL - Maximum Compression", Services.ProcessingEngine.XCL),
-            ("Clisonix AI - ML Optimization", Services.ProcessingEngine.Clisonix),
             ("Hybrid - Full Pipeline", Services.ProcessingEngine.Hybrid)
         };
 
@@ -125,11 +124,13 @@ public static class RealVsSimulatedExamples
 
             var options = new Services.ProcessingOptions(
                 Engine: engine,
-                UseAI: true,
-                OptimizationLevel: 5
+                UseAI: false,
+                UseClisonix: false,
+                OptimizationLevel: 5,
+                UseStigmaMemory: false
             );
 
-            // This will use RealAIProcessor with actual compression and ML!
+            // These engines compress bytes; they do not perform model inference.
             var result = await ServiceFactory.CreateProcessingService().ProcessAsync(testData, options);
             Require(result.Success && result.ProcessedData.Length > 0, $"{name} processing failed or returned no data");
             sw.Stop();
@@ -144,6 +145,7 @@ public static class RealVsSimulatedExamples
             Console.WriteLine("  Processing service completed: ✓ (not a model accuracy evaluation)");
             Console.WriteLine();
         }
+        Console.WriteLine("ONNX inference is a separate operation requiring a configured model and float32 tensor input; this compression demo does not evaluate it.");
     }
 
     public static async Task DemonstrateRealPrinting()
@@ -215,7 +217,7 @@ public static class RealVsSimulatedExamples
         // Ensure we're using REAL services
         LightningAPI.UseRealServices();
 
-        Console.WriteLine("🔹 Workflow: Real Scan → Real AI → Real Print\n");
+        Console.WriteLine("🔹 Workflow: Real Scan → Brotli Compression → File Output\n");
 
         var sw = Stopwatch.StartNew();
 
@@ -230,13 +232,14 @@ public static class RealVsSimulatedExamples
         Require(scanResult.Success && scanResult.Data.Length > 0, scanResult.Error ?? "Workflow scan returned no data");
         Console.WriteLine($"  ✓ Scanned {scanResult.Data.Length:N0} bytes in {scanResult.Metadata.ProcessingTimeMs}ms");
 
-        // Step 2: REAL AI Processing with ML
-        Console.WriteLine("\nStep 2: REAL AI Processing (Microsoft.ML + Brotli)...");
+        // Step 2: lossless compression of the scanned image.
+        Console.WriteLine("\nStep 2: REAL Brotli Processing...");
         var processOptions = new Services.ProcessingOptions(
             Engine: Services.ProcessingEngine.Hybrid,
-            UseAI: true,
-            UseClisonix: true,
-            OptimizationLevel: 5
+            UseAI: false,
+            UseClisonix: false,
+            OptimizationLevel: 5,
+            UseStigmaMemory: false
         );
         var processResult = await ServiceFactory.CreateProcessingService().ProcessAsync(
             scanResult.Data,
@@ -259,7 +262,7 @@ public static class RealVsSimulatedExamples
         Console.WriteLine($"\n⚡ Total REAL workflow time: {sw.ElapsedMilliseconds}ms");
         Console.WriteLine("\n✅ Everything was REAL - no fake data!");
         Console.WriteLine("✅ Actual image processing with ImageSharp");
-        Console.WriteLine("✅ Actual AI/ML with Microsoft.ML");
+        Console.WriteLine("✅ Actual lossless Brotli compression (no model inference)");
         Console.WriteLine("✅ Actual file output to disk");
     }
 

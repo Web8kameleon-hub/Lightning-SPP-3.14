@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Text.Json;
 using wwwmmm.Web;
 using Xunit;
 
@@ -32,6 +33,9 @@ public class ApiTryProcessIntegrationTests
         Assert.Contains("\"ok\": true", body1);
         Assert.Contains("\"profile\": \"lightning\"", body1);
         Assert.Contains("\"afterImageBase64\"", body1);
+        using var json = JsonDocument.Parse(body1);
+        Assert.True(json.RootElement.GetProperty("compressedBytes").GetInt32() > 0,
+            "A successful demo must include actual processing output, not only the scanned preview.");
 
         // 2. Valid upload, explicit profile -> echoed back.
         var r2 = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: "nanodecibel");

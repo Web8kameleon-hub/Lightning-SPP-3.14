@@ -1,5 +1,7 @@
 using wwwmmm.PublicAPI;
 using wwwmmm.Services;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace wwwmmm.Tests;
 
@@ -165,8 +167,12 @@ public static class SimpleTests
 
     private static string CreateTempTestFile(string prefix, int size)
     {
-        var filePath = Path.Combine(Path.GetTempPath(), $"lightning-spp-{prefix}-{Guid.NewGuid():N}.bin");
-        File.WriteAllBytes(filePath, GenerateTestData(size));
+        var filePath = Path.Combine(Path.GetTempPath(), $"lightning-spp-{prefix}-{Guid.NewGuid():N}.png");
+        using var image = new Image<Rgba32>(64, 64);
+        for (var y = 0; y < image.Height; y++)
+            for (var x = 0; x < image.Width; x++)
+                image[x, y] = new Rgba32((byte)(x * 4), (byte)(y * 4), (byte)(size % 256));
+        image.SaveAsPng(filePath);
         return filePath;
     }
 }

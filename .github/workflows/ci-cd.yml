@@ -71,7 +71,12 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: Run unit tests
-      run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=ci-tests.trx"
+      env:
+        SPP_TEST_NATIVE_DOCUMENTS: '1'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends poppler-utils
+        dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=ci-tests.trx"
 
     - name: Run Lightning SPP Demo
       run: dotnet run --no-build --configuration Release -- demo
