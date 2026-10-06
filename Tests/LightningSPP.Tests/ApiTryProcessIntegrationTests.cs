@@ -2,6 +2,9 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Text.Json;
+using wwwmmm.Configuration;
+using wwwmmm.Documents;
+using wwwmmm.Services;
 using wwwmmm.Web;
 using Xunit;
 
@@ -36,6 +39,21 @@ public class ApiTryProcessIntegrationTests
         using var json = JsonDocument.Parse(body1);
         Assert.True(json.RootElement.GetProperty("compressedBytes").GetInt32() > 0,
             "A successful demo must include actual processing output, not only the scanned preview.");
+        var scan = await ServiceFactory.CreateScanService().ScanAsync(RealTestImage.Png(), ScanMode.Lightning, quality: 300);
+        var processed = await ServiceFactory.CreateProcessingService().ProcessAsync(scan.Data,
+            new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: false, UseClisonix: false,
+                OptimizationLevel: 3, UseStigmaMemory: false));
+        Assert.True(processed.Success);
+        Assert.Equal(processed.ProcessedData,
+            Convert.FromBase64String(json.RootElement.GetProperty("outputArtifactBase64").GetString()!));
+        Assert.Equal(".br", json.RootElement.GetProperty("outputArtifactFileExtension").GetString());
+        Assert.Equal("application/octet-stream", json.RootElement.GetProperty("outputArtifactMimeType").GetString());
+        var after = Convert.FromBase64String(json.RootElement.GetProperty("afterImageBase64").GetString()!);
+        Assert.Equal(TryDocumentProcessorTests.Restore(processed.ProcessedData), after);
+        using var decoded = SkiaSharp.SKBitmap.Decode(after);
+        Assert.NotNull(decoded);
+        Assert.Equal(after.Length, json.RootElement.GetProperty("afterBytes").GetInt32());
+        Assert.Equal(after.Length, json.RootElement.GetProperty("compressedBytes").GetInt32());
 
         // 2. Valid upload, explicit profile -> echoed back.
         var r2 = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: "nanodecibel");
@@ -50,7 +68,10 @@ public class ApiTryProcessIntegrationTests
         // before native Poppler tools are invoked.
         var r4 = await PostImageAsync(client, "invalid pdf"u8.ToArray(), "application/pdf", profile: null);
         Assert.Equal(HttpStatusCode.BadRequest, r4.StatusCode);
-        Assert.DoesNotContain("Unsupported file type", await r4.Content.ReadAsStringAsync());
+        var invalidBody = await r4.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("Unsupported file type", invalidBody);
+        Assert.DoesNotContain("outputPdfBase64", invalidBody);
+        Assert.DoesNotContain("Exception", invalidBody);
 
         // 5. Empty body -> 400, not a 500 or hang.
         var r5 = await PostImageAsync(client, Array.Empty<byte>(), "image/png", profile: null);
@@ -61,8 +82,44 @@ public class ApiTryProcessIntegrationTests
         var r6 = await PostImageAsync(client, oversized, "image/png", profile: null);
         Assert.Equal(HttpStatusCode.BadRequest, r6.StatusCode);
 
-        // Calls so far: 6. Issue 4 more harmless valid calls to reach the limit of 10.
-        for (var i = 0; i < 4; i++)
+        // Keep exactly ten requests before the rate-limit assertion, including native coverage.
+        var fillerCount = 4;
+        if (Environment.GetEnvironmentVariable("SPP_TEST_NATIVE_DOCUMENTS") == "1")
+        {
+            var pdf = new PdfDocumentService().CreateFromImages([RealTestImage.Png(), RealTestImage.Png()]);
+            var pdfResponse = await PostImageAsync(client, pdf, "application/pdf", profile: null);
+            Assert.Equal(HttpStatusCode.OK, pdfResponse.StatusCode);
+            using var pdfJson = JsonDocument.Parse(await pdfResponse.Content.ReadAsStringAsync());
+            var root = pdfJson.RootElement;
+            Assert.Equal("pdf", root.GetProperty("inputType").GetString());
+            Assert.Equal(1, root.GetProperty("page").GetInt32());
+            Assert.Equal(2, root.GetProperty("totalPages").GetInt32());
+            Assert.Equal("application/pdf", root.GetProperty("outputMimeType").GetString());
+            Assert.Equal(".pdf", root.GetProperty("outputFileExtension").GetString());
+            var output = Convert.FromBase64String(root.GetProperty("outputPdfBase64").GetString()!);
+            Assert.True(output.AsSpan(0, 5).SequenceEqual("%PDF-"u8));
+            Assert.Equal(output.Length, root.GetProperty("afterBytes").GetInt32());
+            Assert.Equal(output.Length, root.GetProperty("compressedBytes").GetInt32());
+            Assert.Equal(pdf.Length, root.GetProperty("originalBytes").GetInt32());
+            Assert.Equal(Math.Round(100.0 * (1 - (double)output.Length / pdf.Length), 1),
+                root.GetProperty("compressionPercent").GetDouble());
+            Assert.Equal(2, (await new PdfDocumentService().RenderPageAsync(output, 2)).TotalPages);
+            using var preview = SkiaSharp.SKBitmap.Decode(Convert.FromBase64String(root.GetProperty("afterImageBase64").GetString()!));
+            Assert.NotNull(preview);
+
+            var tooMany = await PostImageAsync(client, TryDocumentProcessorTests.CreatePdf(33), "application/pdf", profile: null);
+            Assert.Equal(HttpStatusCode.BadRequest, tooMany.StatusCode);
+            Assert.Contains("32 pages", await tooMany.Content.ReadAsStringAsync());
+            Assert.DoesNotContain("outputPdfBase64", await tooMany.Content.ReadAsStringAsync());
+            var broken = await PostImageAsync(client, "%PDF-1.7\nbroken fixture"u8.ToArray(), "application/pdf", profile: null);
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, broken.StatusCode);
+            var brokenBody = await broken.Content.ReadAsStringAsync();
+            Assert.DoesNotContain("outputPdfBase64", brokenBody);
+            Assert.DoesNotContain("exit code", brokenBody);
+            Assert.DoesNotContain("spp-pdf-", brokenBody);
+            fillerCount -= 3;
+        }
+        for (var i = 0; i < fillerCount; i++)
         {
             var filler = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: null);
             Assert.Equal(HttpStatusCode.OK, filler.StatusCode);

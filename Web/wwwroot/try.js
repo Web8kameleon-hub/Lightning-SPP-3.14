@@ -18,7 +18,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
   const button = event.currentTarget.querySelector('button');
   const oldLabel = button.textContent;
   button.disabled = true; button.textContent = 'Processing…';
-  message('tryStatus', file.type === 'application/pdf' ? 'PDF received. Validating the document, rendering page 1 and running the real pipeline…' : 'Image received. Running the real Scan and Process pipeline…');
+  message('tryStatus', file.type === 'application/pdf' ? 'PDF received. Validating and processing all pages (maximum 32)…' : 'Image received. Running the real Scan and Process pipeline…');
   byId('results').hidden = true;
 
   try {
@@ -26,7 +26,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
       method: 'POST',
       headers: { 'Content-Type': file.type, 'X-Stigma-Profile': profile },
       body: file,
-      signal: AbortSignal.timeout(30000)
+      signal: AbortSignal.timeout(file.type === 'application/pdf' ? 2100000 : 30000)
     });
 
     const data = await response.json();
@@ -41,7 +41,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
       beforeImage.removeAttribute('src');
       beforeImage.hidden = true;
       beforeInfo.hidden = false;
-      beforeInfo.textContent = `PDF document • ${data.totalPages} page${data.totalPages === 1 ? '' : 's'} • page ${data.page} processed`;
+      beforeInfo.textContent = `PDF document • all ${data.totalPages} page${data.totalPages === 1 ? '' : 's'} processed • page 1 preview`;
     } else {
       beforeImage.src = URL.createObjectURL(file);
       beforeImage.hidden = false;
@@ -50,9 +50,16 @@ byId('tryForm').addEventListener('submit', async (event) => {
     }
     const afterSrc = 'data:image/png;base64,' + data.afterImageBase64;
     byId('afterImage').src = afterSrc;
-    byId('downloadLink').href = afterSrc;
+    const download = byId('downloadLink');
+    if (isPdf && (!data.outputPdfBase64 || data.outputMimeType !== 'application/pdf')) {
+      throw new Error('The processed PDF output is missing or invalid.');
+    }
+    download.href = isPdf ? 'data:application/pdf;base64,' + data.outputPdfBase64 : afterSrc;
+    const stem = file.name.replace(/\.[^.]*$/, '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 100) || 'document';
+    download.download = stem + '-processed' + (isPdf ? '.pdf' : '.png');
+    download.textContent = isPdf ? 'Download processed PDF' : 'Download processed image';
 
-    byId('metaInput').textContent = data.inputType === 'pdf' ? `PDF • page ${data.page} of ${data.totalPages}` : 'Image';
+    byId('metaInput').textContent = isPdf ? `PDF • all ${data.totalPages} pages processed` : 'Image';
     byId('metaProfile').textContent = data.profile;
     byId('metaScanTime').textContent = data.scanTimeMs + ' ms';
     byId('metaProcessTime').textContent = data.processTimeMs + ' ms';
@@ -62,7 +69,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
     byId('metaCompression').textContent = data.compressionPercent + '%';
 
     byId('results').hidden = false;
-    message('tryStatus', data.inputType === 'pdf' ? `Done. PDF validated successfully. Page ${data.page} of ${data.totalPages} was rendered and processed. Your result is ready below.` : 'Done. Your image was scanned and processed successfully. Your result is ready below.', 'success');
+    message('tryStatus', isPdf ? `Done. All ${data.totalPages} pages were scanned and processed. Download your processed PDF below; the preview shows page 1.` : 'Done. Your image was scanned and processed successfully. Your result is ready below.', 'success');
   } catch (error) {
     message('tryStatus', error.message, 'error');
   } finally {

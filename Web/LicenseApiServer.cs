@@ -435,7 +435,7 @@ internal static class LicenseApiServer
     /// Public, unauthenticated demo: runs one real document/image processing job and returns
     /// the processed preview plus per-job timing, so a visitor can see Lightning SPP work
     /// without installing anything. PDF input is validated and rendered through the real
-    /// document core before page 1 enters the Scan + Process pipeline.
+    /// document core before every page enters the Scan + Process pipeline.
     /// </summary>
     private static async Task HandleTryProcessAsync(HttpListenerContext context, string clientIp)
     {
@@ -492,98 +492,55 @@ internal static class LicenseApiServer
 
         try
         {
-            var scanService = ServiceFactory.CreateScanService();
-            var processingService = ServiceFactory.CreateProcessingService();
-
-            var inputType = "image";
-            var inputPage = 0;
-            var totalPages = 0;
-            var scanInput = originalBytes;
-
-            if (contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase))
+            var isPdf = contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase);
+            var result = await new TryDocumentProcessor(ServiceFactory.CreateScanService(),
+                ServiceFactory.CreateProcessingService()).ProcessAsync(originalBytes, isPdf, scanMode);
+            var compressionPercent = Math.Round(100.0 * (1 - (double)result.Output.Length / originalBytes.Length), 1);
+            var response = new Dictionary<string, object>
             {
-                try
-                {
-                    var pdfService = new PdfDocumentService();
-                    var rendered = await pdfService.RenderPageAsync(originalBytes, page: 1);
-                    scanInput = rendered.Png;
-                    inputType = "pdf";
-                    inputPage = rendered.Page;
-                    totalPages = rendered.TotalPages;
-                }
-                catch (ArgumentException ex)
-                {
-                    InternalAuditLogger.Error(
-                        $"Try-it PDF validation failed: ip={clientIp}, error={ex.Message}");
-                    await JsonAsync(context, HttpStatusCode.BadRequest,
-                        "{\"ok\":false,\"error\":\"Invalid PDF document.\"}");
-                    return;
-                }
-                catch (DocumentException ex)
-                {
-                    InternalAuditLogger.Error(
-                        $"Try-it PDF rendering failed: ip={clientIp}, error={ex.Message}");
-                    await JsonAsync(context, HttpStatusCode.UnprocessableEntity,
-                        "{\"ok\":false,\"error\":\"The PDF could not be validated or rendered.\"}");
-                    return;
-                }
-            }
-            var scanResult = await scanService.ScanAsync(scanInput, scanMode, quality: 300);
-            if (!scanResult.Success)
+                ["ok"] = true,
+                ["profile"] = profileName,
+                ["inputType"] = isPdf ? "pdf" : "image",
+                ["page"] = isPdf ? 1 : 0,
+                ["totalPages"] = result.TotalPages,
+                ["scanTimeMs"] = result.ScanTimeMs,
+                ["processTimeMs"] = result.ProcessTimeMs,
+                ["totalTimeMs"] = result.TotalTimeMs,
+                ["engine"] = result.Engine,
+                ["originalBytes"] = originalBytes.Length,
+                ["afterBytes"] = result.Output.Length,
+                ["compressedBytes"] = result.Output.Length,
+                ["compressionPercent"] = compressionPercent,
+                ["afterImageBase64"] = Convert.ToBase64String(result.Preview),
+                ["outputMimeType"] = isPdf ? "application/pdf" : "image/png",
+                ["outputFileExtension"] = isPdf ? ".pdf" : ".png"
+            };
+            if (isPdf)
+                response["outputPdfBase64"] = Convert.ToBase64String(result.Output);
+            else
             {
-                await JsonAsync(context, HttpStatusCode.UnprocessableEntity,
-                    $"{{\"ok\":false,\"error\":{JsonEscape(scanResult.Error ?? "The file could not be read as an image.")}}}");
-                return;
+                // Preserve the real compressed Hybrid artifact separately from the decoded image.
+                response["outputArtifactBase64"] = Convert.ToBase64String(result.ImageArtifact!);
+                response["outputArtifactMimeType"] = "application/octet-stream";
+                response["outputArtifactFileExtension"] = ".br";
             }
-
-            var processResult = await processingService.ProcessAsync(
-                scanResult.Data,
-                new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: false, UseClisonix: false, OptimizationLevel: 3, UseStigmaMemory: false));
-
-            if (!processResult.Success)
-            {
-                await JsonAsync(context, HttpStatusCode.UnprocessableEntity,
-                    "{\"ok\":false,\"error\":\"Image processing failed.\"}");
-                return;
-            }
-
-            var compressedBytes = processResult.Success ? processResult.ProcessedData.Length : 0;
-            var compressionPercent = processResult.Success && scanResult.Data.Length > 0
-                ? Math.Round(100.0 * (1 - (double)compressedBytes / scanResult.Data.Length), 1)
-                : 0.0;
-
-            LightningMetrics.RecordScan(scanResult.Metadata.ProcessingTimeMs);
-            if (processResult.Success)
-            {
-                LightningMetrics.RecordProcess(processResult.Metadata.ProcessingTimeMs);
-            }
-
-            var afterBase64 = Convert.ToBase64String(scanResult.Data);
-            var totalMs = scanResult.Metadata.ProcessingTimeMs + (processResult.Success ? processResult.Metadata.ProcessingTimeMs : 0);
-
-            var json = $$"""
-                {
-                  "ok": true,
-                  "profile": "{{profileName}}",
-                  "inputType": "{{inputType}}",
-                  "page": {{inputPage}},
-                  "totalPages": {{totalPages}},
-                  "scanTimeMs": {{scanResult.Metadata.ProcessingTimeMs}},
-                  "processTimeMs": {{(processResult.Success ? processResult.Metadata.ProcessingTimeMs : 0)}},
-                  "totalTimeMs": {{totalMs}},
-                  "engine": {{JsonEscape(processResult.Success ? processResult.Metadata.Engine : "none")}},
-                  "originalBytes": {{originalBytes.Length}},
-                  "afterBytes": {{scanResult.Data.Length}},
-                  "compressedBytes": {{compressedBytes}},
-                  "compressionPercent": {{compressionPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)}},
-                  "afterImageBase64": "{{afterBase64}}"
-                }
-                """;
-
+            var json = System.Text.Json.JsonSerializer.Serialize(response,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             InternalAuditLogger.Info(
-                $"Try-it demo processed: ip={clientIp}, profile={profileName}, originalBytes={originalBytes.Length}, totalTimeMs={totalMs}");
-
+                $"Try-it demo processed: ip={clientIp}, profile={profileName}, originalBytes={originalBytes.Length}, totalTimeMs={result.TotalTimeMs}");
             await JsonAsync(context, HttpStatusCode.OK, json);
+        }
+        catch (ArgumentException ex)
+        {
+            InternalAuditLogger.Error($"Try-it document validation failed: ip={clientIp}, error={ex.Message}");
+            await JsonAsync(context, HttpStatusCode.BadRequest,
+                "{\"ok\":false,\"error\":\"Invalid document. PDFs must contain no more than 32 pages.\"}");
+        }
+        catch (DocumentException ex)
+        {
+            InternalAuditLogger.Error($"Try-it document processing failed: ip={clientIp}, error={ex.Message}");
+            await JsonAsync(context, HttpStatusCode.UnprocessableEntity,
+                "{\"ok\":false,\"error\":\"The document could not be validated, rendered or processed.\"}");
         }
         catch (Exception ex)
         {
