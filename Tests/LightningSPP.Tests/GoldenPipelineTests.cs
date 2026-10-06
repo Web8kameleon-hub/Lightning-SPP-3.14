@@ -37,15 +37,32 @@ public class GoldenPipelineTests
         var svc = new RealAIProcessor();
         var input = DeterministicPayload(2048);
 
-        var result = await svc.ProcessAsync(
-            input,
-            new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: false, UseClisonix: false, OptimizationLevel: 5, UseStigmaMemory: false));
+        var options = new ProcessingOptions(
+            ProcessingEngine.Hybrid,
+            UseAI: false,
+            UseClisonix: false,
+            OptimizationLevel: 5,
+            UseStigmaMemory: false);
+
+        var result = await svc.ProcessAsync(input, options);
+        var repeated = await svc.ProcessAsync(input, options);
 
         Assert.True(result.Success);
-        var hash = Sha256Hex(result.ProcessedData);
-        AssertGolden("process_hybrid.sha256", hash);
-    }
+        Assert.True(repeated.Success);
+        Assert.Equal(result.ProcessedData, repeated.ProcessedData);
 
+        var restored = result.ProcessedData;
+        for (var stage = 0; stage < 3; stage++)
+        {
+            using var source = new MemoryStream(restored);
+            using var decoder = new BrotliStream(source, CompressionMode.Decompress);
+            using var output = new MemoryStream();
+            await decoder.CopyToAsync(output);
+            restored = output.ToArray();
+        }
+
+        Assert.Equal(input, restored);
+    }
     [Fact]
     public async Task Print_Stigma_OutputArtifact_RoundTripsWithoutDataLoss()
     {
