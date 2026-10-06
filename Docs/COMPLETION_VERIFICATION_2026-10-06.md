@@ -8,9 +8,10 @@ excluded nested gitlink, backup and accidental filenames were not staged.
 ## Repairs
 
 - Hybrid's golden baseline previously covered AI/memory options that now fail
-  closed. Its new baseline covers the explicitly supported three-stage Brotli
-  configuration. The test decompresses all three stages back to the exact input
-  and checks identical output on repetition before comparing the golden hash.
+  closed. The concurrent user commit `696ae81` replaces that runtime-dependent
+  compressed-byte hash with the actual lossless contract: decompress all three
+  stages back to the exact input and check identical output on repetition.
+  This branch preserves that correction and the existing historical hash file.
 - The CLI demo and full workflow explicitly exercise compression without
   claiming ONNX inference. CLI scan/pipeline tests use genuine generated PNG
   fixtures instead of random bytes presented as an image.
