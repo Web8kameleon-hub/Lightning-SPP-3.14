@@ -26,7 +26,7 @@ public class ApiTryProcessIntegrationTests
         using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
 
         // 1. Valid upload, no profile header -> defaults to lightning.
-        var r1 = await PostImageAsync(client, RandomBytes(2048), "image/png", profile: null);
+        var r1 = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: null);
         Assert.Equal(HttpStatusCode.OK, r1.StatusCode);
         var body1 = await r1.Content.ReadAsStringAsync();
         Assert.Contains("\"ok\": true", body1);
@@ -34,7 +34,7 @@ public class ApiTryProcessIntegrationTests
         Assert.Contains("\"afterImageBase64\"", body1);
 
         // 2. Valid upload, explicit profile -> echoed back.
-        var r2 = await PostImageAsync(client, RandomBytes(2048), "image/jpeg", profile: "nanodecibel");
+        var r2 = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: "nanodecibel");
         Assert.Equal(HttpStatusCode.OK, r2.StatusCode);
         Assert.Contains("\"profile\": \"nanodecibel\"", await r2.Content.ReadAsStringAsync());
 
@@ -59,12 +59,12 @@ public class ApiTryProcessIntegrationTests
         // Calls so far: 6. Issue 4 more harmless valid calls to reach the limit of 10.
         for (var i = 0; i < 4; i++)
         {
-            var filler = await PostImageAsync(client, RandomBytes(512), "image/png", profile: null);
+            var filler = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: null);
             Assert.Equal(HttpStatusCode.OK, filler.StatusCode);
         }
 
         // 7. The 11th request from this IP within the window must be rate-limited.
-        var r11 = await PostImageAsync(client, RandomBytes(512), "image/png", profile: null);
+        var r11 = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: null);
         Assert.Equal(HttpStatusCode.TooManyRequests, r11.StatusCode);
 
         cts.Cancel();

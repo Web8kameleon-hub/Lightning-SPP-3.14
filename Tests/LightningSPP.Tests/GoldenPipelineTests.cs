@@ -16,7 +16,7 @@ public class GoldenPipelineTests
     public async Task Golden_Scan_TideWave_Hash_IsStable()
     {
         var svc = new FastScanService(NullLogger<FastScanService>.Instance);
-        var input = DeterministicPayload(4096);
+        var input = RealTestImage.Png();
 
         var result = await svc.ScanAsync(input, ScanMode.TideWave, 300);
 
@@ -39,7 +39,7 @@ public class GoldenPipelineTests
 
         var result = await svc.ProcessAsync(
             input,
-            new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: true, UseClisonic: true, OptimizationLevel: 5, UseStigmaMemory: true));
+            new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: false, UseClisonix: false, OptimizationLevel: 5, UseStigmaMemory: false));
 
         Assert.True(result.Success);
         var hash = Sha256Hex(result.ProcessedData);
@@ -70,7 +70,6 @@ public class GoldenPipelineTests
 
     private static void AssertGolden(string fileName, string actual)
     {
-        Directory.CreateDirectory(GoldenDir);
         var path = Path.Combine(GoldenDir, fileName);
 
         var update = string.Equals(
@@ -78,13 +77,21 @@ public class GoldenPipelineTests
             "1",
             StringComparison.OrdinalIgnoreCase);
 
-        if (update || !File.Exists(path))
+        if (update)
         {
+            Directory.CreateDirectory(GoldenDir);
             File.WriteAllText(path, actual + Environment.NewLine, new UTF8Encoding(false));
         }
 
+        Assert.True(
+            File.Exists(path),
+            $"Golden baseline is missing: {path}. Set LIGHTNING_GOLDEN_UPDATE=1 only for an explicit baseline update.");
+
         var expected = File.ReadAllText(path, Encoding.UTF8).Trim();
-        Assert.Equal(expected, actual);
+
+        Assert.True(
+            string.Equals(expected, actual, StringComparison.Ordinal),
+            $"Golden mismatch.{Environment.NewLine}Expected: {expected}{Environment.NewLine}Actual:   {actual}");
     }
 
     private static string Sha256Hex(byte[] data)

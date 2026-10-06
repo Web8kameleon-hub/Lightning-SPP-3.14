@@ -48,7 +48,7 @@ public static class UsageExamples
             UseNanoDecibel: true,
             ProcessingEngine: ProcessingEngine.Hybrid, // Të gjithë motorët
             UseAI: true,
-            UseClisonic: true,
+            UseClisonix: true,
             OptimizationLevel: 5,
             UseStigmaMemory: true,
             ShouldPrint: true,
@@ -113,7 +113,7 @@ public static class UsageExamples
     /// </summary>
     public static async Task AIProcessing()
     {
-        Console.WriteLine("Shembull 5: Përpunim me Clisonic Global AI\n");
+        Console.WriteLine("Shembull 5: Përpunim me Clisonix Global AI\n");
 
         // Skanim fillimisht
         var scanResult = await LightningAPI.QuickScanAsync("complex-document.pdf");
@@ -146,20 +146,20 @@ public static class UsageExamples
         var clxResult = await new HybridProcessingService().ProcessAsync(testData, clxOptions);
         Console.WriteLine($"CLX: {clxResult.Metadata.ProcessingTimeMs}ms");
 
-        // CLI.I
-        var cliOptions = new ProcessingOptions(ProcessingEngine.CLI_I);
+        // CLX.i
+        var cliOptions = new ProcessingOptions(ProcessingEngine.CLX_I);
         var cliResult = await new HybridProcessingService().ProcessAsync(testData, cliOptions);
-        Console.WriteLine($"CLI.I: {cliResult.Metadata.ProcessingTimeMs}ms");
+        Console.WriteLine($"CLX.i: {cliResult.Metadata.ProcessingTimeMs}ms");
 
         // XCL
         var xclOptions = new ProcessingOptions(ProcessingEngine.XCL);
         var xclResult = await new HybridProcessingService().ProcessAsync(testData, xclOptions);
         Console.WriteLine($"XCL: {xclResult.Metadata.ProcessingTimeMs}ms");
 
-        // Clisonic AI
-        var aiOptions = new ProcessingOptions(ProcessingEngine.Clisonic);
+        // Clisonix AI
+        var aiOptions = new ProcessingOptions(ProcessingEngine.Clisonix);
         var aiResult = await new HybridProcessingService().ProcessAsync(testData, aiOptions);
-        Console.WriteLine($"Clisonic AI: {aiResult.Metadata.ProcessingTimeMs}ms");
+        Console.WriteLine($"Clisonix AI: {aiResult.Metadata.ProcessingTimeMs}ms");
 
         // Hybrid
         var hybridOptions = new ProcessingOptions(ProcessingEngine.Hybrid);

@@ -8,7 +8,7 @@ namespace wwwmmm;
 
 /// <summary>
 /// Lightning SPP 3.14 - Universal Scan-Process-Print System
-/// Integrating: TideWave, CLX, CLI.I, XCL, Resonance, NanoDecibel, Clisonic Global AI, Stigma
+/// Integrating: TideWave, CLX, CLX.i, XCL, Resonance, NanoDecibel, Clisonix Global AI, Stigma
 /// NOW: Optimized for MASSIVE deployment on ANY device!
 /// Ready for wide public usage
 /// </summary>
@@ -16,8 +16,23 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
+        if (args.Length > 0 && (args[0].Equals("bridge", StringComparison.OrdinalIgnoreCase) ||
+            args[0] is "document" or "device"))
+        {
+            using var cancellation = new CancellationTokenSource();
+            ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
+            Console.CancelKeyPress += cancel;
+            try
+            {
+                Environment.ExitCode = args[0].Equals("bridge", StringComparison.OrdinalIgnoreCase)
+                    ? await Integrations.BridgeCommands.RunAsync(args, cancellation.Token)
+                    : await Documents.DocumentCommands.RunAsync(args, cancellation.Token);
+            }
+            finally { Console.CancelKeyPress -= cancel; }
+            return;
+        }
         Console.WriteLine("⚡ Lightning Scan-Process-Print System ⚡");
-        Console.WriteLine("Technologies: TideWave • CLX • CLI.I • XCL • Resonance • NanoDecibel • Clisonic AI • Stigma\n");
+        Console.WriteLine("Technologies: TideWave • CLX • CLX.i • XCL • Resonance • NanoDecibel • Clisonix AI • Stigma\n");
 
         if (args.Length > 0)
         {
@@ -69,10 +84,6 @@ internal class Program
                 break;
             case "batch":
                 await BatchProcess(args);
-                break;
-            case "learn":
-            case "selflearn":
-                await RunSelfLearning();
                 break;
             case "demo":
                 await RunDemo();
@@ -131,10 +142,24 @@ internal class Program
 
     private static async Task ProcessFile(string[] args)
     {
+        if (args.Length < 2)
+        {
+            Console.WriteLine("Usage: wwwmmm process <source>");
+            return;
+        }
+
+        var source = args[1];
+
+        if (!File.Exists(source))
+        {
+            Console.WriteLine($"✗ Source file not found: {source}");
+            return;
+        }
+
         Console.WriteLine("🔄 Processing with Hybrid Multi-Engine...");
 
-        var mockData = new byte[1000];
-        var result = await LightningAPI.HybridProcessAsync(mockData);
+        var sourceData = await File.ReadAllBytesAsync(source);
+        var result = await LightningAPI.HybridProcessAsync(sourceData);
 
         if (result.Success)
         {
@@ -150,20 +175,35 @@ internal class Program
 
     private static async Task PrintFile(string[] args)
     {
-        Console.WriteLine("🖨️  Printing with Stigma Premium...");
+        if (args.Length < 2)
+        {
+            Console.WriteLine("Usage: wwwmmm print <source>");
+            return;
+        }
 
-        var mockData = new byte[1000];
-        var result = await LightningAPI.StigmaPrintAsync(mockData);
+        var source = args[1];
+
+        if (!File.Exists(source))
+        {
+            Console.WriteLine($"✗ Source file not found: {source}");
+            return;
+        }
+
+        Console.WriteLine("🖨️  Creating Stigma lossless print artifact...");
+
+        var sourceData = await File.ReadAllBytesAsync(source);
+        var result = await LightningAPI.StigmaPrintAsync(sourceData);
 
         if (result.Success)
         {
-            Console.WriteLine($"✓ Print completed in {result.Metadata.ProcessingTimeMs}ms");
+            Console.WriteLine($"✓ Print artifact completed in {result.Metadata.ProcessingTimeMs}ms");
             Console.WriteLine($"  Technology: {result.Metadata.Technology}");
-            Console.WriteLine($"  Pages: {result.Metadata.PagesPrinted}");
+            Console.WriteLine($"  Artifacts: {result.Metadata.PagesPrinted}");
+            Console.WriteLine($"  Output: {result.Metadata.Destination}");
         }
         else
         {
-            Console.WriteLine($"✗ Print failed: {result.Error}");
+            Console.WriteLine($"✗ Print artifact failed: {result.Error}");
         }
     }
 
@@ -246,113 +286,6 @@ internal class Program
             : "\nSome speed targets were not met in this run. CI regression gates are defined in PerformanceGateTests.");
     }
 
-    private static async Task RunSelfLearning()
-    {
-        Console.WriteLine("🧠 Lightning CLX Self-Learning Mode — started");
-        Console.WriteLine("   Press Ctrl+C to stop.\n");
-
-        using var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-
-        var rng = new Random();
-        var engines = new[] { ProcessingEngine.CLX, ProcessingEngine.Hybrid, ProcessingEngine.XCL };
-        var scanModes = new[] { ScanMode.TideWave, ScanMode.Lightning, ScanMode.NanoDecibel };
-
-        // Adaptive weights — CLX starts neutral
-        var engineWeights = new Dictionary<ProcessingEngine, double>
-        {
-            [ProcessingEngine.CLX] = 1.0,
-            [ProcessingEngine.Hybrid] = 1.0,
-            [ProcessingEngine.XCL] = 1.0
-        };
-
-        long cycle = 0;
-        long totalSuccess = 0;
-        long totalFail = 0;
-
-        while (!cts.IsCancellationRequested)
-        {
-            cycle++;
-
-            // Pick engine proportional to weight (soft-max selection)
-            var totalWeight = engineWeights.Values.Sum();
-            var pick = rng.NextDouble() * totalWeight;
-            ProcessingEngine selectedEngine = engines[0];
-            foreach (var kv in engineWeights)
-            {
-                pick -= kv.Value;
-                if (pick <= 0) { selectedEngine = kv.Key; break; }
-            }
-
-            var scanMode = scanModes[rng.Next(scanModes.Length)];
-            var payloadSize = rng.Next(512, 8192);
-            var payload = new byte[payloadSize];
-            rng.NextBytes(payload);
-
-            var req = new PipelineRequest(
-                Source: $"learn-cycle-{cycle}",
-                ScanMode: scanMode,
-                Quality: 300,
-                UseResonance: true,
-                UseNanoDecibel: false,
-                ProcessingEngine: selectedEngine,
-                UseAI: true,
-                UseClisonic: true,
-                OptimizationLevel: 5,
-                UseStigmaMemory: true,
-                ShouldPrint: false,
-                PrintQuality: PrintQuality.Normal,
-                Copies: 1
-            );
-
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            ProcessingResult? result = null;
-            try
-            {
-                var opts = new ProcessingOptions(
-                    selectedEngine,
-                    UseAI: true,
-                    UseClisonic: true,
-                    OptimizationLevel: 5,
-                    UseStigmaMemory: true
-                );
-                var svc = new wwwmmm.Services.Implementation.HybridProcessingService();
-                result = await svc.ProcessAsync(payload, opts);
-            }
-            catch { /* absorb transient errors */ }
-            sw.Stop();
-
-            bool success = result?.Success ?? false;
-            if (success) totalSuccess++;
-            else totalFail++;
-
-            // Reinforcement: reward faster/successful engines; penalise failures
-            const double alpha = 0.05;
-            if (success)
-                engineWeights[selectedEngine] = Math.Min(5.0, engineWeights[selectedEngine] * (1.0 + alpha));
-            else
-                engineWeights[selectedEngine] = Math.Max(0.1, engineWeights[selectedEngine] * (1.0 - alpha * 2));
-
-            // Log every 10 cycles
-            if (cycle % 10 == 0)
-            {
-                var rate = totalSuccess * 100.0 / cycle;
-                Console.WriteLine($"[Cycle {cycle,6}] Success={totalSuccess} Fail={totalFail} Rate={rate:F1}% | " +
-                    $"CLX={engineWeights[ProcessingEngine.CLX]:F2} " +
-                    $"Hybrid={engineWeights[ProcessingEngine.Hybrid]:F2} " +
-                    $"XCL={engineWeights[ProcessingEngine.XCL]:F2}");
-            }
-
-            // Small pause to avoid tight-loop CPU saturation
-            await Task.Delay(TimeSpan.FromMilliseconds(200), cts.Token).ContinueWith(_ => { });
-        }
-
-        Console.WriteLine($"\n🧠 Self-learning stopped after {cycle} cycles.");
-        Console.WriteLine($"   Final weights — CLX:{engineWeights[ProcessingEngine.CLX]:F3} " +
-            $"Hybrid:{engineWeights[ProcessingEngine.Hybrid]:F3} " +
-            $"XCL:{engineWeights[ProcessingEngine.XCL]:F3}");
-    }
-
     private static async Task RunDemo()
     {
         Console.WriteLine("Running the real image-processing validation demo. Generated fixtures are explicitly identified.");
@@ -371,23 +304,23 @@ internal class Program
         Console.WriteLine("                         - Issue production key with audit log");
         Console.WriteLine("\nProcessing Commands:");
         Console.WriteLine("  scan <source>           - Quick scan using TideWave + Resonance");
-        Console.WriteLine("  process                 - Process using Hybrid Multi-Engine");
-        Console.WriteLine("  print                   - Print with Stigma Premium");
+        Console.WriteLine("  process <source>        - Process a source file using Hybrid Multi-Engine");
+        Console.WriteLine("  print <source>          - Create a Stigma lossless print artifact");
         Console.WriteLine("  pipeline <source>       - Run complete Lightning Pipeline");
         Console.WriteLine("  batch <sources...>      - Batch process multiple items");
         Console.WriteLine("  demo                    - Run demonstration");
-        Console.WriteLine("  learn / selflearn       - Self-learning mode (continuous adaptive loop)");
         Console.WriteLine("  test                    - Run system tests");
         Console.WriteLine("  examples                - Run usage examples");
         Console.WriteLine("  serve [port]            - Start REST API + Web Dashboard");
+        Console.WriteLine("  bridge <operation>      - Excel Core / Excel service / OS-CLX NodeDB adapters (see Docs/BRIDGES.md)");
         Console.WriteLine("\nTechnologies:");
         Console.WriteLine("  • TideWave - Balanced scanning");
         Console.WriteLine("  • CLX - Core processing");
-        Console.WriteLine("  • CLI.I - Interactive processing");
+        Console.WriteLine("  • CLX.i - Interactive processing");
         Console.WriteLine("  • XCL - Extended processing");
         Console.WriteLine("  • Resonance - High precision");
         Console.WriteLine("  • NanoDecibel - Maximum quality");
-        Console.WriteLine("  • Clisonic Global AI - AI-powered enhancement");
+        Console.WriteLine("  • Clisonix Global AI - AI-powered enhancement");
         Console.WriteLine("  • Stigma - Premium print quality");
         Console.WriteLine("  • Stigma Memory - Optimization");
         Console.WriteLine("\nPricing:");
@@ -491,4 +424,3 @@ internal class Program
         Console.WriteLine($"   wwwmmm activate {license.Key}");
     }
 }
-

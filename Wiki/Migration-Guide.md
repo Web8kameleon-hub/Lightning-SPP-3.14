@@ -87,7 +87,7 @@ public void ConfigureServices(IServiceCollection services)
 {
     // Configure Lightning SPP
     LightningAPI.UseRealServices(); // Or UseSimulatedServices() for testing
-    
+
     // Optional: Activate license
     if (Environment.GetEnvironmentVariable("LIGHTNING_LICENSE_KEY") is string key)
     {
@@ -146,7 +146,7 @@ using LightningSPP;
 
 var imageBytes = File.ReadAllBytes(filePath);
 var result = await LightningAPI.HighQualityScanAsync(
-    imageBytes, 
+    imageBytes,
     ScanMode.Resonance // Includes edge detection + sharpening
 );
 ```
@@ -168,8 +168,8 @@ var prediction = predictionEngine.Predict(input);
 using LightningSPP;
 
 var result = await LightningAPI.AIProcessAsync(
-    data, 
-    ProcessingEngine.Clisonic // AI-powered optimization
+    data,
+    ProcessingEngine.Clisonix // AI-powered optimization
 );
 ```
 
@@ -181,13 +181,13 @@ async Task ProcessDocument(string filePath)
 {
     // Step 1: Load
     var bytes = await File.ReadAllBytesAsync(filePath);
-    
+
     // Step 2: Process
     var processed = await CustomImageProcessor(bytes);
-    
+
     // Step 3: Compress
     var compressed = await CompressData(processed);
-    
+
     // Step 4: Save
     await File.WriteAllBytesAsync(outputPath, compressed);
 }
@@ -271,14 +271,14 @@ public static class LightningConfig
     public static void Initialize(IConfiguration config)
     {
         var settings = config.GetSection("LightningSPP");
-        
+
         // Activate license
         var licenseKey = settings["LicenseKey"];
         if (!string.IsNullOrEmpty(licenseKey))
         {
             LicenseManager.ActivateLicense(licenseKey);
         }
-        
+
         // Configure mode
         var mode = settings["Mode"];
         if (mode == "Real")

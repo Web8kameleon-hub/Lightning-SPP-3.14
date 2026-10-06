@@ -25,11 +25,11 @@ public static class Lightning314
     /// <summary>
     /// Process in <5ms - ULTRA FAST
     /// Perfect for: Mobile, web, general purpose
-    /// CLI.I engine: Brotli Optimal compression
+    /// CLX.i engine: Brotli Optimal compression
     /// </summary>
     public static async Task<byte[]> UltraFast(byte[] data)
     {
-        // CLI.I: Brotli Optimal — balance speed/quality
+        // CLX.i: Brotli Optimal — balance speed/quality
         using var output = new System.IO.MemoryStream();
         using (var brotli = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.Optimal))
         {

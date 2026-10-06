@@ -32,7 +32,7 @@ The full pipeline:
 
 ## 2. SDK — `SDK/Lightning314.cs`
 
-Core processing engines based on CLX/CLI.I/XCL Brotli pipelines.
+Core processing engines based on CLX/CLX.i/XCL Brotli pipelines.
 
 ### `Lightning314.Instant(byte[] data) → Task<byte[]>`
 
@@ -43,7 +43,7 @@ Core processing engines based on CLX/CLI.I/XCL Brotli pipelines.
 
 ### `Lightning314.UltraFast(byte[] data) → Task<byte[]>`
 
-- **Engine:** CLI.I — Brotli `CompressionLevel.Optimal`
+- **Engine:** CLX.i — Brotli `CompressionLevel.Optimal`
 - **Target latency:** < 5 ms
 - **Use case:** Mobile apps, web APIs, general-purpose pipelines
 - Balanced speed/quality
@@ -77,9 +77,9 @@ Dispatches to the appropriate profile based on `DeviceType`.
 | `MedicalOptimizedProcess`  | Medical   | Resonance NanoDecibel | SmallestSize + pattern    | 512 MB     | 4           |
 | `DesktopOptimizedProcess`  | Desktop   | XCL                   | SmallestSize + MemoryPool | unlimited  | 8           |
 | `CloudOptimizedProcess`    | Cloud     | XCL                   | SmallestSize + MemoryPool | unlimited  | 16          |
-| `MobileOptimizedProcess`   | Mobile    | CLI.I                 | Optimal                   | 256 MB     | 2           |
-| `WebOptimizedProcess`      | Web       | CLI.I                 | Optimal                   | 128 MB     | 4           |
-| `UniversalProcess`         | Universal | CLI.I                 | Optimal                   | —          | —           |
+| `MobileOptimizedProcess`   | Mobile    | CLX.i                 | Optimal                   | 256 MB     | 2           |
+| `WebOptimizedProcess`      | Web       | CLX.i                 | Optimal                   | 128 MB     | 4           |
+| `UniversalProcess`         | Universal | CLX.i                 | Optimal                   | —          | —           |
 | `IoTOptimizedProcess`      | IoT       | CLX                   | Fastest                   | 64 KB      | 1           |
 | `EmbeddedOptimizedProcess` | Embedded  | CLX                   | Fastest                   | 32 KB      | 1           |
 
@@ -109,7 +109,7 @@ UniversalSDK.DeviceProfile.Cloud    // MaxMemory=0(unlimited), MaxCpu=16
 
 ### `CliIProcessAsync(byte[] data) → Task<byte[]>`
 
-- CLI.I engine: Brotli Optimal
+- CLX.i engine: Brotli Optimal
 
 ### `XclProcessAsync(byte[] data) → Task<byte[]>`
 
@@ -123,7 +123,7 @@ UniversalSDK.DeviceProfile.Cloud    // MaxMemory=0(unlimited), MaxCpu=16
 
 - Size-based auto-routing:
   - `< 1 KB` → CLX
-  - `< 100 KB` → CLI.I
+  - `< 100 KB` → CLX.i
   - `< 1 MB` → XCL
   - `≥ 1 MB` → Hybrid
 
@@ -274,7 +274,7 @@ $$\text{NdB} = 20 \times \log_{10}(\text{score}) \times 10^9$$
 | Symbol | Compression Level           | Use Case                 |
 | ------ | --------------------------- | ------------------------ |
 | CLX    | `Fastest`                   | IoT, Embedded, Real-time |
-| CLI.I  | `Optimal`                   | Mobile, Web, General     |
+| CLX.i  | `Optimal`                   | Mobile, Web, General     |
 | XCL    | `SmallestSize` + MemoryPool | Desktop, Cloud, Archive  |
 
 ---

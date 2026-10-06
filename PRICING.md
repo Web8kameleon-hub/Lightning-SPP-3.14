@@ -2,14 +2,14 @@
 
 ## Company Information
 
-**ABA GmbH**  
-Ledjan Ahmati  
-Wattenscheider Hellweg 199  
-44869 Bochum, Germany  
+**ABA GmbH**
+Ledjan Ahmati
+Wattenscheider Hellweg 199
+44869 Bochum, Germany
 HRB 21069 (Registergericht Bochum)
 
-**Contact:**  
-Email: clisonix@pm.me  
+**Contact:**
+Email: clisonix@pm.me
 Web: https://aba-gmbh.de
 
 ---
@@ -18,8 +18,8 @@ Web: https://aba-gmbh.de
 
 ### 1. Free Tier - Developer Edition
 
-**Price:** FREE  
-**Usage:** Development and Testing Only  
+**Price:** FREE
+**Usage:** Development and Testing Only
 **Limitations:**
 - ✅ Full feature access
 - ✅ Unlimited development usage
@@ -40,7 +40,7 @@ Web: https://aba-gmbh.de
 
 ### 2. Pay-As-You-Go
 
-**Price:** €19.99/month  
+**Price:** €19.99/month
 **Billing:** Monthly subscription
 
 **Included:**
@@ -65,9 +65,9 @@ Web: https://aba-gmbh.de
 
 ### 3. Unlimited - Best Value! 🌟
 
-**Price:** €49.99/month  
-**Billing:** Monthly subscription  
-**Processing:** UNLIMITED  
+**Price:** €49.99/month
+**Billing:** Monthly subscription
+**Processing:** UNLIMITED
 
 **Included:**
 - ✅ **Unlimited processing** - No usage limits!
@@ -95,7 +95,7 @@ Web: https://aba-gmbh.de
 
 ### 4. Enterprise - Custom Solutions
 
-**Price:** Custom Pricing  
+**Price:** Custom Pricing
 **Contact:** clisonix@pm.me
 
 **Included Everything from Unlimited, PLUS:**
@@ -159,11 +159,11 @@ All plans include access to:
 
 - ✅ **TideWave™** - Advanced scanning technology
 - ✅ **CLX™** - Core processing engine
-- ✅ **CLI.I™** - Interactive processing
+- ✅ **CLX.i™** - Interactive processing
 - ✅ **XCL™** - Extended processing
 - ✅ **Resonance™** - High-precision algorithms
 - ✅ **NanoDecibel™** - Maximum quality
-- ✅ **Clisonic Global AI™** - AI enhancement
+- ✅ **Clisonix Global AI™** - AI enhancement
 - ✅ **Stigma™** - Premium quality
 - ✅ **Stigma Memory™** - Memory optimization
 
@@ -342,7 +342,7 @@ Yes, cancel anytime. **No refunds** for unused time, but access continues until 
 
 ### Can I transfer my license?
 
-**Unlimited & Enterprise:** Yes, contact us for transfer  
+**Unlimited & Enterprise:** Yes, contact us for transfer
 **Pay-As-You-Go:** Non-transferable (account-based)
 
 ---
@@ -377,10 +377,10 @@ Need help? Contact support@aba-gmbh.de
 
 Have questions? Need a custom quote?
 
-**Email:** clisonix@pm.me  
+**Email:** clisonix@pm.me
 **Subject:** "Lightning SPP - [Your Question]"
 
-**Enterprise Inquiries:**  
+**Enterprise Inquiries:**
 **Subject:** "Enterprise Quote - [Company Name]"
 
 **Response Time:**
@@ -400,9 +400,9 @@ By purchasing and using Lightning SPP 3.14, you agree to:
 
 ---
 
-**Lightning SPP 3.14 - Flexible Pricing for Every Need**  
+**Lightning SPP 3.14 - Flexible Pricing for Every Need**
 **© 2024 ABA GmbH. All rights reserved.**
 
-**Document ID:** PRICE-001-2024  
-**Version:** 3.14.0  
+**Document ID:** PRICE-001-2024
+**Version:** 3.14.0
 **Last Updated:** 2024

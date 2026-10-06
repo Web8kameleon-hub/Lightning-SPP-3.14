@@ -22,7 +22,7 @@ However, **production use** of advanced features requires an active license key.
 | Operations/month | 1,000 | Unlimited |
 | Devices | 1 | 10 |
 | Basic Features (TideWave, CLX) | ✅ | ✅ |
-| AI Features (Clisonic AI) | ❌ | ✅ |
+| AI Features (Clisonix AI) | ❌ | ✅ |
 | Premium Features (Stigma, NanoDecibel) | ❌ | ✅ |
 | Support | Community | Priority Email |
 | Price | Free | €99.99/year |
@@ -174,7 +174,7 @@ var results = await LightningAPI.BatchProcessAsync(sources);
 
 // Or use parallel API
 var results = await Lightning314.Parallel(
-    sources, 
+    sources,
     maxConcurrency: 10
 );
 ```
@@ -214,7 +214,7 @@ var imageBytes = dicomImage.RenderImage().AsBytes();
 // Process with Lightning SPP (NanoDecibel mode for medical quality)
 var instance = UniversalSDK.ForDevice(DeviceProfile.Medical);
 var result = await instance.ProcessAsync(
-    imageBytes, 
+    imageBytes,
     ScanMode.NanoDecibel
 );
 ```
@@ -262,7 +262,7 @@ var result = await instance.ProcessAsync(data);
 ```csharp
 [FunctionName("ProcessDocument")]
 public static async Task<IActionResult> Run(
-    [HttpTrigger(AuthorizationLevel.Function, "post")] 
+    [HttpTrigger(AuthorizationLevel.Function, "post")]
     HttpRequest req)
 {
     var data = await ReadBodyAsync(req);
@@ -274,12 +274,12 @@ public static async Task<IActionResult> Run(
 **AWS Lambda:**
 ```csharp
 public async Task<APIGatewayProxyResponse> FunctionHandler(
-    APIGatewayProxyRequest request, 
+    APIGatewayProxyRequest request,
     ILambdaContext context)
 {
     var data = Convert.FromBase64String(request.Body);
     var result = await Lightning314.Lightning(data);
-    
+
     return new APIGatewayProxyResponse
     {
         StatusCode = 200,
@@ -551,8 +551,8 @@ Join to:
 
 **Still have questions?**
 
-📧 Email: clisonix@pm.me  
-💬 Discussions: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions  
+📧 Email: clisonix@pm.me
+💬 Discussions: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions
 🐛 Issues: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues
 
 ---

@@ -267,35 +267,22 @@ public class RealImageProcessor : IScanService
 
     private static SKBitmap LoadBitmapOrCreateFromBinary(byte[] sourceData, int quality)
     {
-        try
-        {
-            using var managed = SKData.CreateCopy(sourceData);
-            var decoded = SKBitmap.Decode(managed);
-            if (decoded != null)
-            {
-                return decoded;
-            }
-        }
-        catch
-        {
-            // Fallback below.
-        }
+        ArgumentNullException.ThrowIfNull(sourceData);
 
-        var width = 512;
-        var targetHeight = Math.Max(128, Math.Min(4096, quality * 2));
-        var height = Math.Max(targetHeight, (int)Math.Ceiling(sourceData.Length / (double)width));
-        var bitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        if (sourceData.Length == 0)
+            throw new InvalidDataException("Image input is empty.");
 
-        for (var y = 0; y < height; y++)
-        {
-            for (var x = 0; x < width; x++)
-            {
-                var index = y * width + x;
-                var value = index < sourceData.Length ? sourceData[index] : (byte)0;
-                bitmap.SetPixel(x, y, new SKColor(value, value, value, 255));
-            }
-        }
+        if (sourceData.AsSpan().StartsWith("%PDF-"u8))
+            throw new ArgumentException(
+                "PDF input must be rendered as a real page first. Use document pdf-render <input.pdf> <page> <new.png>.");
 
-        return bitmap;
+        using var managed = SKData.CreateCopy(sourceData);
+        var decoded = SKBitmap.Decode(managed);
+
+        if (decoded is null)
+            throw new InvalidDataException(
+                "Input is not a supported image. Arbitrary binary payloads are not accepted.");
+
+        return decoded;
     }
 }

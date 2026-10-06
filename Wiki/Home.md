@@ -28,7 +28,7 @@ Lightning SPP 3.14 is a professional-grade document scanning, processing, and pr
 
 ### ⚡ **Ultra-Fast Performance**
 - **Instant Mode**: < 1ms processing time
-- **UltraFast Mode**: < 5ms processing time  
+- **UltraFast Mode**: < 5ms processing time
 - **Lightning Mode**: < 10ms processing time
 
 ### 🔬 **REAL Processing**
@@ -59,11 +59,11 @@ Deploy on ANY device:
 ### 🛠️ **Technologies Included**
 - **TideWave™** - Balanced scanning technology
 - **CLX™** - Core processing engine
-- **CLI.I™** - Interactive processing
+- **CLX.i™** - Interactive processing
 - **XCL™** - Extended processing
 - **Resonance™** - High-precision algorithms
 - **NanoDecibel™** - Maximum quality processing
-- **Clisonic Global AI™** - AI-powered enhancement
+- **Clisonix Global AI™** - AI-powered enhancement
 - **Stigma™** - Premium printing quality
 - **Stigma Memory™** - Memory optimization
 
@@ -123,7 +123,7 @@ var data = await Lightning314.Instant(imageBytes);  // < 1ms
 var result = await LightningAPI.ExecuteLightningPipelineAsync(
     source: "document.pdf",
     scanMode: ScanMode.Resonance,
-    processingEngine: ProcessingEngine.Clisonic,
+    processingEngine: ProcessingEngine.Clisonix,
     printQuality: PrintQuality.Stigma
 );
 
@@ -196,13 +196,13 @@ Console.WriteLine($"Processed in {result.TotalTimeMs}ms");
 
 ## 🏢 Company Information
 
-**ABA GmbH**  
-Ledjan Ahmati  
-Wattenscheider Hellweg 199  
-44869 Bochum, Germany  
+**ABA GmbH**
+Ledjan Ahmati
+Wattenscheider Hellweg 199
+44869 Bochum, Germany
 
-📧 Email: clisonix@pm.me  
-🌐 Web: https://aba-gmbh.de  
+📧 Email: clisonix@pm.me
+🌐 Web: https://aba-gmbh.de
 🏛️ Registration: HRB 21069 (Bochum)
 
 ---

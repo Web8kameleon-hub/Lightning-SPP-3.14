@@ -22,9 +22,9 @@ public class HybridProcessingService : IProcessingService
         return _realProcessor.ClxProcessAsync(data, cancellationToken);
     }
 
-    public Task<ProcessingResult> CliProcessAsync(byte[] data, CancellationToken cancellationToken = default)
+    public Task<ProcessingResult> ClxIProcessAsync(byte[] data, CancellationToken cancellationToken = default)
     {
-        return _realProcessor.CliProcessAsync(data, cancellationToken);
+        return _realProcessor.ClxIProcessAsync(data, cancellationToken);
     }
 
     public Task<ProcessingResult> XclProcessAsync(byte[] data, CancellationToken cancellationToken = default)

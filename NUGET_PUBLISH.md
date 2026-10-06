@@ -2,10 +2,10 @@
 
 ## Package Information
 
-**Package Name:** LightningSPP.Universal  
-**Version:** 3.14.0  
-**Publisher:** ABA GmbH  
-**Author:** Ledjan Ahmati  
+**Package Name:** LightningSPP.Universal
+**Version:** 3.14.0
+**Publisher:** ABA GmbH
+**Author:** Ledjan Ahmati
 **License:** MIT
 
 ---
@@ -44,41 +44,41 @@ The `wwwmmm.csproj` file should include:
     <Version>3.14.0</Version>
     <Authors>Ledjan Ahmati</Authors>
     <Company>ABA GmbH</Company>
-    
+
     <!-- Description -->
     <Title>Lightning SPP 3.14 - Universal Scan-Process-Print System</Title>
     <Description>
       Ultra-fast universal scan, process, and print system optimized for ANY device.
       Includes real image processing (ImageSharp), AI/ML (Microsoft.ML), and supports
       medical devices, mobile, IoT, embedded, desktop, web, and cloud deployments.
-      
-      Technologies: TideWave, CLX, CLI.I, XCL, Resonance, NanoDecibel, Clisonic AI, Stigma.
+
+      Technologies: TideWave, CLX, CLX.i, XCL, Resonance, NanoDecibel, Clisonix AI, Stigma.
     </Description>
     <Summary>Universal scan-process-print system with real processing for all devices</Summary>
-    
+
     <!-- Project Info -->
     <PackageProjectUrl>https://github.com/Web8kameleon-hub/Lightning-SPP-3.14</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Web8kameleon-hub/Lightning-SPP-3.14</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    
+
     <!-- Legal -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Copyright>Copyright © 2024 ABA GmbH. All rights reserved.</Copyright>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    
+
     <!-- README -->
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    
+
     <!-- Icon -->
     <PackageIcon>icon.png</PackageIcon>
-    
+
     <!-- Tags -->
     <PackageTags>
       lightning;spp;scan;process;print;universal;medical;iot;mobile;
       embedded;imagesharp;ml;ai;real-processing;tidewave;resonance;
-      stigma;clisonic;bochum;aba-gmbh;healthcare;medical-device
+      stigma;clisonix;bochum;aba-gmbh;healthcare;medical-device
     </PackageTags>
-    
+
     <!-- Release Notes -->
     <PackageReleaseNotes>
       v3.14.0 - REAL Processing Update
@@ -91,19 +91,19 @@ The `wwwmmm.csproj` file should include:
       - Complete documentation and compliance files
       - Production-ready for massive deployment
     </PackageReleaseNotes>
-    
+
     <!-- Build Settings -->
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Library</OutputType>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    
+
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
-  
+
   <!-- Include Files in Package -->
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
@@ -113,7 +113,7 @@ The `wwwmmm.csproj` file should include:
     <None Include="SECURITY.md" Pack="true" PackagePath="docs\" />
     <None Include="PRIVACY.md" Pack="true" PackagePath="docs\" />
   </ItemGroup>
-  
+
   <!-- Dependencies are auto-included -->
 </Project>
 ```
@@ -219,7 +219,7 @@ dotnet nuget push ".\nupkg\LightningSPP.Universal.3.14.0.snupkg" \
 ```
 MAJOR.MINOR.PATCH
   3  . 14  .  0
-  
+
 MAJOR: Breaking changes (incompatible API changes)
 MINOR: New features (backward compatible)
 PATCH: Bug fixes (backward compatible)
@@ -300,27 +300,27 @@ on:
 jobs:
   publish:
     runs-on: windows-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '10.0.x'
-    
+
     - name: Restore dependencies
       run: dotnet restore
-    
+
     - name: Build
       run: dotnet build -c Release --no-restore
-    
+
     - name: Pack
       run: dotnet pack -c Release --no-build -o ./nupkg
-    
+
     - name: Publish to NuGet
       run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
-      
+
     - name: Publish Symbols
       run: dotnet nuget push ./nupkg/*.snupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 ```
@@ -463,15 +463,15 @@ dotnet nuget push ./nupkg/*.nupkg --source https://api.nuget.org/v3/index.json
 
 ## Contact
 
-**Package Maintainer:**  
-Ledjan Ahmati  
-ABA GmbH  
+**Package Maintainer:**
+Ledjan Ahmati
+ABA GmbH
 Email: clisonix@pm.me
 
-**Issues:**  
+**Issues:**
 https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues
 
 ---
 
-**Lightning SPP 3.14 - Ready for NuGet!**  
+**Lightning SPP 3.14 - Ready for NuGet!**
 **© 2024 ABA GmbH. All rights reserved.**

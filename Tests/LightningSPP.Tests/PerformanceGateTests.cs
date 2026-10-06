@@ -36,8 +36,8 @@ public class PerformanceGateTests
     {
         LightningAPI.UseRealServices();
 
-        var filePath = Path.Combine(Path.GetTempPath(), $"lightning-perf-{Guid.NewGuid():N}.bin");
-        await File.WriteAllBytesAsync(filePath, DeterministicPayload(8192));
+        var filePath = Path.Combine(Path.GetTempPath(), $"lightning-perf-{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(filePath, RealTestImage.Png());
 
         // One untimed warm-up run absorbs JIT tiering/first-call costs (assembly load,
         // method compilation, file-system caching) so the timed run below measures

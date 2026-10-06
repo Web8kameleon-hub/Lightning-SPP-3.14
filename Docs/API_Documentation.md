@@ -5,7 +5,7 @@
 Lightning SPP është një sistem i plotë për skanim, përpunim dhe printim që integron teknologjitë më të avancuara:
 
 - **TideWave**, **Resonance**, **NanoDecibel** për skanim
-- **CLX**, **CLI.I**, **XCL**, **Clisonic AI** për përpunim
+- **CLX**, **CLX.i**, **XCL**, **Clisonix AI** për përpunim
 - **Stigma**, **Stigma Memory** për printim
 
 ## API Publik
@@ -131,7 +131,7 @@ Console.WriteLine($"Resolution: {result.Metadata.Resolution} DPI");
 
 #### 5. AIProcessAsync
 
-Përpunim me Clisonic Global AI
+Përpunim me Clisonix Global AI
 
 ```csharp
 Task<ProcessingResult> AIProcessAsync(
@@ -140,7 +140,7 @@ Task<ProcessingResult> AIProcessAsync(
 )
 ```
 
-**Teknologjia:** Clisonic Global AI
+**Teknologjia:** Clisonix Global AI
 **Performance:** ~40ms
 
 **Shembull:**
@@ -154,7 +154,7 @@ var processResult = await LightningAPI.AIProcessAsync(scanResult.Data);
 
 #### 6. HybridProcessAsync
 
-Përpunim me të gjithë motorët (CLX + CLI.I + XCL + AI)
+Përpunim me të gjithë motorët (CLX + CLX.i + XCL + AI)
 
 ```csharp
 Task<ProcessingResult> HybridProcessAsync(
@@ -241,9 +241,9 @@ public enum ProcessingEngine
 {
     Auto,           // Zgjedh automatikisht
     CLX,            // ~20ms - Motor bazë
-    CLI_I,          // ~25ms - Interaktiv
+    CLX_I,          // ~25ms - Interaktiv
     XCL,            // ~30ms - I zgjeruar
-    Clisonic,       // ~40ms - AI-powered
+    Clisonix,       // ~40ms - AI-powered
     Hybrid          // ~50ms - Të gjithë motorët
 }
 ```
@@ -271,7 +271,7 @@ public record PipelineRequest(
     bool UseNanoDecibel = true,             // Aktivizo NanoDecibel
     ProcessingEngine ProcessingEngine = ProcessingEngine.Auto,
     bool UseAI = true,                      // Aktivizo AI
-    bool UseClisonic = true,                // Aktivizo Clisonic
+    bool UseClisonix = true,                // Aktivizo Clisonix
     int OptimizationLevel = 3,              // Niveli 1-5
     bool UseStigmaMemory = true,            // Aktivizo Stigma Memory
     bool ShouldPrint = true,                // A duhet të printohet
@@ -408,9 +408,9 @@ var result = await LightningAPI.ExecuteCustomPipelineAsync(request);
 | Resonance Scan    | 50ms          | Resonance            |
 | NanoDecibel Scan  | 80ms          | NanoDecibel          |
 | CLX Processing    | 20ms          | CLX                  |
-| CLI.I Processing  | 25ms          | CLI.I                |
+| CLX.i Processing  | 25ms          | CLX.i                |
 | XCL Processing    | 30ms          | XCL                  |
-| Clisonic AI       | 40ms          | AI                   |
+| Clisonix AI       | 40ms          | AI                   |
 | Hybrid Processing | 50ms          | Multi-Engine         |
 | Stigma Print      | 60ms          | Stigma + Resonance   |
 | **Full Pipeline** | **120ms**     | **All Technologies** |
@@ -429,9 +429,9 @@ var result = await LightningAPI.ExecuteCustomPipelineAsync(request);
 ### 2. Zgjedhja e Processing Engine
 
 - **CLX**: Për përpunim të shpejtë bazik
-- **CLI.I**: Për kontroll interaktiv
+- **CLX.i**: Për kontroll interaktiv
 - **XCL**: Për të dhëna komplekse
-- **Clisonic**: Kur AI është i nevojshëm
+- **Clisonix**: Kur AI është i nevojshëm
 - **Hybrid**: Për cilësi maksimale (përdor të gjithë motorët)
 - **Auto**: Le sistemin të zgjedhë automatikisht
 

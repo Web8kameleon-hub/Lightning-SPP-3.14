@@ -1,0 +1,256 @@
+diff --git a/services/excel/main.py b/services/excel/main.py
+index bd721d8..2c537de 100644
+--- a/services/excel/main.py
++++ b/services/excel/main.py
+@@ -84,15 +84,35 @@ def _resolve_upload_path(filename: str) -> Path:
+     return target
+ 
+ 
+-async def _read_uploaded_file(file: UploadFile) -> tuple[Path, bytes]:
+-    file_bytes = await file.read()
++async def _read_uploaded_file(file: UploadFile) -> tuple[Path, bytes]:
++    file_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
+     if len(file_bytes) > MAX_UPLOAD_BYTES:
+         raise HTTPException(status_code=413, detail="Uploaded file exceeds the 10MB size limit")
+ 
+     filepath = _resolve_upload_path(file.filename or "")
+     with open(filepath, "wb") as handle:
+         handle.write(file_bytes)
+-    return filepath, file_bytes
++    return filepath, file_bytes
++
++
++def _unique_column_headers(row) -> List[str]:
++    names = [str(cell) if cell is not None and cell != "" else f"Column_{index}"
++             for index, cell in enumerate(row)]
++    reserved = set(names)
++    used = set()
++    headers = []
++    for name in names:
++        candidate = name
++        suffix = 2
++        while candidate in used:
++            candidate = f"{name}_{suffix}"
++            suffix += 1
++            while candidate in reserved:
++                candidate = f"{name}_{suffix}"
++                suffix += 1
++        used.add(candidate)
++        headers.append(candidate)
++    return headers
+ 
+ # Try to import openpyxl
+ try:
+@@ -286,7 +306,7 @@ async def regenerate_excel():
+ 
+ 
+ @app.post("/api/excel/validate")
+-async def validate_excel(file: UploadFile = File(...)):
++async def validate_excel(file: UploadFile = File(...)):
+     """Validate uploaded Excel file structure"""
+     if not EXCEL_AVAILABLE:
+         return JSONResponse(
+@@ -294,7 +314,8 @@ async def validate_excel(file: UploadFile = File(...)):
+             content={"error": "Excel validation not available"}
+         )
+     
+-    filepath = None
++    filepath = None
++    wb = None
+     original_name = file.filename or ""
+     try:
+         filepath, _ = await _read_uploaded_file(file)
+@@ -330,13 +351,15 @@ async def validate_excel(file: UploadFile = File(...)):
+             "valid": False,
+             "error": str(e)
+         }
+-    finally:
+-        if filepath and filepath.exists():
+-            filepath.unlink(missing_ok=True)
++    finally:
++        if wb is not None:
++            wb.close()
++        if filepath and filepath.exists():
++            filepath.unlink(missing_ok=True)
+ 
+ 
+ @app.post("/api/excel/parse")
+-async def parse_excel(file: UploadFile = File(...), sheet: str = None):
++async def parse_excel(file: UploadFile = File(...), sheet: str = None):
+     """Parse Excel file and return JSON data"""
+     if not EXCEL_AVAILABLE:
+         return JSONResponse(
+@@ -344,40 +367,50 @@ async def parse_excel(file: UploadFile = File(...), sheet: str = None):
+             content={"error": "Excel parsing not available"}
+         )
+ 
+-    filepath = None
++    filepath = None
++    wb = None
+     original_name = file.filename or ""
+     try:
+         filepath, _ = await _read_uploaded_file(file)
+         wb = load_workbook(str(filepath), read_only=True, data_only=True)
+-        ws = wb[sheet] if sheet and sheet in wb.sheetnames else wb.active
++        if sheet is not None and sheet not in wb.sheetnames:
++            raise HTTPException(status_code=404, detail="Requested worksheet was not found")
++        ws = wb[sheet] if sheet is not None else wb.active
+ 
+-        data = []
++        data = []
++        row_count = 0
+         headers = []
+         for row_idx, row in enumerate(ws.iter_rows(values_only=True)):
+             if row_idx == 0:
+-                headers = [str(cell) if cell else f"Column_{i}" for i, cell in enumerate(row)]
++                headers = _unique_column_headers(row)
+             else:
+                 row_dict = {}
+                 for col_idx, cell in enumerate(row):
+                     if col_idx < len(headers):
+                         row_dict[headers[col_idx]] = cell
+-                if any(row_dict.values()):
+-                    data.append(row_dict)
++                if any(value is not None and value != "" for value in row_dict.values()):
++                    row_count += 1
++                    if len(data) < 100:
++                        data.append(row_dict)
+ 
+         return {
+             "filename": original_name,
+             "sheet": ws.title,
+             "headers": headers,
+-            "rows": len(data),
+-            "data": data[:100]
++            "rows": row_count,
++            "data": data
+         }
+ 
+-    except Exception as e:
+-        logger.error(f"Excel parsing failed: {e}")
++    except HTTPException:
++        raise
++    except Exception as e:
++        logger.error(f"Excel parsing failed: {e}")
+         raise HTTPException(status_code=500, detail=str(e))
+-    finally:
+-        if filepath and filepath.exists():
+-            filepath.unlink(missing_ok=True)
++    finally:
++        if wb is not None:
++            wb.close()
++        if filepath and filepath.exists():
++            filepath.unlink(missing_ok=True)
+ 
+ 
+ @app.get("/api/excel/formulas")
+diff --git a/services/excel/test_excel_cleanup.py b/services/excel/test_excel_cleanup.py
+new file mode 100644
+index 0000000..b824c23
+--- /dev/null
++++ b/services/excel/test_excel_cleanup.py
+@@ -0,0 +1,104 @@
++"""Real workbook processing and upload cleanup; fixture data is test-only."""
++import io
++import tempfile
++import unittest
++from pathlib import Path
++
++import httpx
++from openpyxl import Workbook
++
++import main
++
++
++class ExcelCleanupTests(unittest.IsolatedAsyncioTestCase):
++    async def asyncSetUp(self):
++        self.directory = tempfile.TemporaryDirectory()
++        self.previous_uploads = main.UPLOADS_DIR
++        main.UPLOADS_DIR = Path(self.directory.name)
++        self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app), base_url="http://test")
++
++    async def asyncTearDown(self):
++        await self.client.aclose()
++        main.UPLOADS_DIR = self.previous_uploads
++        self.directory.cleanup()
++
++    @staticmethod
++    def workbook():
++        wb = Workbook()
++        wb.active.append(["Name", "Count"])
++        wb.active.append(["fixture", 2])
++        buffer = io.BytesIO()
++        wb.save(buffer)
++        wb.close()
++        return buffer.getvalue()
++
++    async def test_validate_closes_workbook_before_cleanup(self):
++        response = await self.client.post("/api/excel/validate", files={"file": ("fixture.xlsx", self.workbook())})
++        self.assertEqual(response.status_code, 200)
++        self.assertTrue(response.json()["valid"])
++        self.assertEqual(list(main.UPLOADS_DIR.iterdir()), [])
++
++    async def test_parse_closes_workbook_before_cleanup(self):
++        response = await self.client.post("/api/excel/parse", files={"file": ("fixture.xlsx", self.workbook())})
++        self.assertEqual(response.status_code, 200)
++        self.assertEqual(response.json()["data"], [{"Name": "fixture", "Count": 2}])
++        self.assertEqual(list(main.UPLOADS_DIR.iterdir()), [])
++
++    async def test_invalid_workbook_is_not_valid_and_is_removed(self):
++        response = await self.client.post("/api/excel/validate", files={"file": ("invalid.xlsx", b"not a workbook")})
++        self.assertEqual(response.status_code, 200)
++        self.assertFalse(response.json()["valid"])
++        self.assertEqual(list(main.UPLOADS_DIR.iterdir()), [])
++
++    async def test_invalid_parse_fails_and_is_removed(self):
++        response = await self.client.post("/api/excel/parse", files={"file": ("invalid.xlsx", b"not a workbook")})
++        self.assertEqual(response.status_code, 500)
++        self.assertEqual(list(main.UPLOADS_DIR.iterdir()), [])
++
++    async def test_zero_and_false_values_are_preserved(self):
++        wb = Workbook()
++        wb.active.append([0, False, "Count"])
++        wb.active.append([0, False, 0])
++        buffer = io.BytesIO()
++        wb.save(buffer)
++        wb.close()
++        response = await self.client.post("/api/excel/parse", files={"file": ("zero.xlsx", buffer.getvalue())})
++        self.assertEqual(response.status_code, 200)
++        self.assertEqual(response.json()["headers"], ["0", "False", "Count"])
++        self.assertEqual(response.json()["rows"], 1)
++        self.assertEqual(response.json()["data"], [{"0": 0, "False": False, "Count": 0}])
++
++    async def test_duplicate_headers_do_not_overwrite_cells(self):
++        wb = Workbook()
++        wb.active.append(["Name", "Name", "Name_2"])
++        wb.active.append(["first", "second", "third"])
++        buffer = io.BytesIO()
++        wb.save(buffer)
++        wb.close()
++        response = await self.client.post("/api/excel/parse", files={"file": ("duplicates.xlsx", buffer.getvalue())})
++        self.assertEqual(response.status_code, 200)
++        self.assertEqual(response.json()["headers"], ["Name", "Name_3", "Name_2"])
++        self.assertEqual(response.json()["data"], [{"Name": "first", "Name_3": "second", "Name_2": "third"}])
++
++    async def test_preview_limit_preserves_total_row_count(self):
++        wb = Workbook()
++        wb.active.append(["Count"])
++        for index in range(120):
++            wb.active.append([index])
++        buffer = io.BytesIO()
++        wb.save(buffer)
++        wb.close()
++        response = await self.client.post("/api/excel/parse", files={"file": ("large.xlsx", buffer.getvalue())})
++        self.assertEqual(response.status_code, 200)
++        self.assertEqual(response.json()["rows"], 120)
++        self.assertEqual(len(response.json()["data"]), 100)
++        self.assertEqual(response.json()["data"][0], {"Count": 0})
++
++    async def test_requested_missing_sheet_does_not_fall_back(self):
++        response = await self.client.post("/api/excel/parse?sheet=missing", files={"file": ("fixture.xlsx", self.workbook())})
++        self.assertEqual(response.status_code, 404)
++        self.assertEqual(list(main.UPLOADS_DIR.iterdir()), [])
++
++
++if __name__ == "__main__":
++    unittest.main()

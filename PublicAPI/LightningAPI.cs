@@ -102,16 +102,16 @@ public static class LightningAPI
     }
 
     /// <summary>
-    /// Process using Clisonic Global AI
+    /// Process using Clisonix Global AI
     /// </summary>
     public static async Task<ProcessingResult> AIProcessAsync(
         byte[] data,
         CancellationToken cancellationToken = default)
     {
         var options = new ProcessingOptions(
-            ProcessingEngine.Clisonic,
+            ProcessingEngine.Clisonix,
             UseAI: true,
-            UseClisonic: true,
+            UseClisonix: true,
             OptimizationLevel: 5,
             UseStigmaMemory: true
         );
@@ -127,10 +127,10 @@ public static class LightningAPI
     {
         var options = new ProcessingOptions(
             ProcessingEngine.Hybrid,
-            UseAI: true,
-            UseClisonic: true,
+            UseAI: false,
+            UseClisonix: false,
             OptimizationLevel: 5,
-            UseStigmaMemory: true
+            UseStigmaMemory: false
         );
         return await _processingService.ProcessAsync(data, options, cancellationToken);
     }

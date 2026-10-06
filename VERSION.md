@@ -81,9 +81,9 @@
 
 ✅ Advanced multi-engine processing
   - CLX Core Engine
-  - CLI.I Interactive Engine
+  - CLX.i Interactive Engine
   - XCL Extended Engine
-  - Clisonic Global AI Engine
+  - Clisonix Global AI Engine
   - Hybrid Multi-Engine Mode
 
 ✅ Premium printing with Stigma technology
@@ -118,11 +118,11 @@
 ✅ Technologies integrated
   - TideWave scanning
   - CLX processing
-  - CLI.I interactive processing
+  - CLX.i interactive processing
   - XCL extended processing
   - Resonance high-precision
   - NanoDecibel maximum quality
-  - Clisonic Global AI
+  - Clisonix Global AI
   - Stigma premium printing
   - Stigma Memory optimization
 

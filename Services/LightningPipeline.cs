@@ -68,7 +68,7 @@ public class LightningPipeline
                 new ProcessingOptions(
                     request.ProcessingEngine,
                     request.UseAI,
-                    request.UseClisonic,
+                    request.UseClisonix,
                     request.OptimizationLevel,
                     request.UseStigmaMemory),
                 cancellationToken);
@@ -127,9 +127,9 @@ public record PipelineRequest(
     bool UseNanoDecibel = true,
     ProcessingEngine ProcessingEngine = ProcessingEngine.Auto,
     bool UseAI = true,
-    bool UseClisonic = true,
+    bool UseClisonix = false,
     int OptimizationLevel = 3,
-    bool UseStigmaMemory = true,
+    bool UseStigmaMemory = false,
     bool ShouldPrint = true,
     string PrintDestination = "default",
     PrintQuality PrintQuality = PrintQuality.Stigma,

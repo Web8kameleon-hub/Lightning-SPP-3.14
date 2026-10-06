@@ -73,11 +73,11 @@ var cloudResult = await CloudAPI.ProcessMassive(millionsOfItems, maxParallelism:
 
 - TideWave: skanim i balancuar
 - CLX: motor bazë përpunimi
-- CLI.I: përpunim interaktiv
+- CLX.i: përpunim interaktiv
 - XCL: përpunim i zgjeruar për raste komplekse
 - Resonance: fokus në precizion
 - NanoDecibel: fokus në cilësi maksimale
-- Clisonic Global AI: përmirësim i asistuar nga AI
+- Clisonix Global AI: përmirësim i asistuar nga AI
 - Stigma: kontroll adaptiv i të gjithë pipeline-it dhe artifact output lossless\n- Stigma Memory: profilizim i përdorimit të memories
 
 ## Profilet Stigma
@@ -201,9 +201,9 @@ wwwmmm/
 ## Motorët e përpunimit
 
 - CLX: motor bazë dhe efikas
-- CLI.I: përpunim interaktiv me kontroll të zgjeruar
+- CLX.i: përpunim interaktiv me kontroll të zgjeruar
 - XCL: për workload-e komplekse
-- Clisonic Global AI: përmirësim automatik
+- Clisonix Global AI: përmirësim automatik
 - Hybrid: kombinim i motorëve për rezultate maksimale
 
 ## Cilësia e printimit

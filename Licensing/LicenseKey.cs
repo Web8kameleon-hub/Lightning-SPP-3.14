@@ -108,7 +108,7 @@ public class LicenseKey
             LicenseTier.PayAsYouGo => "PAYGO",
             LicenseTier.Unlimited => "UNLTD",
             LicenseTier.Enterprise => "ENTER",
-            _ => "TRIAL"
+            _ => throw new ArgumentOutOfRangeException(nameof(license.Tier), license.Tier, "Unsupported license tier.")
         };
 
         var expiration = license.ExpirationDate.ToString("yyyyMMdd");
@@ -124,8 +124,8 @@ public class LicenseKey
         var key = ResolveSigningKeys();
         if (!key.TryGetValue(kid, out var signingSecret))
         {
-            signingSecret = ResolveDefaultSigningSecret();
-            kid = "k1";
+            throw new InvalidOperationException(
+                $"Active signing KID '{kid}' is not configured in {SigningKeysEnv}. Configure the active KID and signing key explicitly.");
         }
 
         if (IsKidExpired(kid, DateTime.UtcNow, out var expiresOn))
@@ -158,8 +158,8 @@ public class LicenseKey
         var secret = Environment.GetEnvironmentVariable(SigningKeyEnv);
         if (string.IsNullOrWhiteSpace(secret))
         {
-            // Dev fallback for local usage. In production set LSPP_LICENSE_SIGNING_KEY.
-            secret = "LSPP-DEV-DEFAULT-CHANGE-IN-PROD";
+            throw new InvalidOperationException(
+                $"License signing requires {SigningKeyEnv} or {SigningKeysEnv}. No default signing secret is permitted.");
         }
         return secret;
     }

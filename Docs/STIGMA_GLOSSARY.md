@@ -16,7 +16,7 @@
 
 ## Engine Terms
 - CLX: fastest compression-oriented path.
-- CLI.I: balanced speed/ratio path.
+- CLX.i: balanced speed/ratio path.
 - XCL: maximum compression path with memory pooling.
 
 ## Quality Terms

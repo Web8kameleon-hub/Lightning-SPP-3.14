@@ -8,7 +8,7 @@ RUN dotnet publish wwwmmm.csproj -c Release -o /app/publish --no-restore /p:UseA
 FROM mcr.microsoft.com/dotnet/runtime:10.0 AS final
 USER root
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl poppler-utils cups-client sane-utils \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /data \
     && chown app:app /data

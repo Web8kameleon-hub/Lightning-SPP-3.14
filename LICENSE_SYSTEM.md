@@ -152,7 +152,7 @@ C:\Users\Admin\AppData\Roaming\LightningSPP\license.json
 
 ### PAY-AS-YOU-GO
 - All scanning modes (TideWave, Resonance, NanoDecibel)
-- All processing engines (CLX, CLI.I, XCL, Clisonic AI)
+- All processing engines (CLX, CLX.i, XCL, Clisonix AI)
 - All print qualities (Draft, Normal, High, Stigma)
 - Pay €0.001/operation
 - Minimum €9.99/month
@@ -213,8 +213,8 @@ For development and testing, use the `generate-license` command to create sample
 
 For licensing issues:
 
-📧 **Email**: clisonix@pm.me  
-🌐 **Web**: https://aba-gmbh.de  
+📧 **Email**: clisonix@pm.me
+🌐 **Web**: https://aba-gmbh.de
 🏢 **Company**: ABA GmbH, Wattenscheider Hellweg 199, 44869 Bochum, Germany
 
 ## License Agreement

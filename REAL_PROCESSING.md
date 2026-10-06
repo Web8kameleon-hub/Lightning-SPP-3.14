@@ -217,7 +217,7 @@ SIMULATED:
   Total Time: 177ms
   Processing: Fake (Task.Delay)
   Output: None
-  
+
 REAL:
   Total Time: 230ms
   Processing: ImageSharp + ML + Brotli
@@ -353,7 +353,7 @@ var result = await processingService.ClxProcessAsync(data);
 var result = await processingService.ProcessAsync(data, new ProcessingOptions(
     Engine: ProcessingEngine.Hybrid,
     UseAI: true,
-    UseClisonic: true,
+    UseClisonix: true,
     UseStigmaMemory: true
 ));
 // Uses: Multi-stage Brotli + ML optimization + Memory pooling
@@ -391,19 +391,19 @@ foreach (var file in files)
 
 ### REAL Processing
 
-✅ Actual image manipulation  
-✅ True AI/ML optimization  
-✅ Real compression algorithms  
-✅ Physical file output  
-✅ Production-ready quality  
+✅ Actual image manipulation
+✅ True AI/ML optimization
+✅ Real compression algorithms
+✅ Physical file output
+✅ Production-ready quality
 
 ### Still Lightning Fast
 
-⚡ Only 1.30x overhead vs simulated  
-⚡ Sub-second for most operations  
-⚡ <50ms for full quality pipeline  
-⚡ Async/await throughout  
-⚡ Memory-efficient with pooling  
+⚡ Only 1.30x overhead vs simulated
+⚡ Sub-second for most operations
+⚡ <50ms for full quality pipeline
+⚡ Async/await throughout
+⚡ Memory-efficient with pooling
 
 ## 🚀 Commands
 
@@ -433,10 +433,10 @@ dotnet run universal
 
 ## ✅ Production Ready
 
-**Status:** ✅ REAL Processing Enabled  
-**Version:** 3.14.0 - Real Update  
-**Mode:** Production  
-**Fake Data:** ELIMINATED  
+**Status:** ✅ REAL Processing Enabled
+**Version:** 3.14.0 - Real Update
+**Mode:** Production
+**Fake Data:** ELIMINATED
 
 ---
 

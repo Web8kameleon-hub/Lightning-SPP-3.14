@@ -125,7 +125,7 @@ public class LicenseManager
         {
             "ai" => hasAI,
             "premium" => hasPremium,
-            "clisonic" => hasAI,
+            "clisonix" => hasAI,
             "stigma" => hasPremium,
             "nanodecibel" => hasPremium,
             "resonance" => hasPremium,

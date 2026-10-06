@@ -41,7 +41,7 @@ Generate unique production secrets. Never reuse the example values. Configure al
 ## Known production gaps
 
 - `main` does not expose scan/process/pipeline operations through REST. Those operations are currently SDK/CLI only; the separate Fabric API PR must be reviewed, tested, and merged deliberately.
-- The current “Clisonic AI” implementation does not load, train, or execute an ML/ONNX model. `MLContext` is instantiated, but the processing path is a byte heuristic. Do not advertise model inference until a versioned model, preprocessing contract, evaluation dataset, and inference tests are present.
+- The current “Clisonix AI” implementation does not load, train, or execute an ML/ONNX model. `MLContext` is instantiated, but the processing path is a byte heuristic. Do not advertise model inference until a versioned model, preprocessing contract, evaluation dataset, and inference tests are present.
 - Stripe replay protection and usage counters are in-memory; multiple replicas need shared durable storage before horizontal scaling.
 - The current server is a single `HttpListener` process. Zero-downtime rollout requires a second instance behind the proxy or an orchestrator with readiness checks.
 - License activation is local to one instance. Mount and back up the `lightning-data` volume.

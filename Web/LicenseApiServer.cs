@@ -504,7 +504,7 @@ internal static class LicenseApiServer
 
             var processResult = await processingService.ProcessAsync(
                 scanResult.Data,
-                new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: true, UseClisonic: true, OptimizationLevel: 3, UseStigmaMemory: true));
+                new ProcessingOptions(ProcessingEngine.Hybrid, UseAI: true, UseClisonix: true, OptimizationLevel: 3, UseStigmaMemory: true));
 
             var compressedBytes = processResult.Success ? processResult.ProcessedData.Length : 0;
             var compressionPercent = processResult.Success && scanResult.Data.Length > 0

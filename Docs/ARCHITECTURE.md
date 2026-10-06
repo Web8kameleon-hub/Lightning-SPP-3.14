@@ -64,7 +64,7 @@ Orkestrimi i të gjithë fazave të procesimit.
 - Kthen ScanResult me metadata
 
 **Faza 2: Advanced Processing**
-- Zgjedh processing engine (CLX, CLI.I, XCL, Clisonic, Hybrid)
+- Zgjedh processing engine (CLX, CLX.i, XCL, Clisonix, Hybrid)
 - Aplikon optimizime
 - Përdor AI nëse është i aktivizuar
 - Kthen ProcessingResult me metadata
@@ -118,7 +118,7 @@ NanoDecibel:
    - Optimizuar për performance
    - ~20ms processing time
 
-2. **CLI.I (Interactive Processing)**
+2. **CLX.i (Interactive Processing)**
    - Përpunim interaktiv
    - Kontrolle të avancuara
    - ~25ms processing time
@@ -128,14 +128,14 @@ NanoDecibel:
    - Për të dhëna komplekse
    - ~30ms processing time
 
-4. **Clisonic Global AI**
+4. **Clisonix Global AI**
    - Përpunim me AI
    - Machine learning optimization
    - ~40ms processing time
 
 5. **Hybrid Multi-Engine**
    - Kombinon të gjithë motorët
-   - Pipeline: CLX → CLI.I → XCL → AI → Stigma Memory
+   - Pipeline: CLX → CLX.i → XCL → AI → Stigma Memory
    - ~50ms processing time
    - Cilësi maksimale
 
@@ -145,11 +145,11 @@ Input Data
     ↓
 CLX Processing (Basic optimization)
     ↓
-CLI.I Processing (Interactive refinement)
+CLX.i Processing (Interactive refinement)
     ↓
 XCL Processing (Extended algorithms)
     ↓
-Clisonic AI (if enabled) (AI enhancement)
+Clisonix AI (if enabled) (AI enhancement)
     ↓
 Stigma Memory (if enabled) (Memory optimization)
     ↓
@@ -213,7 +213,7 @@ Scanned Data
     ↓                  │
 [Apply Optimization] ◄─┘
     ↓
-[AI Enhancement?] ───Yes─→ [Clisonic AI]
+[AI Enhancement?] ───Yes─→ [Clisonix AI]
     │                            ↓
     No ◄─────────────────────────┘
     ↓

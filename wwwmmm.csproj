@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -23,7 +23,7 @@
     <PackageProjectUrl>https://github.com/Web8kameleon-hub/Lightning-SPP-3.14</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Web8kameleon-hub/Lightning-SPP-3.14</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>scan;process;output;lightning;image-processing;ai;ml;iot;embedded;tidewave;clx;resonance;nanodecibel;clisonic;stigma</PackageTags>
+    <PackageTags>scan;process;output;lightning;image-processing;ai;ml;iot;embedded;tidewave;clx;resonance;nanodecibel;clisonix;stigma</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>
       Version 3.14.1
@@ -68,7 +68,6 @@
     <Compile Remove="Tests\LightningSPP.Tests\**\*.cs" />
     <Compile Remove="VSExtension\**\*.cs" />
     <Compile Remove="Desktop\**\*.cs" />
-    <Compile Remove="Lightning-SPP-3.14\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>

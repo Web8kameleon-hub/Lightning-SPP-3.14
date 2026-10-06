@@ -127,7 +127,7 @@ public class FastScanService : IScanService
     private async Task<byte[]> LightningScanAsync(ScanRequest request, CancellationToken cancellationToken)
     {
         var sourceData = await ReadSourceBytesAsync(request.Source, cancellationToken);
-        var image = LoadImageOrCreateFromBinary(sourceData, request.Quality);
+        var image = LoadSupportedImage(sourceData, request.Quality);
 
         using (image)
         {
@@ -145,7 +145,7 @@ public class FastScanService : IScanService
     private async Task<byte[]> TideWaveScanAsync(ScanRequest request, CancellationToken cancellationToken)
     {
         var sourceData = await ReadSourceBytesAsync(request.Source, cancellationToken);
-        var image = LoadImageOrCreateFromBinary(sourceData, request.Quality);
+        var image = LoadSupportedImage(sourceData, request.Quality);
 
         using (image)
         {
@@ -164,7 +164,7 @@ public class FastScanService : IScanService
     private async Task<byte[]> ResonanceScanInternalAsync(ScanRequest request, CancellationToken cancellationToken)
     {
         var sourceData = await ReadSourceBytesAsync(request.Source, cancellationToken);
-        var image = LoadImageOrCreateFromBinary(sourceData, request.Quality * 2);
+        var image = LoadSupportedImage(sourceData, request.Quality * 2);
 
         using (image)
         {
@@ -182,7 +182,7 @@ public class FastScanService : IScanService
 
     private async Task<byte[]> ProcessInMemoryAsync(byte[] sourceData, ScanRequest request, CancellationToken cancellationToken)
     {
-        var image = LoadImageOrCreateFromBinary(sourceData, request.Quality);
+        var image = LoadSupportedImage(sourceData, request.Quality);
         using (image)
         {
             image.Mutate(ctx =>
@@ -225,7 +225,7 @@ public class FastScanService : IScanService
     {
         var effectiveQuality = Math.Min(request.Quality * 4, MaxNanoDecibelQuality);
         var sourceData = await ReadSourceBytesAsync(request.Source, cancellationToken);
-        var image = LoadImageOrCreateFromBinary(sourceData, effectiveQuality);
+        var image = LoadSupportedImage(sourceData, effectiveQuality);
 
         using (image)
         {
@@ -275,46 +275,31 @@ public class FastScanService : IScanService
         return await File.ReadAllBytesAsync(source, cancellationToken);
     }
 
-    private static Image<Rgba32> LoadImageOrCreateFromBinary(byte[] sourceData, int quality)
+    private static Image<Rgba32> LoadSupportedImage(byte[] sourceData, int quality)
     {
+        ArgumentNullException.ThrowIfNull(sourceData);
+
+        if (sourceData.Length == 0)
+            throw new InvalidDataException("Image input is empty.");
+
         try
         {
             return Image.Load<Rgba32>(sourceData);
         }
-        catch (UnknownImageFormatException)
+        catch (UnknownImageFormatException ex)
         {
-            return BuildImageFromBinaryPayload(sourceData, quality);
+            throw new InvalidDataException(
+                "Input is not a supported image. Arbitrary binary payloads are not accepted.",
+                ex);
         }
     }
-
-    private static Image<Rgba32> BuildImageFromBinaryPayload(byte[] sourceData, int quality)
-    {
-        var width = 512;
-        var targetHeight = Math.Max(128, Math.Min(2048, quality * 2));
-        var height = Math.Max(targetHeight, (int)Math.Ceiling(sourceData.Length / (double)width));
-        var image = new Image<Rgba32>(width, height);
-
-        for (var y = 0; y < height; y++)
-        {
-            var row = image.DangerousGetPixelRowMemory(y).Span;
-            for (var x = 0; x < width; x++)
-            {
-                var index = y * width + x;
-                var value = index < sourceData.Length ? sourceData[index] : (byte)0;
-                row[x] = new Rgba32(value, value, value, 255);
-            }
-        }
-
-        return image;
-    }
-
     private static async Task<byte[]> ApplyImageTransformAsync(
         byte[] data,
         CancellationToken cancellationToken,
         Action<IImageProcessingContext> transform)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using var image = LoadImageOrCreateFromBinary(data, 300);
+        using var image = LoadSupportedImage(data, 300);
         image.Mutate(transform);
         return await EncodePngAsync(image, cancellationToken);
     }

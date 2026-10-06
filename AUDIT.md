@@ -1,14 +1,14 @@
 # AUDIT — What is real vs. what is a wrapper (Lightning SPP 3.14)
 
 This audit exists because the README and the marketing pages list many technology names
-(TideWave, CLX, CLI.I, XCL, Resonance, NanoDecibel, Clisonic Global AI, Stigma, Stigma Memory,
+(TideWave, CLX, CLX.i, XCL, Resonance, NanoDecibel, Clisonix Global AI, Stigma, Stigma Memory,
 NodeDB Fluid) without stating which ones are independent executable logic and which ones are
 naming or parameter presets.
 
 The classification below is produced by reading the source and by this command:
 
 ```bash
-grep -rEn "TideWave|CLX|CLI_I|XCL|Clisonic|Resonance|NanoDecibel|NodeDB|StigmaMemory|UseStigma" \
+grep -rEn "TideWave|CLX|CLX_I|XCL|Clisonix|Resonance|NanoDecibel|NodeDB|StigmaMemory|UseStigma" \
   --include="*.cs" .
 ```
 
@@ -31,9 +31,9 @@ Classification legend:
 |---|---|---|---|
 | **Stigma** | **REAL** | `Services/StigmaExecutionProfile.cs` — `StigmaProfiles.Apply()` | Selects scan mode, processing engine, quality, optimization level and output quality. Changes the whole execution path. Covered by `Tests/LightningSPP.Tests/StigmaExecutionProfileTests.cs`. |
 | **Lightning / TideWave / Resonance / NanoDecibel** (scan modes) | **PARAMETER SET** | `Services/Implementation/RealImageProcessor.cs` — `ResizeByQuality()`, `ApplyModeProcessing()` | One SkiaSharp engine. Each mode sets a resize multiplier (1.0 / 1.2 / 1.8 / 2.5) and a colour/edge pass. Output differs and is deterministic (`GoldenPipelineTests`), but it is not four separate algorithms. |
-| **CLX / CLI.I / XCL** (processing engines) | **WRAPPER** | `Services/Implementation/RealAIProcessor.cs` — `ClxProcessAsync` / `CliProcessAsync` / `XclProcessAsync` | All three call the same `CompressAsync()`; the only difference is the Brotli level (Fastest / Optimal / SmallestSize). No independent processing algorithm exists. |
+| **CLX / CLX.i / XCL** (processing engines) | **WRAPPER** | `Services/Implementation/RealAIProcessor.cs` — `ClxProcessAsync` / `ClxIProcessAsync` / `XclProcessAsync` | All three call the same `CompressAsync()`; the only difference is the Brotli level (Fastest / Optimal / SmallestSize). No independent processing algorithm exists. |
 | **Hybrid** (processing engine) | **WRAPPER** | `RealAIProcessor.ProcessAsync` maps `Hybrid` → `XclProcessAsync`; `Services/Implementation/HybridProcessingService.cs` | The service comment itself reads “Compatibility wrapper that routes all processing to REAL AI processor.” |
-| **Clisonic Global AI** | **CONDITIONAL** | `RealAIProcessor.RunInference()` | Real ONNX Runtime inference only when `LSPP_ONNX_MODEL_PATH` and `LSPP_ONNX_INPUT_SHAPE` are set. Otherwise it throws and the result is reported as unavailable. The default pipeline does **not** enable it. |
+| **Clisonix Global AI** | **CONDITIONAL** | `RealAIProcessor.RunInference()` | Real ONNX Runtime inference only when `LSPP_ONNX_MODEL_PATH` and `LSPP_ONNX_INPUT_SHAPE` are set. Otherwise it throws and the result is reported as unavailable. The default pipeline does **not** enable it. |
 | **Stigma Memory** | **WRAPPER (inert flag)** | `ProcessingOptions.UseStigmaMemory` | The flag is passed through `LightningPipeline` into `ProcessingOptions` but is never read in `RealAIProcessor`. It has no runtime effect today. |
 | **Stigma Print** | **WRAPPER** | `Services/Implementation/StigmaPrintService.cs` | “Compatibility wrapper that routes all print operations to REAL print service.” |
 | **Lossless print artifact** | **REAL** | `Services/Implementation/RealPrintService.cs` | Writes a real Brotli-compressed `.br` artifact to disk with copy/cleanup support. It is an artifact writer, **not** a physical printer driver. |
@@ -62,7 +62,7 @@ Classification legend:
 
 ## Required follow-up (tracked, not yet done)
 
-- Rename or re-document `CLX / CLI.I / XCL` so the UI does not imply three independent engines.
+- Rename or re-document `CLX / CLX.i / XCL` so the UI does not imply three independent engines.
 - Either implement `Stigma Memory` behaviour or remove the flag.
 - Either implement `NodeDB Fluid` or remove it from the technology page.
 - Decide whether `FastScanService` is the canonical scanner; if not, delete it to avoid two

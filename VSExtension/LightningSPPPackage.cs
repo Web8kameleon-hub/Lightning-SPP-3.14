@@ -24,7 +24,7 @@ namespace LightningSPP.VisualStudio
 
         private static readonly string[] ProductionFeatures = new[]
         {
-            "AI Processing (Clisonic)",
+            "AI Processing (Clisonix)",
             "Premium Print (Stigma)",
             "High-Quality Scan (NanoDecibel)",
             "Batch Processing (>10 items)",
@@ -123,8 +123,8 @@ namespace LightningSPP.VisualStudio
                         // Show paywall icon if feature locked
                         menuCommand.Enabled = LicenseManager.IsFeatureAvailable("ai");
                         menuCommand.Text = LicenseManager.IsFeatureAvailable("ai")
-                            ? "Process with Clisonic AI"
-                            : "Process with Clisonic AI (License Required) 🔒";
+                            ? "Process with Clisonix AI"
+                            : "Process with Clisonix AI (License Required) 🔒";
                     }
                 };
                 commandService.AddCommand(aiProcessMenuItem);
@@ -185,7 +185,7 @@ namespace LightningSPP.VisualStudio
             {
                 // Show paywall dialog
                 ShowPaywallDialog(
-                    "Clisonic AI Processing",
+                    "Clisonix AI Processing",
                     "AI-powered processing requires a paid license.\n\n" +
                     "Features:\n" +
                     "• Machine Learning optimization\n" +
@@ -200,7 +200,7 @@ namespace LightningSPP.VisualStudio
 
             VsShellUtilities.ShowMessageBox(
                 this,
-                "Processing with Clisonic Global AI...\n\n" +
+                "Processing with Clisonix Global AI...\n\n" +
                 "✓ Machine Learning enabled\n" +
                 "✓ Pattern optimization active\n" +
                 "✓ Quality enhancement applied\n\n" +

@@ -39,7 +39,7 @@ public class StigmaExecutionProfileTests
         Assert.Equal(ScanMode.Lightning, request.ScanMode);
         Assert.Equal(ProcessingEngine.CLX, request.ProcessingEngine);
         Assert.False(request.UseAI);
-        Assert.False(request.UseClisonic);
+        Assert.False(request.UseClisonix);
         Assert.False(request.UseResonance);
         Assert.False(request.UseStigmaMemory);
         Assert.Equal(PrintQuality.Normal, request.PrintQuality);

@@ -113,9 +113,9 @@ public static class RealVsSimulatedExamples
         var engines = new[]
         {
             ("CLX - Fast Compression", Services.ProcessingEngine.CLX),
-            ("CLI.I - Optimal Compression", Services.ProcessingEngine.CLI_I),
+            ("CLX.i - Optimal Compression", Services.ProcessingEngine.CLX_I),
             ("XCL - Maximum Compression", Services.ProcessingEngine.XCL),
-            ("Clisonic AI - ML Optimization", Services.ProcessingEngine.Clisonic),
+            ("Clisonix AI - ML Optimization", Services.ProcessingEngine.Clisonix),
             ("Hybrid - Full Pipeline", Services.ProcessingEngine.Hybrid)
         };
 
@@ -235,7 +235,7 @@ public static class RealVsSimulatedExamples
         var processOptions = new Services.ProcessingOptions(
             Engine: Services.ProcessingEngine.Hybrid,
             UseAI: true,
-            UseClisonic: true,
+            UseClisonix: true,
             OptimizationLevel: 5
         );
         var processResult = await ServiceFactory.CreateProcessingService().ProcessAsync(

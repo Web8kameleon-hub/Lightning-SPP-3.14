@@ -101,7 +101,7 @@ public class LightningSPPInstance
 
     private async Task<byte[]> MobileOptimizedProcess(byte[] data)
     {
-        // Mobile: CLI.I Optimal — battery-efficient balance
+        // Mobile: CLX.i Optimal — battery-efficient balance
         using var output = new System.IO.MemoryStream();
         using (var brotli = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.Optimal))
         {
@@ -146,7 +146,7 @@ public class LightningSPPInstance
 
     private async Task<byte[]> WebOptimizedProcess(byte[] data)
     {
-        // Web: CLI.I Optimal — WebAssembly compatible
+        // Web: CLX.i Optimal — WebAssembly compatible
         using var output = new System.IO.MemoryStream();
         using (var brotli = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.Optimal))
         {
@@ -169,7 +169,7 @@ public class LightningSPPInstance
 
     private async Task<byte[]> UniversalProcess(byte[] data)
     {
-        // Universal: CLI.I Optimal fallback
+        // Universal: CLX.i Optimal fallback
         using var output = new System.IO.MemoryStream();
         using (var brotli = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.Optimal))
         {
