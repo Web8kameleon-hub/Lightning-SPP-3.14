@@ -28,7 +28,7 @@ Classification legend:
 ## Classification table
 
 | Technology | Classification | Evidence (file / line) | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **Stigma** | **REAL** | `Services/StigmaExecutionProfile.cs` — `StigmaProfiles.Apply()` | Selects scan mode, processing engine, quality, optimization level and output quality. Changes the whole execution path. Covered by `Tests/LightningSPP.Tests/StigmaExecutionProfileTests.cs`. |
 | **Lightning / TideWave / Resonance / NanoDecibel** (scan modes) | **PARAMETER SET** | `Services/Implementation/RealImageProcessor.cs` — `ResizeByQuality()`, `ApplyModeProcessing()` | One SkiaSharp engine. Each mode sets a resize multiplier (1.0 / 1.2 / 1.8 / 2.5) and a colour/edge pass. Output differs and is deterministic (`GoldenPipelineTests`), but it is not four separate algorithms. |
 | **CLX / CLI.I / XCL** (processing engines) | **WRAPPER** | `Services/Implementation/RealAIProcessor.cs` — `ClxProcessAsync` / `CliProcessAsync` / `XclProcessAsync` | All three call the same `CompressAsync()`; the only difference is the Brotli level (Fastest / Optimal / SmallestSize). No independent processing algorithm exists. |

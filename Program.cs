@@ -229,13 +229,13 @@ internal class Program
     {
         if (args.Length < 3)
         {
-            Console.WriteLine("Usage: wwwmmm convert <input-image> <png|jpeg|bmp|tiff|pdf> [quality 1-100]");
+            Console.WriteLine("Usage: wwwmmm convert <input-image> <png|jpeg|bmp|tiff|pdf|xlsx|docx> [quality 1-100]");
             return;
         }
 
         if (!TryParseOutputFormat(args[2], out var format))
         {
-            Console.WriteLine($"Unknown format '{args[2]}'. Use png, jpeg, bmp, tiff or pdf.");
+            Console.WriteLine($"Unknown format '{args[2]}'. Use png, jpeg, bmp, tiff, pdf, xlsx or docx.");
             Environment.ExitCode = 1;
             return;
         }
@@ -256,6 +256,8 @@ internal class Program
         {
             OutputFormat.Jpeg => ".jpg",
             OutputFormat.Tiff => ".tiff",
+            OutputFormat.Xlsx => ".xlsx",
+            OutputFormat.Docx => ".docx",
             _ => "." + format.ToString().ToLowerInvariant()
         };
         var outputPath = Path.ChangeExtension(input, extension);
@@ -277,6 +279,10 @@ internal class Program
             case "tif":
             case "tiff": format = OutputFormat.Tiff; return true;
             case "pdf": format = OutputFormat.Pdf; return true;
+            case "xlsx":
+            case "excel": format = OutputFormat.Xlsx; return true;
+            case "docx":
+            case "word": format = OutputFormat.Docx; return true;
             default: format = default; return false;
         }
     }
@@ -296,7 +302,7 @@ internal class Program
         Console.WriteLine("  print <source>          - Print with Stigma Premium");
         Console.WriteLine("  pipeline <source>       - Run complete Lightning Pipeline");
         Console.WriteLine("  batch <sources...>      - Batch process multiple items");
-        Console.WriteLine("  convert <in> <fmt> [q]  - Encode processed image to png/jpeg/bmp/tiff/pdf");
+        Console.WriteLine("  convert <in> <fmt> [q]  - Encode processed image to png/jpeg/bmp/tiff/pdf/xlsx/docx");
         Console.WriteLine("  serve [port]            - Start REST API + Web Dashboard");
         Console.WriteLine("\nTechnologies:");
         Console.WriteLine("  • TideWave - Balanced scanning");

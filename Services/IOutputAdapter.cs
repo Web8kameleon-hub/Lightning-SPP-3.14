@@ -27,5 +27,7 @@ public enum OutputFormat
     Jpeg,
     Bmp,
     Tiff,
-    Pdf
+    Pdf,
+    Xlsx,
+    Docx
 }

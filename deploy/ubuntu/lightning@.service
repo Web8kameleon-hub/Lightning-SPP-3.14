@@ -1,0 +1,29 @@
+[Unit]
+Description=Lightning SPP API Service (%i)
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/lightning/lightning.env
+EnvironmentFile=-/etc/lightning/%i.env
+WorkingDirectory=/opt/lightning/%i/current
+ExecStart=/usr/bin/dotnet /opt/lightning/%i/current/wwwmmm.dll serve ${LIGHTNING_PORT}
+Restart=on-failure
+RestartSec=3
+User=www-data
+Group=www-data
+StateDirectory=lightning
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,53 @@
+name: Deploy Production (Zero Downtime)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - 'Web/**'
+      - 'deploy/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Blue/Green Deploy
+    runs-on: ubuntu-latest
+    env:
+      PROD_SSH_HOST: ${{ vars.PROD_SSH_HOST }}
+      PROD_SSH_USER: ${{ vars.PROD_SSH_USER }}
+      PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ env.PROD_SSH_HOST }}
+          username: ${{ env.PROD_SSH_USER }}
+          key: ${{ env.PROD_SSH_KEY }}
+          port: 22
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            export REPO_URL="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14.git"
+            export REPO_DIR="/opt/lightning/repo"
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              sudo mkdir -p /opt/lightning
+              sudo chown -R $USER:$USER /opt/lightning
+              git clone "$REPO_URL" "$REPO_DIR"
+            fi
+            cd "$REPO_DIR"
+            git fetch --prune origin
+            git checkout main
+            git reset --hard origin/main
+            chmod +x deploy/ubuntu/zero-downtime-deploy.sh
+            bash deploy/ubuntu/zero-downtime-deploy.sh
