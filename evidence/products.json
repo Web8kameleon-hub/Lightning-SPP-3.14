@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "product": "Lightning SPP",
+  "coreWorkflow": [
+    "Scan",
+    "Process",
+    "Output"
+  ],
+  "products": [
+    {
+      "id": "document-processing",
+      "name": "Document Processing",
+      "customerAction": "Upload an image or multi-page PDF, process it and download the result.",
+      "customerBenefit": "Handle document and image processing through one simple workflow.",
+      "maturity": "VERIFIED",
+      "commercialReadiness": "NEAR_READY",
+      "interfaces": [
+        "Browser",
+        "HTTP"
+      ],
+      "verifiedScope": "Image processing is verified by tests; multi-page PDF processing is deployed and verified through the production browser workflow.",
+      "limitations": [
+        "The Windows evidence run skipped native PDF tests because Poppler was unavailable on that machine."
+      ]
+    },
+    {
+      "id": "pdf-tools",
+      "name": "PDF Tools",
+      "customerAction": "Create PDFs from images.",
+      "customerBenefit": "Build PDF documents directly from image pages.",
+      "maturity": "VERIFIED",
+      "commercialReadiness": "NEAR_READY",
+      "interfaces": [
+        "CLI",
+        ".NET"
+      ],
+      "verifiedScope": "PDF creation and safety contracts are verified by tests; the active production runtime provides Poppler 24.02.0 and supports the deployed multi-page PDF workflow.",
+      "limitations": [
+        "Native PDF tests were not executed in the recorded Windows test environment; production runtime evidence is recorded separately."
+      ]
+    },
+    {
+      "id": "image-processing",
+      "name": "Image Processing",
+      "customerAction": "Prepare and transform images for your workflow.",
+      "customerBenefit": "Use different processing modes without building the processing pipeline yourself.",
+      "maturity": "VERIFIED",
+      "commercialReadiness": "NEAR_READY",
+      "interfaces": [
+        "Browser",
+        "SDK",
+        "HTTP"
+      ],
+      "verifiedScope": "Both image engines and the tested processing modes are verified with PNG fixtures.",
+      "limitations": [
+        "Broader image-format compatibility and quality claims require additional verification."
+      ]
+    },
+    {
+      "id": "lossless-artifacts",
+      "name": "Lossless Data Output",
+      "customerAction": "Create compressed data outputs that can be restored to the original bytes.",
+      "customerBenefit": "Reduce stored output while preserving the tested byte content exactly.",
+      "maturity": "VERIFIED",
+      "commercialReadiness": "NEAR_READY",
+      "interfaces": [
+        "SDK",
+        "CLI"
+      ],
+      "verifiedScope": "Hybrid and Stigma fixture outputs restore the original input bytes exactly.",
+      "limitations": [
+        "Lossless refers to the tested byte restoration contract, not to every image or document transformation."
+      ]
+    },
+    {
+      "id": "excel-integration",
+      "name": "Excel Integration",
+      "customerAction": "Validate workbooks, preview their contents and retrieve reports through configured Excel services.",
+      "customerBenefit": "Connect spreadsheet workflows to Lightning without manually rebuilding the integration.",
+      "maturity": "IMPLEMENTED",
+      "commercialReadiness": "NOT_READY",
+      "interfaces": [
+        "SDK",
+        "CLI"
+      ],
+      "verifiedScope": "Protocol behavior is tested; current real upstream execution is not verified.",
+      "limitations": [
+        "Real Excel upstream tests were skipped in the current evidence run."
+      ]
+    },
+    {
+      "id": "licensing",
+      "name": "License Management",
+      "customerAction": "Create signed license keys and activate a workspace.",
+      "customerBenefit": "Control access to commercial Lightning installations.",
+      "maturity": "VERIFIED",
+      "commercialReadiness": "NOT_READY",
+      "interfaces": [
+        "REST",
+        "CLI",
+        "Dashboard"
+      ],
+      "verifiedScope": "Issuance, activation boundaries, signing-key rotation and audit contracts are verified.",
+      "limitations": [
+        "Durable usage, expiry and complete entitlement enforcement still require work."
+      ]
+    }
+  ]
+}

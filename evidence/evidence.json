@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "product": "Lightning SPP",
+  "commit": "c1183ee867b297abf5f9cc0ccec8a940a9e0b636",
+  "recordedAt": "2026-10-08",
+  "evidenceStatus": "PARTIAL",
+  "build": {
+    "status": "GREEN",
+    "warnings": 0,
+    "errors": 0
+  },
+  "tests": {
+    "discovered": 139,
+    "passed": 126,
+    "failed": 0,
+    "skipped": 13,
+    "total": 139
+  },
+  "verificationGaps": [
+    "Real Excel and NodeDB upstream integration tests were skipped because their isolated services were not enabled.",
+    "Successful real-model ONNX inference has not been verified.",
+    "Physical scanner and printer operation has not been verified."
+  ],
+  "rules": {
+    "zeroTestsIsGreen": false,
+    "implementationEqualsVerified": false,
+    "verifiedEqualsProduction": false,
+    "preserveIntent": true,
+    "noFake": true
+  },
+  "testEnvironment": {
+    "platform": "Windows",
+    "nativePdfToolsAvailable": false,
+    "note": "Six native PDF tests were skipped in this Windows run because Poppler was unavailable. This does not change the recorded 126 passed / 0 failed / 13 skipped result."
+  },
+  "productionRuntime": {
+    "verified": true,
+    "commit": "c1183ee867b297abf5f9cc0ccec8a940a9e0b636",
+    "activeReleaseId": "c1183ee867b297abf5f9cc0ccec8a940a9e0b636",
+    "image": "scanprocessprint:c1183ee867b297abf5f9cc0ccec8a940a9e0b636",
+    "containerStatus": "running",
+    "health": "healthy",
+    "pdfinfo": "/usr/bin/pdfinfo",
+    "pdftoppm": "/usr/bin/pdftoppm",
+    "popplerVersion": "24.02.0",
+    "dotnetRuntime": "10.0.12",
+    "pdfRuntimeAvailable": true,
+    "note": "Runtime evidence is separate from the Windows test-run evidence and does not imply that skipped Windows tests executed in production."
+  }
+}
