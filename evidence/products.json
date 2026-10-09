@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "product": "Lightning SPP",
   "coreWorkflow": [
     "Scan",
@@ -7,6 +7,48 @@
     "Output"
   ],
   "products": [
+    {
+      "id": "pdf-processor",
+      "name": "PDF Processor",
+      "kind": "PRODUCT",
+      "maturity": "VERIFIED",
+      "customerVisible": true,
+      "commercialReady": false,
+      "customerAction": "Upload PDF → Process → Preview page 1 → Download all processed pages",
+      "capabilities": [
+        "Process every page through the existing document pipeline",
+        "Preview the first processed page",
+        "Download the complete generated PDF"
+      ],
+      "entrypoints": [
+        "/pdf",
+        "/api/try/process"
+      ],
+      "evidence": [
+        "Tests/LightningSPP.Tests/PdfDocumentTests.cs",
+        "Tests/LightningSPP.Tests/TryDocumentProcessorTests.cs",
+        "Tests/LightningSPP.Tests/ApiTryProcessIntegrationTests.cs",
+        "evidence/evidence.json",
+        "evidence/pdf-processor-verification.json"
+      ],
+      "limitations": [
+        "PDF only, up to 8 MiB and 32 pages.",
+        "Page 1 preview; the download contains all processed pages.",
+        "Pages are rasterized; selectable text, vectors and PDF metadata are not preserved.",
+        "Encrypted PDFs are rejected. Processing failures return no partial PDF.",
+        "Output may be larger than the input. This is not a lossless PDF optimizer.",
+        "Requests are rate-limited to 10 per visitor per 5 minutes.",
+        "Native PDF processing requires Poppler in the application environment.",
+        "This product page has not been deployed; commercial readiness is not established.",
+        "Only the Lightning grayscale profile is offered here. Other profiles need further PDF dimension-limit verification."
+      ],
+      "profiles": [
+        {
+          "id": "lightning",
+          "name": "Lightning — grayscale"
+        }
+      ]
+    },
     {
       "id": "document-processing",
       "name": "Document Processing",
@@ -21,6 +63,19 @@
       "verifiedScope": "Image processing is verified by tests; multi-page PDF processing is deployed and verified through the production browser workflow.",
       "limitations": [
         "The Windows evidence run skipped native PDF tests because Poppler was unavailable on that machine."
+      ],
+      "kind": "CAPABILITY",
+      "customerVisible": false,
+      "commercialReady": false,
+      "capabilities": [
+        "Image processing is verified by tests; multi-page PDF processing is deployed and verified through the production browser workflow."
+      ],
+      "entrypoints": [
+        "/try",
+        "/api/try/process"
+      ],
+      "evidence": [
+        "evidence/evidence.json"
       ]
     },
     {
@@ -37,6 +92,20 @@
       "verifiedScope": "PDF creation and safety contracts are verified by tests; the active production runtime provides Poppler 24.02.0 and supports the deployed multi-page PDF workflow.",
       "limitations": [
         "Native PDF tests were not executed in the recorded Windows test environment; production runtime evidence is recorded separately."
+      ],
+      "kind": "CAPABILITY",
+      "customerVisible": false,
+      "commercialReady": false,
+      "capabilities": [
+        "PDF creation and safety contracts are verified by tests; the active production runtime provides Poppler 24.02.0 and supports the deployed multi-page PDF workflow."
+      ],
+      "entrypoints": [
+        "document pdf-create",
+        "document pdf-render",
+        "Documents/PdfDocumentService.cs"
+      ],
+      "evidence": [
+        "evidence/evidence.json"
       ]
     },
     {
@@ -54,13 +123,27 @@
       "verifiedScope": "Both image engines and the tested processing modes are verified with PNG fixtures.",
       "limitations": [
         "Broader image-format compatibility and quality claims require additional verification."
+      ],
+      "kind": "CAPABILITY",
+      "customerVisible": false,
+      "commercialReady": false,
+      "capabilities": [
+        "Both image engines and the tested processing modes are verified with PNG fixtures."
+      ],
+      "entrypoints": [
+        "/try",
+        "/api/try/process",
+        "Services/IScanService.cs"
+      ],
+      "evidence": [
+        "evidence/evidence.json"
       ]
     },
     {
       "id": "lossless-artifacts",
       "name": "Lossless Data Output",
       "customerAction": "Create compressed data outputs that can be restored to the original bytes.",
-      "customerBenefit": "Reduce stored output while preserving the tested byte content exactly.",
+      "customerBenefit": "Create restorable byte artifacts; output size depends on the input.",
       "maturity": "VERIFIED",
       "commercialReadiness": "NEAR_READY",
       "interfaces": [
@@ -70,6 +153,19 @@
       "verifiedScope": "Hybrid and Stigma fixture outputs restore the original input bytes exactly.",
       "limitations": [
         "Lossless refers to the tested byte restoration contract, not to every image or document transformation."
+      ],
+      "kind": "CAPABILITY",
+      "customerVisible": false,
+      "commercialReady": false,
+      "capabilities": [
+        "Hybrid and Stigma fixture outputs restore the original input bytes exactly."
+      ],
+      "entrypoints": [
+        "Services/IProcessingService.cs",
+        "Services/IPrintService.cs"
+      ],
+      "evidence": [
+        "evidence/evidence.json"
       ]
     },
     {
@@ -86,6 +182,22 @@
       "verifiedScope": "Protocol behavior is tested; current real upstream execution is not verified.",
       "limitations": [
         "Real Excel upstream tests were skipped in the current evidence run."
+      ],
+      "kind": "INTEGRATION",
+      "customerVisible": false,
+      "commercialReady": false,
+      "capabilities": [
+        "Protocol behavior is tested; current real upstream execution is not verified."
+      ],
+      "entrypoints": [
+        "bridge excel-export",
+        "bridge excel-parse",
+        "bridge excel-validate",
+        "Integrations/ClisonixExcelCoreBridge.cs",
+        "Integrations/ClisonixExcelBridge.cs"
+      ],
+      "evidence": [
+        "evidence/evidence.json"
       ]
     },
     {
@@ -103,6 +215,20 @@
       "verifiedScope": "Issuance, activation boundaries, signing-key rotation and audit contracts are verified.",
       "limitations": [
         "Durable usage, expiry and complete entitlement enforcement still require work."
+      ],
+      "kind": "COMMERCIAL_INFRASTRUCTURE",
+      "customerVisible": false,
+      "commercialReady": false,
+      "capabilities": [
+        "Issuance, activation boundaries, signing-key rotation and audit contracts are verified."
+      ],
+      "entrypoints": [
+        "/api/license/issue",
+        "/api/license/activate",
+        "/dashboard"
+      ],
+      "evidence": [
+        "evidence/evidence.json"
       ]
     }
   ]

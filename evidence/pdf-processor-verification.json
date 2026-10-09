@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "productId": "pdf-processor",
+  "recordedAt": "2026-10-09T14:09:06.252003Z",
+  "baseCommit": "d390369db74b43a2873cd3c91281358b8c64b3f0",
+  "scope": "Uncommitted local worktree; not deployed",
+  "productGate": "GREEN",
+  "overallEvidence": "PARTIAL",
+  "build": {
+    "status": "PASS",
+    "warnings": 0,
+    "commands": [
+      "dotnet build wwwmmm.csproj -c Release --no-restore",
+      "dotnet build Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release --no-restore",
+      "Linux: dotnet build wwwmmm.csproj -c Release --no-restore -t:Rebuild",
+      "Linux: dotnet build Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release --no-restore -t:Rebuild"
+    ],
+    "errors": 0,
+    "platforms": [
+      "Windows",
+      "Linux/Docker"
+    ]
+  },
+  "windowsTests": {
+    "discovered": 139,
+    "passed": 126,
+    "failed": 0,
+    "skipped": 13,
+    "artifact": "artifacts/pdf-product-verification/windows-current.trx",
+    "sha256": "3BAED3FA2936C52DE5511842B71201D1484DF23E09A8B2091543FC789E8408A1"
+  },
+  "linuxTests": {
+    "discovered": 139,
+    "passed": 132,
+    "failed": 0,
+    "skipped": 7,
+    "artifact": "artifacts/pdf-product-verification/linux-current.trx",
+    "sha256": "5D6E653A76B3F7950C23E4E30B2012B831E6DA13CD6955DB3ABD85DBA6977BF5"
+  },
+  "nativePdfTests": {
+    "discovered": 24,
+    "passed": 24,
+    "failed": 0,
+    "skipped": 0,
+    "artifact": "artifacts/pdf-product-verification/pdf-current.trx",
+    "sha256": "F54C838C8D9B441527276346E307043049CCC23DFF8EBFA1687355BA728B1F1D",
+    "scope": "24 PDF/document processor boundary tests, including all six native Poppler tests; SPP_TEST_NATIVE_DOCUMENTS=1"
+  },
+  "linuxEnvironment": {
+    "currentSourceRebuilt": true,
+    "nativeFlag": "SPP_TEST_NATIVE_DOCUMENTS=1",
+    "testNetwork": "none",
+    "pull": "never",
+    "image": "lightning-spp:pdf-native-final-worktree-20261006",
+    "productionAccess": false,
+    "imageId": "sha256:c80101eecf5ef6ef59ef9520ca6231e513df8b4504dac11d7f53ea92378b0faa",
+    "sourceSnapshot": "Fresh copy of current tracked and untracked source, excluding the deleted historical worktree. Both projects rebuilt with -t:Rebuild before tests; native image used only for cached dependencies and tools."
+  },
+  "browser": {
+    "reRenderedPages": [
+      1,
+      2
+    ],
+    "engine": "Installed Microsoft Edge headless, local-only fixture driver",
+    "pdfinfoPages": 2,
+    "sha256": "B5873DE47056B2703719CDF8C767770CB9B351F71D1DEA23FDB0EF954B6378E3",
+    "artifact": "artifacts/pdf-product-verification/browser-e2e.json",
+    "downloadSha256": "1351065C3CC255A7FA7FACA48C085F21B659F4EBA89ACEB87A03B0FBCA897088",
+    "scenarios": [
+      {
+        "scenario": "lightning",
+        "passed": true,
+        "pages": 2,
+        "downloadBytes": 362075,
+        "previewWidth": 2400
+      },
+      {
+        "scenario": "lightning",
+        "passed": true,
+        "error": "The document could not be validated, rendered or processed."
+      },
+      {
+        "scenario": "unsupported-option",
+        "passed": true,
+        "error": "This profile is not available in PDF Processor."
+      },
+      {
+        "scenario": "lightning",
+        "passed": true,
+        "error": "File is larger than 8 MB. Choose a smaller file."
+      },
+      {
+        "scenario": "lightning",
+        "passed": true,
+        "error": "Choose a PDF file for PDF Processor."
+      },
+      {
+        "scenario": "existing-image-try-regression",
+        "passed": true,
+        "downloadBytes": 4626
+      }
+    ],
+    "status": "PASS",
+    "downloadMatchesBackendBytes": true,
+    "previewArtifacts": [
+      "artifacts/pdf-product-verification/current-page-1.png",
+      "artifacts/pdf-product-verification/current-page-2.png"
+    ],
+    "screenshotArtifact": "artifacts/pdf-product-verification/current-product.png"
+  },
+  "registryValidation": {
+    "status": "PASS",
+    "scope": "Determinism, stale assets, maturity/visibility gating, invalid profiles/IDs/entrypoints/types, HTML escaping and safe JSON metadata round-trip",
+    "command": "./tools/Test-ProductUi.ps1"
+  },
+  "limitations": [
+    "Only Lightning grayscale is exposed. TideWave failed for a square real PDF due to the image dimension limit; other PDF profiles remain outside this product.",
+    "Rasterized PDF: no preservation of selectable text, vectors or metadata; output can grow.",
+    "8 MiB input, 32 pages, first-page preview, per-visitor rate limit.",
+    "Native tools are not available on Windows; six native tests remain skipped there.",
+    "Seven upstream bridge tests, successful real ONNX inference and physical hardware verification remain outstanding.",
+    "No production deployment or commercial readiness verification of this page."
+  ],
+  "sourceFiles": [
+    {
+      "path": "Documents/PdfDocumentService.cs",
+      "sha256": "96F710352133464ABBDE899CBB9828DDB7B9D5DA11889960FF5D258EA6A85C0D"
+    },
+    {
+      "path": "evidence/products.json",
+      "sha256": "11B7B4077B2709F729EAD181DD0B0B77DE858CE200AA82F1AF0C8A80B7785794"
+    },
+    {
+      "path": "Services/Implementation/RealImageProcessor.cs",
+      "sha256": "448A8E40A3600C64CD38BAC5AECDCDF77845F3E7D6AAA08B6492635949C17C5A"
+    },
+    {
+      "path": "Tests/LightningSPP.Tests/ApiSeoIntegrationTests.cs",
+      "sha256": "4CCD252700926B871F6579FDF54A391A71558115D288FD1C6396B481F58D68FA"
+    },
+    {
+      "path": "Tests/LightningSPP.Tests/ApiTryProcessIntegrationTests.cs",
+      "sha256": "7ECE97B2894C3851ABB268A217AAD253B732516266F2F4FFA426A5E3335AF4C4"
+    },
+    {
+      "path": "Tests/LightningSPP.Tests/PdfDocumentTests.cs",
+      "sha256": "9DD66F30F4ACC48498D2575DD1D9C65F340E6BFC01A20267F5619FDD05CB58F8"
+    },
+    {
+      "path": "Tests/LightningSPP.Tests/TryDocumentProcessorTests.cs",
+      "sha256": "A28438C0E610C4205611C9DA5A14FFE0E04590F25A7A8CA752FF904921B0110B"
+    },
+    {
+      "path": "tools/templates/pdf.html",
+      "sha256": "66A95DD135F055D6F0EFFB6B690443EB9FB1F565E8BD64BA3DD472E8A95943E5"
+    },
+    {
+      "path": "tools/Test-PdfProductBrowser.mjs",
+      "sha256": "6AAC2986186FE9A817221E6061E0C52408C177EC1AA5553854DC1828685320F5"
+    },
+    {
+      "path": "tools/Test-ProductUi.ps1",
+      "sha256": "ABE98A5D8F423C0B6EE2AA286633DF3E6A39852ED44EF1DE68FD40FE0D3F9ECF"
+    },
+    {
+      "path": "tools/Update-ProductUi.ps1",
+      "sha256": "B9BA777C70B8BC8BF5BCE5A15F09C39D0C911A9890602E41DF23FB2C72408EC0"
+    },
+    {
+      "path": "tools/Update-ReadmeEvidence.ps1",
+      "sha256": "B6DEBA8EF0FD8CDE48C11821DBAB6EC788289D0CCCBB783EB7F94CDE8258EA93"
+    },
+    {
+      "path": "Web/LicenseApiServer.cs",
+      "sha256": "8D945BCDB7010650015BE282899C64DF05A7F9B558C181E5EE74DFC36E889CE6"
+    },
+    {
+      "path": "Web/TryDocumentProcessor.cs",
+      "sha256": "C35A52772A8B63421847BC7886209573C47FFD1B6470E1D62A0386B4D08DBA24"
+    },
+    {
+      "path": "Web/wwwroot/pdf.html",
+      "sha256": "33ED0330C2005E582375BA77BF13FCBE4021B9D1624274585CB935577411D47E"
+    },
+    {
+      "path": "Web/wwwroot/site.css",
+      "sha256": "81B341726E73C26EC0B58653BD177F1B2A70733C429709376CC3A993EB9F39D6"
+    },
+    {
+      "path": "Web/wwwroot/try.html",
+      "sha256": "F2EB077D5C60EB7A80F689B7E4D70EC17ABA96CC3489111360ED339655DB8C6C"
+    },
+    {
+      "path": "Web/wwwroot/try.js",
+      "sha256": "934F4371D5BBD4161B0F0364D6569009B4DF922EEFD0506093B7A1984AC55234"
+    },
+    {
+      "path": "wwwmmm.csproj",
+      "sha256": "41C81507537953D400E051BA4D806E77C1E9CCF438B35C359EA9647FCF237F8E"
+    }
+  ],
+  "previousVerification": {
+    "artifact": "artifacts/pdf-product-verification/previous-verification.json",
+    "sha256": "25CA7672A5A225C7134820B561E4B8856BF82F4A960C0BAA9069F9DF911DF69D",
+    "scope": "Previous local worktree run, preserved separately; not combined with current counts"
+  },
+  "truthEngineValidation": {
+    "status": "PASS",
+    "rejectedCases": [
+      "mismatched TRX counts",
+      "stale test artifact hash",
+      "stale browser artifact hash",
+      "GREEN with failed build",
+      "stale source hash"
+    ],
+    "invalidEvidenceWritesReadme": false,
+    "evidenceStatus": "PARTIAL"
+  },
+  "staticContentValidation": {
+    "status": "PASS",
+    "existingSeoPages": 7,
+    "pdfLocalLinksAndAssets": 14,
+    "scope": "PDF title, heading, canonical, JSON-LD parse and product name; local HTTP links/assets; shared JavaScript syntax; existing SEO regression checks",
+    "pdfinfoPages": 2,
+    "renderedDownloadedPages": [
+      1,
+      2
+    ],
+    "visualInspection": "PDF product page and both downloaded pages inspected"
+  }
+}

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF Processor | Lightning SPP</title>
+<meta name="description" content="Upload a PDF, process every page, preview page 1 and download the generated PDF. Up to 8 MiB and 32 pages.">
+<link rel="canonical" href="https://scanprocessprint.com/pdf">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap"><link rel="stylesheet" href="/site.css">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<script src="/try.js" defer></script>
+<meta property="og:title" content="PDF Processor | Lightning SPP">
+<meta property="og:description" content="Upload a PDF, process every page, preview page 1 and download the generated PDF. Up to 8 MiB and 32 pages.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://scanprocessprint.com/pdf">
+<meta property="og:site_name" content="Lightning SPP">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="PDF Processor | Lightning SPP">
+<meta name="twitter:description" content="Upload a PDF, process every page, preview page 1 and download the generated PDF. Up to 8 MiB and 32 pages.">
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "WebPage", "@id": "https://scanprocessprint.com/pdf#webpage", "url": "https://scanprocessprint.com/pdf", "name": "PDF Processor | Lightning SPP", "description": "Upload a PDF, process every page, preview page 1 and download the generated PDF. Up to 8 MiB and 32 pages.", "inLanguage": "en", "isPartOf": {"@id": "https://scanprocessprint.com/#website"}, "breadcrumb": {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Lightning SPP", "item": "https://scanprocessprint.com/"}, {"@type": "ListItem", "position": 2, "name": "PDF Processor", "item": "https://scanprocessprint.com/pdf"}]}}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header><a class="brand" href="/">Lightning SPP<span aria-hidden="true">.</span></a>
+<nav aria-label="Main navigation"><a href="/features">Features</a><a href="/technology">Technology</a><a href="/try" aria-current="page">Try it</a><a href="/pricing">Pricing</a><a href="/benchmarks">Benchmarks</a><a href="/dashboard">Your license</a></nav></header>
+<main id="main">
+<nav aria-label="Breadcrumb"><a href="/">Lightning SPP</a><span aria-hidden="true"> / </span><span>PDF Processor</span></nav>
+<section class="hero"><span class="eyebrow">Lightning SPP · VERIFIED</span><h1>PDF Processor</h1><p class="intro">Upload PDF → Process → Preview page 1 → Download all processed pages</p><p>Process each page with a supported image profile, then download the rebuilt PDF.</p></section>
+
+<section class="card" aria-labelledby="try-title">
+<h2 id="try-title">Upload a PDF</h2>
+<form id="tryForm" data-product="pdf-processor" data-profiles="lightning">
+  <label for="fileInput">PDF file</label>
+  <input id="fileInput" type="file" accept="application/pdf,.pdf" required>
+  <label for="profileSelect">Profile</label>
+  <select id="profileSelect"><option value="lightning">Lightning — grayscale</option></select>
+  <button type="submit">Process PDF</button>
+  <p id="tryStatus" class="message" role="status" aria-live="polite"></p>
+</form>
+</section>
+
+<section id="results" class="section" hidden>
+  <h2>Result</h2>
+  <div class="grid two">
+    <article class="card"><h3>Before</h3><img id="beforeImage" alt="Original uploaded image" style="max-width:100%;border-radius:8px"><p id="beforeDocumentInfo" class="muted" hidden></p></article>
+    <article class="card"><h3>After</h3><img id="afterImage" alt="First page of the processed PDF" style="max-width:100%;border-radius:8px"><p><a id="downloadLink" class="button secondary" download="processed.pdf">Download processed PDF</a></p></article>
+  </div>
+  <article class="card section">
+    <h3>Timing and size for this job</h3>
+    <dl>
+      <dt>Input</dt><dd id="metaInput">—</dd>
+      <dt>Profile used</dt><dd id="metaProfile">—</dd>
+      <dt>Scan time</dt><dd id="metaScanTime">—</dd>
+      <dt>Process time</dt><dd id="metaProcessTime">—</dd>
+      <dt>Total time</dt><dd id="metaTotalTime">—</dd>
+      <dt>Original size</dt><dd id="metaOriginalSize">—</dd>
+      <dt>Generated PDF size</dt><dd id="metaCompressedSize">—</dd>
+      <dt>Size reduction (negative means larger)</dt><dd id="metaCompression">—</dd>
+    </dl>
+    <p class="muted">This is one real measurement for your file on our current server — like <a href="/benchmarks">the published benchmarks</a>, it depends on file size, content and server load, not a universal guarantee.</p>
+  </article>
+  
+</section>
+
+<section class="section notice"><h2>Limits and availability</h2><ul><li>PDF only, up to 8 MiB and 32 pages.</li>
+<li>Page 1 preview; the download contains all processed pages.</li>
+<li>Pages are rasterized; selectable text, vectors and PDF metadata are not preserved.</li>
+<li>Encrypted PDFs are rejected. Processing failures return no partial PDF.</li>
+<li>Output may be larger than the input. This is not a lossless PDF optimizer.</li>
+<li>Requests are rate-limited to 10 per visitor per 5 minutes.</li>
+<li>Native PDF processing requires Poppler in the application environment.</li>
+<li>This product page has not been deployed; commercial readiness is not established.</li>
+<li>Only the Lightning grayscale profile is offered here. Other profiles need further PDF dimension-limit verification.</li></ul><p>This workflow is available on this application instance; it is not a claim of commercial readiness.</p></section>
+</main>
+<footer><span>Lightning SPP</span><a href="/#help">Need help getting started?</a></footer>
+</body></html>

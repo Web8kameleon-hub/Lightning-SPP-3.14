@@ -60,6 +60,10 @@ internal static class LicenseApiServer
     public static async Task RunAsync(int port, CancellationToken cancellationToken = default)
     {
         RuntimeSecurity.ValidateProduction();
+        if (RuntimeSecurity.IsProduction && CustomerAccounts.Enabled) _ = CustomerAccounts.Store.ReadState();
+        using var workerStop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var notificationWorker = Environment.GetEnvironmentVariable("LSPP_NOTIFY_WORKER_ENABLED") == "true"
+            ? RunNotificationWorkerAsync(workerStop.Token) : Task.CompletedTask;
         using var listener = new HttpListener();
         var inContainer = string.Equals(
             Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
@@ -100,7 +104,33 @@ internal static class LicenseApiServer
             }
         }
 
+        workerStop.Cancel();
+        await notificationWorker;
         InternalAuditLogger.Info("Server stopped");
+    }
+
+    private static async Task RunNotificationWorkerAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                try
+                {
+                    var store = CustomerAccounts.Store;
+                    var fulfillment = new PaidFulfillment(store, new StripeGateway());
+                    foreach (var id in store.PendingNotifications())
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await fulfillment.NotifyAsync(id);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                { InternalAuditLogger.Error($"Notification worker unavailable: {ex.GetType().Name}; durable state retained."); }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
     }
 
     private static async Task HandleRequestAsync(HttpListenerContext context)
@@ -131,7 +161,7 @@ internal static class LicenseApiServer
         // Public pages and their assets must remain crawlable without consuming
         // the API budget. Unknown paths still have the general abuse limit.
         var isPublicRead = (context.Request.HttpMethod is "GET" or "HEAD") && path is
-            "/" or "/index.html" or "/features" or "/technology" or "/try" or
+            "/" or "/index.html" or "/features" or "/technology" or "/try" or "/pdf" or
             "/pricing" or "/benchmarks" or "/swagger" or "/openapi.json" or
             "/robots.txt" or "/sitemap.xml" or "/site.css" or "/try.js" or
             "/favicon.ico" or "/favicon-16x16.png" or "/favicon-32x32.png" or
@@ -155,13 +185,31 @@ internal static class LicenseApiServer
                 context.Response.Close();
                 return;
             }
-            if (path == "/site.css" || path == "/dashboard.js" || path == "/try.js")
+            if (path == "/site.css" || path == "/dashboard.js" || path == "/try.js" || path == "/account.js")
             {
                 var jsOrCss = path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8";
                 await ServeStaticAsync(context, path[1..], jsOrCss);
                 return;
             }
 
+            if (path == "/api/account" || path.StartsWith("/api/account/", StringComparison.Ordinal))
+            {
+                await CustomerAccounts.HandleAsync(context, clientIp);
+                return;
+            }
+            if (path == "/account" && context.Request.HttpMethod is "GET" or "HEAD")
+            {
+                context.Response.Headers["Cache-Control"] = "no-store";
+                context.Response.Headers["X-Robots-Tag"] = "noindex";
+                await ServeStaticAsync(context, "account.html", "text/html; charset=utf-8");
+                return;
+            }
+            if ((path == "/" || path == "/index.html") && context.Request.HttpMethod is not ("GET" or "HEAD"))
+            {
+                context.Response.Headers["Allow"] = "GET, HEAD";
+                await TextAsync(context, HttpStatusCode.MethodNotAllowed, "ok=false\nerror=Use the explicit API endpoint");
+                return;
+            }
             if (path == "/" || path == "/index.html")
             {
                 await ServeStaticAsync(context, "landing.html", "text/html; charset=utf-8");
@@ -177,6 +225,12 @@ internal static class LicenseApiServer
             if (path == "/try")
             {
                 await ServeStaticAsync(context, "try.html", "text/html; charset=utf-8");
+                return;
+            }
+
+            if (path == "/pdf")
+            {
+                await ServeStaticAsync(context, "pdf.html", "text/html; charset=utf-8");
                 return;
             }
 
@@ -231,6 +285,7 @@ internal static class LicenseApiServer
 
             if (path == "/api/health")
             {
+                if (RuntimeSecurity.IsProduction && CustomerAccounts.Enabled) _ = CustomerAccounts.Store.ReadState();
                 await TextAsync(context, HttpStatusCode.OK, $"ok=true\nservice=LightningSPP\ntimestamp={DateTime.UtcNow:O}");
                 return;
             }
@@ -259,6 +314,20 @@ internal static class LicenseApiServer
                 return;
             }
 
+            if (path == "/api/stripe/recover" && context.Request.HttpMethod == "POST")
+            {
+                if (!IsAdminAuthorized(context.Request))
+                { await TextAsync(context, HttpStatusCode.Unauthorized, "ok=false\nerror=Administrator authorization required"); return; }
+                var fields = ParseForm(await ReadBodyAsync(context.Request));
+                if (!fields.TryGetValue("eventId", out var eventId) || !System.Text.RegularExpressions.Regex.IsMatch(eventId, "^evt_[A-Za-z0-9]{1,100}$"))
+                { await TextAsync(context, HttpStatusCode.BadRequest, "ok=false\nerror=Existing Stripe event ID required"); return; }
+                using var record = await new StripeGateway().GetAsync("events/" + Uri.EscapeDataString(eventId));
+                var recovered = Stripe.EventUtility.ParseEvent(record.RootElement.GetRawText(), throwOnApiVersionMismatch: false);
+                if (recovered.Id != eventId || recovered.Type != "invoice.paid")
+                { await TextAsync(context, HttpStatusCode.BadRequest, "ok=false\nerror=Existing paid invoice event required"); return; }
+                var result = await StripeFulfillment.ProcessAsync(recovered);
+                await TextAsync(context, result.Status, result.Message); return;
+            }
             if (path == "/api/stripe/webhook" && context.Request.HttpMethod == "POST")
             {
                 var payload = await ReadBodyAsync(context.Request);
@@ -276,27 +345,16 @@ internal static class LicenseApiServer
                     return;
                 }
 
-                if (stripeEvent is null || !StripeBilling.TryMarkEventProcessed(stripeEvent.Id))
+                if (stripeEvent is null)
                 {
-                    await TextAsync(context, HttpStatusCode.OK, "ok=true\nduplicate=true");
+                    await TextAsync(context, HttpStatusCode.BadRequest, "ok=false\nerror=Missing event");
                     return;
                 }
-
-                InternalAuditLogger.Info(
-                    $"Stripe webhook verified: destination={destination}, type={stripeEvent.Type}, id={stripeEvent.Id}");
-
-                if (StripeBilling.TryGetCheckoutFulfillment(stripeEvent, out var customerEmail, out var purchasedTier, out var sessionId))
-                {
-                    await FulfillCheckoutAsync(customerEmail, purchasedTier, sessionId);
-                }
-
-                await TextAsync(
-                    context,
-                    HttpStatusCode.OK,
-                    $"ok=true\ndestination={destination}\neventType={stripeEvent.Type}");
+                InternalAuditLogger.Info($"Stripe webhook verified: destination={destination}, type={stripeEvent.Type}, id={stripeEvent.Id}");
+                var outcome = await StripeFulfillment.ProcessAsync(stripeEvent);
+                await TextAsync(context, outcome.Status, outcome.Message);
                 return;
             }
-
             if (path == "/api/try/process" && context.Request.HttpMethod == "POST")
             {
                 await HandleTryProcessAsync(context, clientIp);
@@ -388,46 +446,8 @@ internal static class LicenseApiServer
         }
         catch (Exception ex)
         {
-            InternalAuditLogger.Error($"API error on {path}: {ex.Message}");
+            InternalAuditLogger.Error($"API error on {path}: {ex.GetType().Name}");
             await TextAsync(context, HttpStatusCode.InternalServerError, "ok=false\nerror=Internal server error");
-        }
-    }
-
-    /// <summary>
-    /// Issues a license key for a paid Checkout Session and emails it to the customer.
-    /// Deliberately swallows and logs all failures: the webhook must still return 200 to
-    /// Stripe (the event is already marked processed, so Stripe will not retry), and a
-    /// failure here must surface as an audit-log alert for manual follow-up rather than
-    /// as an HTTP error that could be misread as "payment rejected".
-    /// </summary>
-    private static async Task FulfillCheckoutAsync(string email, string tier, string sessionId)
-    {
-        try
-        {
-            var license = LicenseManager.CreateLicenseKey(
-                email,
-                company: email,
-                tier,
-                devices: 1,
-                validityDays: tier.Equals("paygo", StringComparison.OrdinalIgnoreCase) ? 30 : 365,
-                useInternalQuantumSecurity: false);
-
-            InternalAuditLogger.Info(
-                $"Stripe checkout fulfilled: session={sessionId}, tier={tier}, email={email}, expires={license.ExpirationDate:yyyy-MM-dd}");
-
-            var (sent, emailError) = await EmailService.TrySendLicenseKeyEmailAsync(
-                email, tier, license.Key, license.ExpirationDate);
-
-            if (!sent)
-            {
-                InternalAuditLogger.Error(
-                    $"Stripe checkout fulfilled but license email FAILED to send: session={sessionId}, email={email}, error={emailError}. Manual delivery required.");
-            }
-        }
-        catch (Exception ex)
-        {
-            InternalAuditLogger.Error(
-                $"Stripe checkout fulfillment FAILED: session={sessionId}, tier={tier}, email={email}, error={ex.Message}. Manual license issuance required.");
         }
     }
 

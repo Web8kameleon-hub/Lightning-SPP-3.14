@@ -45,6 +45,16 @@
     "popplerVersion": "24.02.0",
     "dotnetRuntime": "10.0.12",
     "pdfRuntimeAvailable": true,
-    "note": "Runtime evidence is separate from the Windows test-run evidence and does not imply that skipped Windows tests executed in production."
-  }
+    "note": "Runtime evidence is separate from the Windows test-run evidence and does not imply that skipped Windows tests executed in production.",
+    "provenance": "Recorded production evidence from the prior session and user-reported real two-page /try verification; not rechecked in this task."
+  },
+  "nativePdfEvidence": {
+    "commit": "c1183ee867b297abf5f9cc0ccec8a940a9e0b636",
+    "platform": "Linux/Docker",
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "provenance": "Historical native PDF run reported by the user; separate from the Windows baseline."
+  },
+  "productVerification": "evidence/pdf-processor-verification.json"
 }

@@ -72,9 +72,10 @@ if ($LASTEXITCODE -ne 0) {
     throw "Unable to resolve Git HEAD."
 }
 
-if ($e.commit -ne $head) {
-    throw "Evidence commit $($e.commit) does not match HEAD $head."
-}
+# Recorded evidence remains attached to its tested revision, including when a
+# descendant changes only documentation. Never relabel that run as current HEAD.
+git merge-base --is-ancestor $e.commit $head
+if ($LASTEXITCODE -ne 0) { throw "Recorded evidence revision is not an ancestor of HEAD." }
 
 if ($e.PSObject.Properties.Name -contains "productionRuntime") {
     if ($e.productionRuntime.verified -eq $true) {
@@ -108,6 +109,35 @@ $lines.Add("| Build | $($e.build.status) ($($e.build.warnings) warnings, $($e.bu
 $lines.Add("| Tests | $passed passed, $failed failed, $skipped skipped, $total total |")
 $lines.Add("| Recorded | $($e.recordedAt) |")
 $lines.Add("")
+$lines.Add("The test row describes the recorded Windows run at ``$shortCommit``, not a combined Windows/Linux result or verification of uncommitted changes.")
+if ($e.productVerification) {
+    $v = Get-Content -LiteralPath $e.productVerification -Raw | ConvertFrom-Json
+    if ($v.baseCommit -ne $head) { throw 'PDF product verification belongs to another worktree base' }
+    foreach ($source in $v.sourceFiles) {
+        if ((Get-FileHash -LiteralPath $source.path -Algorithm SHA256).Hash -ne $source.sha256) { throw "PDF evidence is stale: $($source.path)" }
+    }
+    foreach ($run in @($v.windowsTests, $v.linuxTests, $v.nativePdfTests)) {
+        if ((Get-FileHash -LiteralPath $run.artifact -Algorithm SHA256).Hash -ne $run.sha256) { throw "Test artifact is stale: $($run.artifact)" }
+        [xml]$trx = Get-Content -LiteralPath $run.artifact -Raw
+        $counts = $trx.TestRun.ResultSummary.Counters
+        if ([int]$counts.total -ne $run.discovered -or [int]$counts.passed -ne $run.passed -or [int]$counts.failed -ne $run.failed -or ([int]$counts.total - [int]$counts.executed) -ne $run.skipped) { throw "Test artifact totals disagree: $($run.artifact)" }
+    }
+    if ((Get-FileHash -LiteralPath $v.browser.artifact -Algorithm SHA256).Hash -ne $v.browser.sha256) { throw 'Browser evidence is stale' }
+    $browserReport = Get-Content -LiteralPath $v.browser.artifact -Raw | ConvertFrom-Json
+    if ($v.productGate -eq 'GREEN' -and ($v.build.status -ne 'PASS' -or $v.windowsTests.failed -ne 0 -or $v.linuxTests.failed -ne 0 -or $v.nativePdfTests.failed -ne 0 -or $v.nativePdfTests.skipped -ne 0 -or $v.nativePdfTests.passed -le 0 -or $v.browser.status -ne 'PASS' -or $browserReport.passed -ne $true)) { throw 'PDF product gate contradicts verification results' }
+    $lines.Add("")
+    $lines.Add("PDF Processor worktree verification (base ``$($v.baseCommit.Substring(0,7))``; source and artifact hashes recorded in ``$($e.productVerification)``): build $($v.build.status); Windows $($v.windowsTests.passed)/$($v.windowsTests.failed)/$($v.windowsTests.skipped), Linux $($v.linuxTests.passed)/$($v.linuxTests.failed)/$($v.linuxTests.skipped), PDF boundary suite with Poppler enabled $($v.nativePdfTests.passed)/$($v.nativePdfTests.failed)/$($v.nativePdfTests.skipped) (passed/failed/skipped). Browser workflow and downloaded PDF re-rendering: $($v.browser.status). These are local results, not a production deployment.")
+}
+if ($e.PSObject.Properties.Name -contains 'nativePdfEvidence') {
+    $n = $e.nativePdfEvidence
+    $lines.Add("")
+    $lines.Add("Linux/native PDF: $($n.passed) passed, $($n.failed) failed, $($n.skipped) skipped at ``$($n.commit.Substring(0,7))`` ($($n.provenance)).")
+}
+if ($e.productionRuntime) {
+    $lines.Add("")
+    $lines.Add("Production evidence is recorded separately at ``$($e.productionRuntime.commit.Substring(0,7))``: $($e.productionRuntime.provenance). No production check or deployment is performed by this generator.")
+}
+$lines.Add("")
 $lines.Add("### Verification gaps")
 $lines.Add("")
 
@@ -120,13 +150,6 @@ $lines.Add("**Evidence status is not the same as production status.**")
 $lines.Add($endMarker)
 
 $blockLf = $lines -join "`n"
-
-# Deterministic preview artifact.
-[System.IO.File]::WriteAllText(
-    (Join-Path (Get-Location) $OutputPath),
-    $blockLf + "`n",
-    [System.Text.UTF8Encoding]::new($false)
-)
 
 $readmeFullPath = (Resolve-Path -LiteralPath $ReadmePath).Path
 $readmeBytes = [System.IO.File]::ReadAllBytes($readmeFullPath)
@@ -149,6 +172,7 @@ if ($startCount -ne $endCount) {
 if ($startCount -gt 1) {
     throw "README contains duplicate evidence blocks."
 }
+if ($startCount -eq 1 -and $readmeText.IndexOf($startMarker) -ge $readmeText.IndexOf($endMarker)) { throw 'README evidence markers are reversed.' }
 
 # Preserve README newline convention.
 $newline = if ($readmeText.Contains("`r`n")) {
@@ -189,6 +213,7 @@ else {
     )
 }
 
+[System.IO.File]::WriteAllText((Join-Path (Get-Location) $OutputPath), $blockLf + "`n", [System.Text.UTF8Encoding]::new($false))
 [System.IO.File]::WriteAllText(
     $readmeFullPath,
     $updated,
@@ -211,5 +236,6 @@ if ($verifyStart -ne 1 -or $verifyEnd -ne 1) {
     throw "README generation did not produce exactly one evidence block."
 }
 
-Write-Host "GREEN: generated $OutputPath"
-Write-Host "GREEN: README evidence block synchronized"
+& (Join-Path $PSScriptRoot 'Update-ProductUi.ps1')
+Write-Host "Generated $OutputPath; recorded evidence status: $($e.evidenceStatus)"
+Write-Host "README evidence block synchronized"

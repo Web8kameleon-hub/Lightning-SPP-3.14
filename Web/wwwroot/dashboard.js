@@ -75,4 +75,14 @@ byId('loadDiagnostics').addEventListener('click',async () => {
   finally { button.disabled = false; }
 });
 if (location.hash === '#administration') byId('administration').open = true;
+if (new URLSearchParams(location.search).get('purchase') === 'success') {
+  byId('purchaseStatus').textContent = 'Stripe returned you here after checkout. This redirect does not prove a license was provisioned or activated. Sign in to check your customer account. If you already paid, do not pay again.';
+}
+fetch('/api/account', {signal:AbortSignal.timeout(10000)}).then(async response => {
+  if (!response.ok) return;
+  const account = await response.json();
+  byId('purchaseStatus').textContent = account.entitlements.length ?
+    'Your account entitlements: ' + account.entitlements.map(e => e.tier + ' — ' + e.state).join('; ') :
+    'No paid entitlement is currently linked to your account. If you already paid, contact support to reconcile that purchase; do not pay again.';
+}).catch(() => { /* The visible message continues to require an account check. */ });
 refreshStatus();

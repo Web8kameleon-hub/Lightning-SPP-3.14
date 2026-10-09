@@ -54,7 +54,7 @@ public class ApiSeoIntegrationTests
             Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
             Assert.Equal("noindex", limited.Headers.GetValues("X-Robots-Tag").Single());
 
-            foreach (var path in new[] { "/", "/features", "/technology", "/pricing", "/benchmarks", "/try", "/swagger", "/robots.txt", "/sitemap.xml", "/site.css", "/try.js", "/favicon.ico", "/openapi.json" })
+            foreach (var path in new[] { "/", "/features", "/technology", "/pricing", "/benchmarks", "/try", "/pdf", "/swagger", "/robots.txt", "/sitemap.xml", "/site.css", "/try.js", "/favicon.ico", "/openapi.json" })
             {
                 using var response = await client.GetAsync(path);
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);

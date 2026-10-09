@@ -31,71 +31,8 @@ internal static class StripeFulfillment
         return plans;
     }
 
-    internal static async Task<Outcome> ProcessAsync(Event stripeEvent)
-    {
-        if (stripeEvent.Type is not ("checkout.session.completed" or "checkout.session.async_payment_succeeded" or "invoice.paid"))
-            return new(HttpStatusCode.OK, "ok=true\nignored=true\nreason=Event does not grant a license");
-        try
-        {
-            var plans = LoadPlans();
-            if (RuntimeSecurity.IsProduction && !stripeEvent.Livemode)
-                return new(HttpStatusCode.BadRequest, "ok=false\nerror=Test payments cannot grant production licenses");
-            var id = stripeEvent.Data?.Object switch
-            {
-                Stripe.Checkout.Session session => session.Id,
-                Invoice invoice => invoice.Id,
-                _ => null
-            };
-            if (string.IsNullOrWhiteSpace(id))
-                return new(HttpStatusCode.BadRequest, "ok=false\nerror=Missing payment object");
-
-            var isInvoice = stripeEvent.Type == "invoice.paid";
-            using var payment = await FetchAsync(isInvoice ? $"invoices/{Uri.EscapeDataString(id)}" :
-                $"checkout/sessions/{Uri.EscapeDataString(id)}?expand[]=line_items");
-            var data = payment.RootElement;
-            if (RuntimeSecurity.IsProduction && (!data.TryGetProperty("livemode", out var live) || !live.GetBoolean()))
-                return new(HttpStatusCode.BadRequest, "ok=false\nerror=Test payments cannot grant production licenses");
-            if (!isInvoice && String(data, "mode") == "subscription")
-                return new(HttpStatusCode.OK, "ok=true\nignored=true\nreason=Subscription licenses are granted by invoice.paid");
-            if (isInvoice ? String(data, "status") != "paid" : String(data, "payment_status") != "paid")
-                return new(HttpStatusCode.OK, "ok=true\nfulfilled=false\nreason=Payment not confirmed");
-            var lines = data.GetProperty(isInvoice ? "lines" : "line_items");
-            if (lines.TryGetProperty("has_more", out var more) && more.GetBoolean())
-                throw new InvalidOperationException("Paginated purchases are not supported; no license was issued.");
-            var items = lines.GetProperty("data").EnumerateArray().ToArray();
-            if (items.Length != 1 || !items[0].TryGetProperty("quantity", out var quantity) || quantity.GetInt32() != 1)
-                throw new InvalidOperationException("Expected exactly one license plan with quantity one.");
-            var item = items[0];
-            var priceId = item.TryGetProperty("price", out var legacyPrice) && legacyPrice.ValueKind == JsonValueKind.Object
-                ? String(legacyPrice, "id")
-                : item.GetProperty("pricing").GetProperty("price_details").GetProperty("price").GetString();
-            if (priceId == null || !plans.TryGetValue(priceId, out var plan) || plan.Mode != (isInvoice ? "subscription" : "payment"))
-                throw new InvalidOperationException("Paid price has no matching license plan.");
-            var email = isInvoice ? String(data, "customer_email") :
-                data.TryGetProperty("customer_details", out var details) && details.ValueKind == JsonValueKind.Object ? String(details, "email") : null;
-            if (string.IsNullOrWhiteSpace(email)) throw new InvalidOperationException("Paid customer email is missing.");
-            var expiry = isInvoice
-                ? DateTimeOffset.FromUnixTimeSeconds(item.GetProperty("period").GetProperty("end").GetInt64()).UtcDateTime
-                : DateTimeOffset.FromUnixTimeSeconds(data.GetProperty("created").GetInt64()).UtcDateTime.AddDays(plan.ValidityDays);
-            if (expiry <= DateTime.UtcNow)
-                return new(HttpStatusCode.OK, "ok=true\nfulfilled=false\nreason=Paid entitlement period has expired");
-            var receipt = StoreOnce(id, () =>
-            {
-                var days = Math.Max(1, (int)Math.Ceiling((expiry.Date - DateTime.UtcNow.Date).TotalDays));
-                var key = LicenseKey.Generate(Enum.Parse<LicenseKey.LicenseTier>(plan.Tier, true), email, "", days);
-                return new Receipt(id, stripeEvent.Id, email, key.Key, key.ExpirationDate.Date);
-            });
-            InternalAuditLogger.Info($"Payment fulfilled: payment={id}, event={stripeEvent.Id}");
-            return new(HttpStatusCode.OK, "ok=true\nfulfilled=true");
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException or HttpRequestException or
-            TaskCanceledException or JsonException or KeyNotFoundException or ArgumentException)
-        {
-            // Never acknowledge an uncommitted purchase; Stripe can retry after configuration/storage recovery.
-            InternalAuditLogger.Error($"Stripe fulfillment failed: {ex.GetType().Name}");
-            return new(HttpStatusCode.ServiceUnavailable, "ok=false\nerror=Payment fulfillment unavailable; retry required");
-        }
-    }
+    internal static Task<Outcome> ProcessAsync(Event stripeEvent) =>
+        new PaidFulfillment(CustomerAccounts.Store, new StripeGateway()).ProcessAsync(stripeEvent);
 
     private static string? String(JsonElement value, string property) =>
         value.TryGetProperty(property, out var result) && result.ValueKind == JsonValueKind.String ? result.GetString() : null;

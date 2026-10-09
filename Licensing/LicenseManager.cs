@@ -48,7 +48,6 @@ public class LicenseManager
         _activeLicense = license;
 
         Console.WriteLine("✅ License activated successfully!");
-        Console.WriteLine(license.ToString());
 
         return true;
     }

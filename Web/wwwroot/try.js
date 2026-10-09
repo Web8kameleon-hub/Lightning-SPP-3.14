@@ -1,5 +1,8 @@
 'use strict';
 const byId = id => document.getElementById(id);
+const pdfOnly = byId('tryForm').dataset.product === 'pdf-processor';
+const pdfProfiles = (byId('tryForm').dataset.profiles || '').split(',');
+let beforeUrl;
 function message(id, text, kind = '') { const el = byId(id); el.textContent = text; el.className = 'message ' + kind; }
 function formatBytes(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -9,24 +12,35 @@ function formatBytes(bytes) {
 
 byId('tryForm').addEventListener('submit', async (event) => {
   event.preventDefault();
+  byId('results').hidden = true;
+  byId('downloadLink').removeAttribute('href');
   const fileInput = byId('fileInput');
   const file = fileInput.files[0];
   if (!file) { message('tryStatus', 'Choose a document or image file first.', 'error'); return; }
   if (file.size > 8 * 1024 * 1024) { message('tryStatus', 'File is larger than 8 MB. Choose a smaller file.', 'error'); return; }
+  if (pdfOnly && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+    message('tryStatus', 'Choose a PDF file for PDF Processor.', 'error'); return;
+  }
+  const contentType = pdfOnly ? 'application/pdf' : file.type;
 
   const profile = byId('profileSelect').value;
+  if (pdfOnly && !pdfProfiles.includes(profile)) {
+    message('tryStatus', 'This profile is not available in PDF Processor.', 'error'); return;
+  }
   const button = event.currentTarget.querySelector('button');
   const oldLabel = button.textContent;
   button.disabled = true; button.textContent = 'Processing…';
-  message('tryStatus', file.type === 'application/pdf' ? 'PDF received. Validating and processing all pages (maximum 32)…' : 'Image received. Running the real Scan and Process pipeline…');
+  fileInput.disabled = true; byId('profileSelect').disabled = true;
+  message('tryStatus', contentType === 'application/pdf' ? 'Submitting PDF for validation and processing of all pages (maximum 32). Waiting for the server result…' : 'Submitting image to the Scan and Process pipeline. Waiting for the server result…');
   byId('results').hidden = true;
+  byId('downloadLink').removeAttribute('href');
 
   try {
     const response = await fetch('/api/try/process', {
       method: 'POST',
-      headers: { 'Content-Type': file.type, 'X-Stigma-Profile': profile },
+      headers: { 'Content-Type': contentType, 'X-Stigma-Profile': profile },
       body: file,
-      signal: AbortSignal.timeout(file.type === 'application/pdf' ? 2100000 : 30000)
+      signal: AbortSignal.timeout(contentType === 'application/pdf' ? 2100000 : 30000)
     });
 
     const data = await response.json();
@@ -35,6 +49,18 @@ byId('tryForm').addEventListener('submit', async (event) => {
     }
 
     const isPdf = data.inputType === 'pdf';
+    if (data.profile !== profile || (pdfOnly && !isPdf)) throw new Error('The server returned an unexpected processing result.');
+    if (isPdf) {
+      if (data.outputMimeType !== 'application/pdf' || data.outputFileExtension !== '.pdf' ||
+          !Number.isInteger(data.totalPages) || data.totalPages < 1 || data.totalPages > 32 ||
+          typeof data.outputPdfBase64 !== 'string' || !atob(data.outputPdfBase64).startsWith('%PDF-') ||
+          atob(data.outputPdfBase64).length !== data.afterBytes) {
+        throw new Error('The processed PDF output is missing or invalid.');
+      }
+    }
+    if (typeof data.afterImageBase64 !== 'string' || !atob(data.afterImageBase64).startsWith('\x89PNG\r\n\x1a\n')) {
+      throw new Error('The processed page preview is missing or invalid.');
+    }
     const beforeImage = byId('beforeImage');
     const beforeInfo = byId('beforeDocumentInfo');
     if (isPdf) {
@@ -43,7 +69,8 @@ byId('tryForm').addEventListener('submit', async (event) => {
       beforeInfo.hidden = false;
       beforeInfo.textContent = `PDF document • all ${data.totalPages} page${data.totalPages === 1 ? '' : 's'} processed • page 1 preview`;
     } else {
-      beforeImage.src = URL.createObjectURL(file);
+      if (beforeUrl) URL.revokeObjectURL(beforeUrl);
+      beforeImage.src = beforeUrl = URL.createObjectURL(file);
       beforeImage.hidden = false;
       beforeInfo.hidden = true;
       beforeInfo.textContent = '';
@@ -65,7 +92,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
     byId('metaProcessTime').textContent = data.processTimeMs + ' ms';
     byId('metaTotalTime').textContent = data.totalTimeMs + ' ms';
     byId('metaOriginalSize').textContent = formatBytes(data.originalBytes);
-    byId('metaCompressedSize').textContent = formatBytes(data.compressedBytes);
+    byId('metaCompressedSize').textContent = formatBytes(data.afterBytes);
     byId('metaCompression').textContent = data.compressionPercent + '%';
 
     byId('results').hidden = false;
@@ -73,6 +100,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
   } catch (error) {
     message('tryStatus', error.message, 'error');
   } finally {
+    fileInput.disabled = false; byId('profileSelect').disabled = false;
     button.disabled = false; button.textContent = oldLabel;
   }
 });

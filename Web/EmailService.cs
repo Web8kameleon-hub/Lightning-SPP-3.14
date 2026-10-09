@@ -24,6 +24,9 @@ internal static class EmailService
         string tier,
         string licenseKey,
         DateTime expirationUtc)
+        => await TrySendEmailAsync(toEmail, "Your Lightning SPP license key", BuildBody(tier, licenseKey, expirationUtc));
+
+    internal static async Task<(bool Sent, string Error)> TrySendEmailAsync(string toEmail, string subject, string text)
     {
         if (string.IsNullOrWhiteSpace(toEmail))
         {
@@ -37,16 +40,17 @@ internal static class EmailService
 
         if (!string.IsNullOrWhiteSpace(resendApiKey))
         {
-            return await SendViaResendApiAsync(resendApiKey, toEmail, tier, licenseKey, expirationUtc);
+            return await SendViaResendApiAsync(resendApiKey, toEmail, subject, text);
         }
 
-        return await SendViaSmtpAsync(toEmail, tier, licenseKey, expirationUtc);
+        return await SendViaSmtpAsync(toEmail, subject, text);
     }
 
     private static async Task<(bool Sent, string Error)> SendViaResendApiAsync(
-        string apiKey, string toEmail, string tier, string licenseKey, DateTime expirationUtc)
+        string apiKey, string toEmail, string subject, string text)
     {
-        var from = Environment.GetEnvironmentVariable("SMTP_FROM") ?? "Lightning SPP <onboarding@resend.dev>";
+        var from = Environment.GetEnvironmentVariable("SMTP_FROM");
+        if (string.IsNullOrWhiteSpace(from)) return (false, "Sender address is not configured.");
 
         try
         {
@@ -56,28 +60,27 @@ internal static class EmailService
             {
                 from,
                 to = new[] { toEmail },
-                subject = "Your Lightning SPP license key",
-                text = BuildBody(tier, licenseKey, expirationUtc)
+                subject,
+                text
             });
 
             using var response = await HttpClient.SendAsync(request);
-            var body = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
             {
                 return (true, string.Empty);
             }
 
-            return (false, $"Resend API returned {(int)response.StatusCode}: {body}");
+            return (false, $"Email provider rejected the request ({(int)response.StatusCode}).");
         }
         catch (Exception ex)
         {
-            return (false, ex.Message);
+            return (false, ex.GetType().Name);
         }
     }
 
     private static async Task<(bool Sent, string Error)> SendViaSmtpAsync(
-        string toEmail, string tier, string licenseKey, DateTime expirationUtc)
+        string toEmail, string subject, string text)
     {
         var host = Environment.GetEnvironmentVariable("SMTP_HOST");
         var user = Environment.GetEnvironmentVariable("SMTP_USER");
@@ -96,6 +99,7 @@ internal static class EmailService
         var port = int.TryParse(portText, out var parsedPort) ? parsedPort : 587;
         var useSslText = Environment.GetEnvironmentVariable("SMTP_USE_SSL");
         var useSsl = !bool.TryParse(useSslText, out var parsedSsl) || parsedSsl;
+        if (RuntimeSecurity.IsProduction && !useSsl) return (false, "Production SMTP requires TLS.");
 
         try
         {
@@ -107,8 +111,8 @@ internal static class EmailService
 
             using var message = new MailMessage(from, toEmail)
             {
-                Subject = "Your Lightning SPP license key",
-                Body = BuildBody(tier, licenseKey, expirationUtc),
+                Subject = subject,
+                Body = text,
                 IsBodyHtml = false
             };
 
@@ -117,7 +121,7 @@ internal static class EmailService
         }
         catch (Exception ex)
         {
-            return (false, ex.Message);
+            return (false, ex.GetType().Name);
         }
     }
 
@@ -130,9 +134,9 @@ internal static class EmailService
         $"Valid until: {expirationUtc:yyyy-MM-dd}",
         "",
         "To activate:",
-        "1. Open your workspace dashboard: https://scanprocessprint.com/dashboard",
-        "2. Paste the license key under \"Activate a license\".",
-        "3. Click \"Activate license\". No administrator access code is needed.",
+        "1. Sign in to your verified customer account: https://scanprocessprint.com/account",
+        "2. Open your paid entitlement and select Activate.",
+        "3. Your customer dashboard records activation and provides the signed license key.",
         "",
         "Need help? Reply to this email or contact clisonix@pm.me.",
         "",
