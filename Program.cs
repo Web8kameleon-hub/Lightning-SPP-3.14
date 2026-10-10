@@ -70,6 +70,9 @@ internal class Program
             case "api":
                 await StartApiServer(args);
                 break;
+            case "audit-imagesharp":
+                Environment.ExitCode = await wwwmmm.Tools.ImageSharpAuditCommand.RunAsync(args);
+                break;
             case "scan":
                 await QuickScan(args);
                 break;
@@ -313,6 +316,8 @@ internal class Program
         Console.WriteLine("  examples                - Run usage examples");
         Console.WriteLine("  serve [port]            - Start REST API + Web Dashboard");
         Console.WriteLine("  bridge <operation>      - Excel Core / Excel service / OS-CLX NodeDB adapters (see Docs/BRIDGES.md)");
+        Console.WriteLine("  audit-imagesharp [root] [report.md]");
+        Console.WriteLine("                         - Scan the repo for real SixLabors.ImageSharp usage");
         Console.WriteLine("\nTechnologies:");
         Console.WriteLine("  • TideWave - Balanced scanning");
         Console.WriteLine("  • CLX - Core processing");
