@@ -1,5 +1,6 @@
 using wwwmmm.Services;
 using wwwmmm.Services.Implementation;
+using wwwmmm.Services.Imaging;
 
 namespace wwwmmm.Configuration;
 
@@ -17,6 +18,13 @@ public class LightningConfiguration
     public bool EnablePerformanceLogging { get; set; } = true;
     public bool EnableMemoryOptimization { get; set; } = true;
     public StigmaExecutionProfile StigmaProfile { get; set; } = StigmaProfiles.FromEnvironment();
+
+    /// <summary>
+    /// Hybrid image engine selection (L=Skia, R=ImageSharp). Defaults to Skia so
+    /// existing behavior is unchanged; set WWWMMM_IMAGE_ENGINE=ImageSharp to switch
+    /// explicitly. No silent fallback between engines.
+    /// </summary>
+    public ImageEngine ImageEngine { get; set; } = ImageEngineSelection.FromEnvironment();
 
     public static LightningConfiguration Default => new();
 
@@ -49,7 +57,11 @@ public static class ServiceFactory
         _config = configuration;
     }
 
-    public static IScanService CreateScanService() => new RealImageProcessor();
+    public static IScanService CreateScanService() =>
+        new ImageEngineAdapter(
+            new RealImageProcessor(),
+            new FastScanService(Microsoft.Extensions.Logging.Abstractions.NullLogger<FastScanService>.Instance))
+        .Get(_config.ImageEngine);
 
     public static IProcessingService CreateProcessingService() => new RealAIProcessor();
 
