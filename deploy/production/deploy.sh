@@ -171,8 +171,16 @@ cmd_deploy() {
   [ "$release" != "$ACTIVE_RELEASE_ID" ] || die "release $release is already active"
 
   log "building scanprocessprint:$release from $REPO_DIR"
-  docker build --secret "id=sixlabors_license,src=${SIXLABORS_LICENSE_FILE:-$STATE_DIR/sixlabors.lic}" \
+  # Build-only secret: never add this file to the app's env_file.
+  local build_env="${SIXLABORS_BUILD_ENV_FILE:-$STATE_DIR/.env.build}"
+  [ -f "$build_env" ] || die "Private build environment file is missing"
+  set -a
+  source "$build_env"
+  set +a
+  [ -n "${SIXLABORS_LICENSE:-}" ] || die "SIXLABORS_LICENSE is missing"
+  docker build --secret "id=sixlabors_license,env=SIXLABORS_LICENSE" \
     -t "scanprocessprint:$release" "$REPO_DIR"
+  unset SIXLABORS_LICENSE
 
   # Shared persistence is independent of release lifecycle and never exposed on edge.
   docker build -t "scanprocessprint-longo:$release" "$REPO_DIR/Persistence/Longo"

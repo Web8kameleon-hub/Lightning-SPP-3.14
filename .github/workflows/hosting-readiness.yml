@@ -31,6 +31,10 @@ concurrency:
   group: hosting-readiness-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+  SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE }}
+
 jobs:
   application:
     name: Application & Tests
@@ -43,9 +47,6 @@ jobs:
           SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
         run: |
           test -n "$SIXLABORS_LICENSE"
-          umask 077
-          printf '%s' "$SIXLABORS_LICENSE" > "$RUNNER_TEMP/sixlabors.lic"
-          echo "SixLaborsLicenseFile=$RUNNER_TEMP/sixlabors.lic" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -70,12 +71,9 @@ jobs:
           SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
         run: |
           test -n "$SIXLABORS_LICENSE"
-          umask 077
-          printf '%s' "$SIXLABORS_LICENSE" > "$RUNNER_TEMP/sixlabors.lic"
-          echo "SixLaborsLicenseFile=$RUNNER_TEMP/sixlabors.lic" >> "$GITHUB_ENV"
       - run: cp .env.production.example .env.production
       - run: docker compose -f docker-compose.production.yml config --quiet
-      - run: docker build --secret "id=sixlabors_license,src=$RUNNER_TEMP/sixlabors.lic" -t lightning-spp:${{ github.sha }} .
+      - run: docker build --secret "id=sixlabors_license,env=SIXLABORS_LICENSE" -t lightning-spp:${{ github.sha }} .
       - run: docker run --rm lightning-spp:${{ github.sha }} --help
       - run: docker run --rm lightning-spp:${{ github.sha }} test
       - run: docker run --rm lightning-spp:${{ github.sha }} real

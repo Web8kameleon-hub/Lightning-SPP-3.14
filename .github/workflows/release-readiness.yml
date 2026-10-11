@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+env:
+  SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+  SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE }}
+
 jobs:
   evidence:
     name: Code, tests, docs and customer UI
@@ -23,9 +27,6 @@ jobs:
           SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
         run: |
           test -n "$SIXLABORS_LICENSE"
-          umask 077
-          printf '%s' "$SIXLABORS_LICENSE" > "$RUNNER_TEMP/sixlabors.lic"
-          echo "SixLaborsLicenseFile=$RUNNER_TEMP/sixlabors.lic" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

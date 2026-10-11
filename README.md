@@ -100,6 +100,12 @@ Vlerat e pavlefshme refuzohen gjatë nisjes, që konfigurimi të mos dështojë 
 
 ## Instalimi i shpejtë
 
+Build-i kërkon licencën private SixLabors në mjedis. Në PowerShell, vendos
+`SIXLABORS_LICENSE` në `.env.build` lokal (nuk versionohet), pastaj ekzekuto
+`. ./Scripts/Load-BuildEnvironment.ps1` në të njëjtën seancë para komandave më poshtë.
+Për Docker përdor `--secret id=sixlabors_license,env=SIXLABORS_LICENSE`;
+vlera nuk duhet vendosur në Dockerfile `ENV`/`ARG` ose në konfigurimin runtime.
+
 ```bash
 dotnet build
 dotnet run

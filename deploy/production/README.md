@@ -101,7 +101,7 @@ canonical Stripe invoice and reuses any stored entitlement on repeated requests.
 Provider acceptance does not establish inbox delivery.
 
 The Docker build requires the private Six Labors license at
-`/opt/scanprocessprint/sixlabors.lic` (0600), passed through a BuildKit secret.
+`/opt/scanprocessprint/.env.build` (0600), containing `SIXLABORS_LICENSE` and loaded only by the build/deployment process. Docker receives it through an environment-backed BuildKit secret; MSBuild reads `SixLaborsLicenseKey` only during compilation. Never add `.env.build` to the application runtime `env_file`.
 GitHub Actions uses the `SIXLABORS_LICENSE` repository secret. Neither the license
 nor account passwords/cookie files belong in the image or source control.
 Longo must be started with `persistence.yml` before the release; its host data
