@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+env:
+  SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+  SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE }}
+
 jobs:
   evidence:
     name: Code, tests, docs and customer UI
@@ -23,9 +27,6 @@ jobs:
           SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
         run: |
           test -n "$SIXLABORS_LICENSE"
-          umask 077
-          printf '%s' "$SIXLABORS_LICENSE" > "$RUNNER_TEMP/sixlabors.lic"
-          echo "SixLaborsLicenseFile=$RUNNER_TEMP/sixlabors.lic" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -46,20 +47,7 @@ jobs:
       - name: Run performance gates
         run: dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release --no-build --filter FullyQualifiedName~PerformanceGateTests
       - name: Validate release companions
-        shell: bash
-        run: |
-          test -s Docs/BENCHMARK_PROTOCOL.md
-          test -s Docs/EDGE_CASES_AND_NEGATIVE_TESTS.md
-          test -s Docs/RELEASE_EVIDENCE.md
-          test -s Web/wwwroot/landing.html
-          test -s Web/wwwroot/pricing.html
-          # Pricing moved off the landing page onto its own indexable /pricing page
-          # (see "Add indexable product pages for SEO" and "Allow self-service license
-          # activation without admin token"); verify the real, live Stripe checkout
-          # links and current prices there instead of stale placeholder copy.
-          grep -q "buy.stripe.com" Web/wwwroot/pricing.html
-          grep -q "€49.99" Web/wwwroot/pricing.html
-          grep -q "Counter-tests" Docs/EDGE_CASES_AND_NEGATIVE_TESTS.md
+        run: python3 Scripts/validate-release-companions.py
       - name: Block unsubstantiated customer claims
         shell: bash
         run: |

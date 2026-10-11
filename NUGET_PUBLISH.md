@@ -16,10 +16,11 @@ written agreement; an activation key alone does not grant it.
 ## Build and inspect
 
 Configure a valid private Six Labors license using the dependency's supported
-license-file configuration. Keep that license, API keys and credentials outside
+environment-variable configuration (`SixLaborsLicenseKey`). Keep that license, API keys and credentials outside
 the repository and package.
 
 ```powershell
+. ./Scripts/Load-BuildEnvironment.ps1
 dotnet build wwwmmm.csproj -c Release
 dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release
 dotnet pack wwwmmm.csproj -c Release --no-build -o nupkg

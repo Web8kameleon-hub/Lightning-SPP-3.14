@@ -39,6 +39,8 @@ on:
         default: false
 
 env:
+  SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+  SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE }}
   DOTNET_VERSION: '10.0.x'
   DOCKER_IMAGE_NAME: lightning-spp
 
@@ -53,9 +55,6 @@ jobs:
         SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
       run: |
         test -n "$SIXLABORS_LICENSE"
-        umask 077
-        printf '%s' "$SIXLABORS_LICENSE" > "$RUNNER_TEMP/sixlabors.lic"
-        echo "SixLaborsLicenseFile=$RUNNER_TEMP/sixlabors.lic" >> "$GITHUB_ENV"
 
     - name: Setup Java for real Longo tests
       uses: actions/setup-java@v4
@@ -133,8 +132,6 @@ jobs:
         SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
       run: |
         test -n "$SIXLABORS_LICENSE"
-        umask 077
-        printf '%s' "$SIXLABORS_LICENSE" > "$RUNNER_TEMP/sixlabors.lic"
 
     - name: Checkout code
       uses: actions/checkout@v4
@@ -144,7 +141,7 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build --secret "id=sixlabors_license,src=$RUNNER_TEMP/sixlabors.lic" \
+        docker build --secret "id=sixlabors_license,env=SIXLABORS_LICENSE" \
           -t ${{ env.DOCKER_IMAGE_NAME }}:latest -t ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} \
           --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
           --label org.opencontainers.image.revision=${{ github.sha }} .
@@ -254,9 +251,6 @@ jobs:
         SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
       run: |
         test -n "$SIXLABORS_LICENSE"
-        umask 077
-        printf '%s' "$SIXLABORS_LICENSE" > "$RUNNER_TEMP/sixlabors.lic"
-        echo "SixLaborsLicenseFile=$RUNNER_TEMP/sixlabors.lic" >> "$GITHUB_ENV"
 
     - name: Checkout code
       uses: actions/checkout@v4

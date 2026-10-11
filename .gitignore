@@ -10,6 +10,7 @@
 *.userosscache
 *.sln.docstates
 sixlabors.lic
+.env.build
 cookies.txt
 register-body.json
 
@@ -424,3 +425,5 @@ Lightning-SPP-3.14/
 !.env.example
 artifacts/
 !.env.production.example
+
+!.env.build.example
