@@ -9,6 +9,9 @@
 *.user
 *.userosscache
 *.sln.docstates
+sixlabors.lic
+cookies.txt
+register-body.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

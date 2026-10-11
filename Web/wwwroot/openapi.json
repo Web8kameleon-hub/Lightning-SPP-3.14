@@ -2,18 +2,267 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lightning SPP API",
-    "version": "3.14.0",
-    "description": "Local API for Lightning SPP licensing and health endpoints"
+    "version": "3.14.1",
+    "description": "Lightning SPP HTTP API: runtime health, workspace licensing, customer accounts, Stripe fulfillment and real image/PDF processing. SDK processing, Linux CUPS/SANE devices and private Longo storage are separate interfaces. Account POST requests require same-origin JSON and a CSRF token; email delivery depends on the configured provider."
   },
   "servers": [
     {
-      "url": "http://localhost:11400",
-      "description": "Local server"
+      "url": "https://scanprocessprint.com",
+      "description": "Production (operations affect live accounts and licenses)"
+    },
+    {
+      "url": "http://localhost:13080",
+      "description": "Local server: dotnet run -- api 13080"
     }
   ],
   "components": {
     "securitySchemes": {
-      "bearerAuth": { "type": "http", "scheme": "bearer" }
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "customerSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-LightningCustomer",
+        "description": "Production session cookie obtained by verified-email login. Local non-production cookie name: LightningCustomer. Browser sends it automatically."
+      },
+      "csrfToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "description": "Request token from GET /api/account/csrf, with its matching CSRF cookie. Refresh after login/logout. Required on every account POST."
+      },
+      "stripeSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Stripe-Signature",
+        "description": "Stripe signature over the unmodified raw request body; not an administrator token."
+      }
+    },
+    "schemas": {
+      "AccountMessage": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "AccountError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "CsrfToken": {
+        "type": "object",
+        "properties": {
+          "csrfToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrfToken"
+        ]
+      },
+      "Entitlement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string"
+          },
+          "expires": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unix timestamp (seconds)"
+          },
+          "subscriptionStatus": {
+            "type": "string"
+          },
+          "emailState": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "PAST_DUE",
+              "CANCELED",
+              "EXPIRED",
+              "FULFILLMENT_FAILED",
+              "PROVISIONING",
+              "ACTIVE",
+              "PAYMENT_CONFIRMED"
+            ]
+          },
+          "activated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "csrfToken": {
+            "type": "string"
+          },
+          "entitlements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Entitlement"
+            }
+          },
+          "plans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "priceId": {
+                  "type": "string"
+                },
+                "tier": {
+                  "type": "string"
+                },
+                "mode": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "pdfDemoRoute": {
+            "type": "string"
+          }
+        }
+      },
+      "CustomerLicense": {
+        "type": "object",
+        "properties": {
+          "licenseKey": {
+            "type": "string"
+          },
+          "expires": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unix timestamp (seconds)"
+          }
+        }
+      },
+      "StripeRedirect": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "ProcessingError": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "ProcessedDocument": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "profile": {
+            "type": "string"
+          },
+          "inputType": {
+            "type": "string",
+            "enum": [
+              "image",
+              "pdf"
+            ]
+          },
+          "page": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "scanTimeMs": {
+            "type": "number"
+          },
+          "processTimeMs": {
+            "type": "number"
+          },
+          "totalTimeMs": {
+            "type": "number"
+          },
+          "engine": {
+            "type": "string"
+          },
+          "originalBytes": {
+            "type": "integer"
+          },
+          "afterBytes": {
+            "type": "integer"
+          },
+          "compressedBytes": {
+            "type": "integer"
+          },
+          "compressionPercent": {
+            "type": "number",
+            "description": "Measured byte change; may be negative when output grows."
+          },
+          "afterImageBase64": {
+            "type": "string",
+            "format": "byte"
+          },
+          "outputMimeType": {
+            "type": "string"
+          },
+          "outputFileExtension": {
+            "type": "string"
+          },
+          "outputPdfBase64": {
+            "type": "string",
+            "format": "byte",
+            "description": "PDF inputs only: complete processed PDF."
+          },
+          "outputArtifactBase64": {
+            "type": "string",
+            "format": "byte",
+            "description": "Image inputs only: compressed Hybrid artifact."
+          },
+          "outputArtifactMimeType": {
+            "type": "string"
+          },
+          "outputArtifactFileExtension": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "paths": {
@@ -30,8 +279,32 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or storage failure",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
-        }
+        },
+        "tags": [
+          "Runtime"
+        ],
+        "operationId": "health_get"
       }
     },
     "/api/metrics": {
@@ -47,8 +320,32 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or storage failure",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
-        }
+        },
+        "tags": [
+          "Runtime"
+        ],
+        "operationId": "metrics_get"
       }
     },
     "/api/alerts": {
@@ -64,8 +361,32 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or storage failure",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
-        }
+        },
+        "tags": [
+          "Runtime"
+        ],
+        "operationId": "alerts_get"
       }
     },
     "/api/stigma/schema": {
@@ -81,8 +402,32 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or storage failure",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
-        }
+        },
+        "tags": [
+          "Runtime"
+        ],
+        "operationId": "stigma_schema_get"
       }
     },
     "/api/license/status": {
@@ -98,14 +443,38 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or storage failure",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
-        }
+        },
+        "tags": [
+          "Workspace licenses"
+        ],
+        "operationId": "license_status_get"
       }
     },
     "/api/license/activate": {
       "post": {
         "summary": "Activate a license key",
-        "description": "Self-service. Any valid, signed license key may be activated; no administrator token is required.",
+        "description": "Validates a signed license key and activates the shared workspace license. No administrator token is required. This is distinct from recording a customer device activation through /api/account/activate.",
         "requestBody": {
           "required": true,
           "content": {
@@ -117,25 +486,65 @@
                     "type": "string"
                   }
                 },
-                "required": ["key"]
+                "required": [
+                  "key"
+                ]
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Activated"
+            "description": "Activated",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "400": {
-            "description": "Invalid input or activation failed"
+            "description": "Invalid input or activation failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or storage failure",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
-        }
+        },
+        "tags": [
+          "Workspace licenses"
+        ],
+        "operationId": "license_activate_post"
       }
     },
     "/api/license/issue": {
       "post": {
         "summary": "Issue a new license key",
-        "description": "Requires Authorization: Bearer <LSPP_ADMIN_TOKEN>",
+        "description": "Administrator-only issuance. Does not charge a payment or create a paid customer entitlement. Requires the configured administrator bearer token.",
         "requestBody": {
           "required": true,
           "content": {
@@ -143,12 +552,27 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "email": { "type": "string" },
-                  "company": { "type": "string" },
-                  "tier": { "type": "string", "example": "free" },
-                  "devices": { "type": "integer", "format": "int32" },
-                  "validityDays": { "type": "integer", "format": "int32" },
-                  "useInternalQuantumSecurity": { "type": "boolean" }
+                  "email": {
+                    "type": "string"
+                  },
+                  "company": {
+                    "type": "string"
+                  },
+                  "tier": {
+                    "type": "string",
+                    "example": "free"
+                  },
+                  "devices": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "validityDays": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "useInternalQuantumSecurity": {
+                    "type": "boolean"
+                  }
                 }
               }
             }
@@ -156,9 +580,55 @@
         },
         "responses": {
           "200": {
-            "description": "License issued"
+            "description": "License issued",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or storage failure",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administrator authorization required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
-        }
+        },
+        "tags": [
+          "Workspace licenses"
+        ],
+        "operationId": "license_issue_post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/license/signing-status": {
@@ -177,10 +647,1656 @@
             }
           },
           "401": {
-            "description": "Unauthorized"
+            "description": "Administrator authorization required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or storage failure",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Workspace licenses"
+        ],
+        "operationId": "license_signing-status_get",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/account": {
+      "get": {
+        "operationId": "account_status_get",
+        "summary": "View the signed-in customer account",
+        "tags": [
+          "Customer accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists this customer\u00e2\u20ac\u2122s entitlements and configured Stripe plans. Does not expose other customers or license keys.",
+        "security": [
+          {
+            "customerSession": []
+          }
+        ]
+      }
+    },
+    "/api/account/csrf": {
+      "get": {
+        "operationId": "account_csrf_get",
+        "summary": "Obtain an account CSRF request token",
+        "tags": [
+          "Customer accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CsrfToken"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Sets the CSRF cookie; preserve it with the returned token. Obtain a fresh token after authentication changes."
+      }
+    },
+    "/api/account/register": {
+      "post": {
+        "operationId": "account_register_post",
+        "summary": "Register an account",
+        "tags": [
+          "Customer accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Authentication request limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Registers or retains an existing account. Sends a verification link when needed. Registration does not issue another license. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/login": {
+      "post": {
+        "operationId": "account_login_post",
+        "summary": "Sign in with a verified email",
+        "tags": [
+          "Customer accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Authentication request limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials or unverified account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Successful login sets an eight-hour session cookie. Invalid credentials or an unverified email return 401. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/request-reset": {
+      "post": {
+        "operationId": "account_request_reset_post",
+        "summary": "Request a password reset link",
+        "tags": [
+          "Customer accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Authentication request limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Uniform response does not disclose whether an account exists. A 200 response is not proof of email delivery. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/request-verification": {
+      "post": {
+        "operationId": "account_request_verification_post",
+        "summary": "Request another verification link",
+        "tags": [
+          "Customer accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Authentication request limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Uniform response does not disclose account eligibility or provider delivery. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/verify": {
+      "post": {
+        "operationId": "account_verify_post",
+        "summary": "Consume an email verification token",
+        "tags": [
+          "Customer accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Single-use verification token expires after 24 hours. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/reset": {
+      "post": {
+        "operationId": "account_reset_post",
+        "summary": "Consume a password reset token",
+        "tags": [
+          "Customer accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Single-use reset token expires after one hour. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token",
+                  "password"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/logout": {
+      "post": {
+        "operationId": "account_logout_post",
+        "summary": "End the current session",
+        "tags": [
+          "Customer accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Revokes the current session and clears its cookie. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": [],
+            "customerSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/license": {
+      "post": {
+        "operationId": "account_license_post",
+        "summary": "Retrieve an existing customer license",
+        "tags": [
+          "Customer licenses"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerLicense"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entitlement not owned by the current customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the existing key owned by this customer; never creates a replacement key. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": [],
+            "customerSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "entitlementId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "entitlementId"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/activate": {
+      "post": {
+        "operationId": "account_activate_post",
+        "summary": "Record a customer device activation",
+        "tags": [
+          "Customer licenses"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entitlement not owned by the current customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Activation denied by license, subscription, expiry or device limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          }
+        },
+        "description": "Validates entitlement, signed key and device limit. Does not change the global shared workspace license. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": [],
+            "customerSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "entitlementId": {
+                    "type": "string"
+                  },
+                  "deviceId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "entitlementId",
+                  "deviceId"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/retry-email": {
+      "post": {
+        "operationId": "account_retry_email_post",
+        "summary": "Retry an existing license notification",
+        "tags": [
+          "Customer licenses"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Notification requires retry; existing license is retained",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMessage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entitlement not owned by the current customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Uses the retained key. A 200 response means provider acceptance, not confirmed inbox delivery. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": [],
+            "customerSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "entitlementId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "entitlementId"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/checkout": {
+      "post": {
+        "operationId": "account_checkout_post",
+        "summary": "Create a Stripe checkout session",
+        "tags": [
+          "Customer billing"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StripeRedirect"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires a configured price mapping. Existing subscriptions must use billing management. Returned checkout URL does not imply payment success. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": [],
+            "customerSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "priceId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "priceId"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/billing": {
+      "post": {
+        "operationId": "account_billing_post",
+        "summary": "Open the customer billing portal",
+        "tags": [
+          "Customer billing"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StripeRedirect"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Accounts, storage, billing or email service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON, fields or consumed/expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin, content type or CSRF validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Account body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires a Stripe customer linked to the current account. Send application/json from the configured public origin, retain the CSRF cookie, and supply X-CSRF-Token. Body limit: 16 KiB. An empty body must be sent as {}.",
+        "security": [
+          {
+            "csrfToken": [],
+            "customerSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stripe/recover": {
+      "post": {
+        "operationId": "stripe_recover",
+        "tags": [
+          "Stripe administration"
+        ],
+        "summary": "Recover an existing paid invoice event",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Reads the existing invoice.paid event from Stripe and idempotently fulfills it. No additional charge is taken; notification failure retains the key for retry.",
+        "responses": {
+          "200": {
+            "description": "Event processed or acknowledged",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid event or signature",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body too large",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Processing failure",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fulfillment or notification requires retry",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administrator authorization required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "eventId": {
+                    "type": "string",
+                    "pattern": "^evt_[A-Za-z0-9]{1,100}$"
+                  }
+                },
+                "required": [
+                  "eventId"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stripe/webhook": {
+      "post": {
+        "operationId": "stripe_webhook",
+        "tags": [
+          "Stripe administration"
+        ],
+        "summary": "Receive a signed Stripe event",
+        "security": [
+          {
+            "stripeSignature": []
+          }
+        ],
+        "description": "Stripe server-to-server endpoint. Preserve the raw JSON payload for signature verification. Paid invoice fulfillment retains durable entitlement and receipt state; unsupported events may be acknowledged without issuance.",
+        "responses": {
+          "200": {
+            "description": "Event processed or acknowledged",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid event or signature",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body too large",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rate limit exceeded",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Processing failure",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fulfillment or notification requires retry",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Stripe event object; use the original bytes."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/try/process": {
+      "post": {
+        "operationId": "process_document",
+        "tags": [
+          "Document processing"
+        ],
+        "summary": "Process a real image or PDF",
+        "description": "Public demo. Send raw binary bytes (not multipart), a positive Content-Length and at most 8 MiB. PDFs: at most 32 pages. Images are limited to 8 million decoded pixels. Returns actual measured timings, PNG preview and PDF or compressed image artifact. One demo job runs at a time; rate limits apply.",
+        "parameters": [
+          {
+            "name": "X-Stigma-Profile",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "lightning",
+                "tidewave",
+                "resonance",
+                "nanodecibel"
+              ],
+              "default": "lightning"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/pdf": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/bmp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/tiff": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/gif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Document processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessedDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid size, media type, profile or document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Document could not be validated, rendered or processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected processing failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Another demo job is running; retry shortly",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingError"
+                }
+              }
+            }
           }
         }
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Runtime"
+    },
+    {
+      "name": "Workspace licenses"
+    },
+    {
+      "name": "Customer accounts"
+    },
+    {
+      "name": "Customer licenses"
+    },
+    {
+      "name": "Customer billing"
+    },
+    {
+      "name": "Stripe administration"
+    },
+    {
+      "name": "Document processing"
+    }
+  ]
 }

@@ -272,7 +272,8 @@ public final class JsonCodec {
             }
             String raw = input.substring(start, position);
             try {
-                return decimal ? Double.valueOf(raw) : Long.valueOf(raw);
+                if (decimal) return Double.valueOf(raw);
+                return Long.valueOf(raw);
             } catch (NumberFormatException e) {
                 throw error("Invalid JSON number");
             }

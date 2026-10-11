@@ -3,10 +3,10 @@
 
 [package]
 name = "lightning-spp-universal"
-version = "3.14.0"
+version = "3.14.1"
 description = "Modular scan, process, and print pipeline for .NET 10"
 authors = ["wwwmmm Team", "Clisonix Global", "Web8 Kameleon Hub"]
-license = "MIT"
+license = "Component split: SDK/clients MIT; engine/runtime commercial (see LICENSE)"
 keywords = ["scan", "print", "AI", "processing", "lightning", ".NET", "document-processing"]
 repository = "https://github.com/Web8kameleon-hub/Lightning-SPP-3.14"
 homepage = "https://scanprocessprint.com"
@@ -41,25 +41,7 @@ docker = true
 aot = true
 
 [distribution]
-# Lightning SPP is a .NET/C# codebase. The only real, currently published
-# distribution channel is NuGet. There is no Python, Rust, Node.js, Java or
-# mobile (CocoaPods) source in this repository, so no packages are published
-# to PyPI, crates.io, npm, Maven or CocoaPods. Do not list those channels
-# here until real wrapper/binding projects exist and are published.
-nuget = "LightningSPP.Universal 3.14.0"
-
-[compliance]
-# No regulatory certifications (FDA, CE, ISO, HIPAA, GDPR, SOC 2, GxP, etc.)
-# are claimed for this product. Medical, healthcare or other regulated use
-# requires independent validation and certification by the deploying
-# organization. See README.md "Kufijtë e versionit 3.14" and PRIVACY.md.
-
-[documentation]
-readme = "README.md"
-api_docs = "Docs/API_Documentation.md"
-architecture = "Docs/ARCHITECTURE.md"
-deployment = "Docs/DEPLOYMENT.md"
-examples = "Examples/UniversalExamples.cs"
-version_history = "VERSION.md"
-pricing = "PRICING.md"
-benchmarks = "https://scanprocessprint.com/benchmarks"
+# The project defines a .NET NuGet package. Neither NuGet publication nor binary
+# installer publication was found in the 11 October 2026 distribution audit.
+# Java Longo is a separate private service; it is not a published Maven SDK.
+nuget = "LightningSPP 3.14.1 (not published at audit time)"

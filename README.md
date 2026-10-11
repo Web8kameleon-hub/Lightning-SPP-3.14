@@ -267,7 +267,13 @@ Për konsistencë ndërmjet source, package dhe CLI:
 
 ## Licenca
 
-MIT License. Shih [LICENSE](LICENSE).
+Lightning SPP ndan licencat sipas komponentëve: **SDK/client MIT; motori dhe runtime-i komercial**, sipas [LICENSE](LICENSE).
+
+- `SDK/`, `Examples/`, `Desktop/`, `VSExtension/` dhe përmbajtja origjinale e `Web/wwwroot/` përdorin [MIT](LICENSE-MIT.txt).
+- Motori, shërbimet e përpunimit, serveri dhe Longo përdorin [licencimin komercial](LICENSE-COMMERCIAL.txt), sipas marrëveshjes përkatëse me shkrim. Kontakt: clisonix@pm.me.
+- Paketa aktuale `LightningSPP` përmban të dy grupet; nuk është paketë e motorit vetëm nën MIT.
+- Të drejtat MIT të dhëna më parë për kopjet/versionet e mëparshme nuk revokohen nga kjo politikë. Varësitë ruajnë licencat e tyre.
+- Planet dhe çelësat e produktit përshkruhen te [PRICING.md](PRICING.md); një çelës aktivizimi nuk jep vetvetiu të drejtën e rishpërndarjes së kodit komercial.
 
 ## Kontributet
 

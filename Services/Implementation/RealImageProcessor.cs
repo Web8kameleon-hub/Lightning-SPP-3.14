@@ -154,8 +154,12 @@ public class RealImageProcessor : IScanService
         };
 
         var qualityScale = Math.Clamp(quality / 300f, 0.5f, 4f) * modeMultiplier;
-        var width = Math.Max(64, (int)Math.Round(source.Width * qualityScale));
-        var height = Math.Max(64, (int)Math.Round(source.Height * qualityScale));
+        const long maxOutputPixels = 8_000_000;
+        var maximumScale = Math.Sqrt((double)maxOutputPixels / ((long)source.Width * source.Height));
+        maximumScale = Math.Min(maximumScale, 8192d / Math.Max(source.Width, source.Height));
+        qualityScale = Math.Min(qualityScale, (float)maximumScale);
+        var width = Math.Max(64, (int)Math.Floor(source.Width * qualityScale));
+        var height = Math.Max(64, (int)Math.Floor(source.Height * qualityScale));
 
         var resized = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
         using var canvas = new SKCanvas(resized);
@@ -163,10 +167,10 @@ public class RealImageProcessor : IScanService
         using var paint = new SKPaint
         {
             IsAntialias = true,
-            FilterQuality = SKFilterQuality.High,
             IsDither = true
         };
-        canvas.DrawBitmap(source, new SKRect(0, 0, width, height), paint);
+        canvas.DrawBitmap(source, new SKRect(0, 0, width, height),
+            new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), paint);
         return resized;
     }
 
@@ -192,10 +196,9 @@ public class RealImageProcessor : IScanService
         using var paint = new SKPaint
         {
             IsAntialias = true,
-            FilterQuality = SKFilterQuality.High,
             ColorFilter = SKColorFilter.CreateColorMatrix(matrix)
         };
-        canvas.DrawBitmap(source, 0, 0, paint);
+        canvas.DrawBitmap(source, 0, 0, new SKSamplingOptions(SKFilterMode.Linear), paint);
         return output;
     }
 

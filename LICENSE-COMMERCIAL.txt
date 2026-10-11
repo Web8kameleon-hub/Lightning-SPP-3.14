@@ -1,0 +1,22 @@
+Lightning SPP Commercial License Notice
+
+Copyright holders retain all rights in the components covered by this notice.
+Those components are proprietary. Except for rights already granted under an
+applicable earlier license, no right to use, copy, modify, distribute, sublicense
+or sell those components is granted without an applicable written commercial
+license from the authorized copyright holder or licensor.
+
+A written commercial agreement specifies the licensed components and versions,
+permitted deployment and redistribution, fees and term, and any agreed support,
+warranty or service commitments. Contact ABA GmbH at clisonix@pm.me to obtain
+such an agreement. A product activation key or subscription does not, on its
+own, grant source-code redistribution or sublicensing rights.
+
+This notice does not revoke permissions already granted for earlier copies
+under the MIT License, and does not alter licenses of third-party components.
+MIT-covered components are listed in LICENSE and retain LICENSE-MIT.txt.
+
+Unless an applicable written agreement provides otherwise, these components
+are provided AS IS, without warranties, to the extent permitted by applicable
+law. No support, service-level agreement or certification is promised by this
+notice. Applicable statutory rights are not excluded by this notice.

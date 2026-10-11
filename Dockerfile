@@ -3,7 +3,20 @@ WORKDIR /src
 COPY wwwmmm.csproj ./
 RUN dotnet restore wwwmmm.csproj
 COPY . .
-RUN dotnet publish wwwmmm.csproj -c Release -o /app/publish --no-restore /p:UseAppHost=false
+RUN --mount=type=secret,id=sixlabors_license,required=true \
+    dotnet publish wwwmmm.csproj -c Release -o /app/publish --no-restore \
+    /p:UseAppHost=false /p:SixLaborsLicenseFile=/run/secrets/sixlabors_license
+
+FROM build AS test
+COPY --from=eclipse-temurin:25-jdk /opt/java/openjdk /opt/java/openjdk
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH="/opt/java/openjdk/bin:${PATH}"
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=secret,id=sixlabors_license,required=true \
+    SPP_TEST_NATIVE_DOCUMENTS=1 dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj \
+    -c Release /p:SixLaborsLicenseFile=/run/secrets/sixlabors_license \
+    --logger 'trx;LogFileName=linux-tests.trx' --results-directory /verification
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 USER root

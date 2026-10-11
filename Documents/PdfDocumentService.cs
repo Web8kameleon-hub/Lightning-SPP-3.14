@@ -32,7 +32,7 @@ public sealed class PdfDocumentService
             var height = bitmap.Height * 72f / dpi;
             var canvas = document.BeginPage(width, height);
             canvas.Clear(SKColors.White);
-            canvas.DrawBitmap(bitmap, new SKRect(0, 0, width, height));
+            canvas.DrawBitmap(bitmap, new SKRect(0, 0, width, height), new SKSamplingOptions(SKFilterMode.Linear));
             document.EndPage();
         }
         document.Close();

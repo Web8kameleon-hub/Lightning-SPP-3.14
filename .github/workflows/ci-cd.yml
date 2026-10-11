@@ -48,6 +48,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Configure private Six Labors license
+      env:
+        SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+      run: |
+        test -n "$SIXLABORS_LICENSE"
+        umask 077
+        printf '%s' "$SIXLABORS_LICENSE" > "$RUNNER_TEMP/sixlabors.lic"
+        echo "SixLaborsLicenseFile=$RUNNER_TEMP/sixlabors.lic" >> "$GITHUB_ENV"
+
+    - name: Setup Java for real Longo tests
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '25'
+
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -113,6 +128,14 @@ jobs:
     needs: build-and-test
 
     steps:
+    - name: Configure private Six Labors license
+      env:
+        SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+      run: |
+        test -n "$SIXLABORS_LICENSE"
+        umask 077
+        printf '%s' "$SIXLABORS_LICENSE" > "$RUNNER_TEMP/sixlabors.lic"
+
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -121,7 +144,8 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t ${{ env.DOCKER_IMAGE_NAME }}:latest -t ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} \
+        docker build --secret "id=sixlabors_license,src=$RUNNER_TEMP/sixlabors.lic" \
+          -t ${{ env.DOCKER_IMAGE_NAME }}:latest -t ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }} \
           --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
           --label org.opencontainers.image.revision=${{ github.sha }} .
 
@@ -225,6 +249,15 @@ jobs:
     if: github.event_name == 'release'
 
     steps:
+    - name: Configure private Six Labors license
+      env:
+        SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+      run: |
+        test -n "$SIXLABORS_LICENSE"
+        umask 077
+        printf '%s' "$SIXLABORS_LICENSE" > "$RUNNER_TEMP/sixlabors.lic"
+        echo "SixLaborsLicenseFile=$RUNNER_TEMP/sixlabors.lic" >> "$GITHUB_ENV"
+
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -283,6 +316,8 @@ jobs:
       with:
         context: .
         push: true
+        secrets: |
+          sixlabors_license=${{ secrets.SIXLABORS_LICENSE }}
         tags: |
           ${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
           ${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
@@ -292,7 +327,7 @@ jobs:
         cache-to: type=gha,mode=max
 
   deploy-production:
-    name: Deploy to Production (zero-downtime)
+    name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [build-and-test, docker-build]
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.publish_ghcr)
@@ -318,7 +353,7 @@ jobs:
         done
     # Builds the release container on hel-core-01 itself (deploy.sh runs
     # `docker build` from a server-side checkout), verifies it end-to-end
-    # against its own internal proxy, hot-swaps the shared nginx edge with a
+    # against its own network address, hot-swaps the shared nginx edge with a
     # graceful reload, re-verifies over the public domain, then drains and
     # stops the previous release. See deploy/production/README.md for the
     # one-time host bootstrap this depends on, and deploy/production/deploy.sh

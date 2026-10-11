@@ -30,8 +30,10 @@
     <nav aria-label="Main navigation"><a href="/">Lightning SPP</a> · <a href="/features">SDK features</a> · <a href="/technology">Architecture</a> · <a href="/try">Image demo</a> · <a href="/pricing">Pricing</a></nav>
     <nav aria-label="Breadcrumb"><a href="/">Lightning SPP</a> / <span>API documentation</span></nav>
     <h1>Lightning SPP REST API documentation</h1>
-    <p>Integrate workspace license activation, health checks, Stripe billing and the image processing demo. The interactive reference below shows endpoints, request parameters and response schemas.</p>
+    <p>Explore 25 HTTP operations for runtime health, workspace licensing, customer registration and login, customer licenses, Stripe billing and real image/PDF processing. The interactive reference below shows request parameters, response schemas and authorization requirements.</p>
+    <p>For customer requests, first fetch <code>/api/account/csrf</code> and keep its cookie. Send JSON from this site's origin with the returned token in <code>X-CSRF-Token</code>. Obtain a fresh token after login. Administrator operations require a separate bearer token; Stripe webhooks require Stripe's signature.</p>
     <p><a href="/openapi.json">Download the OpenAPI specification</a>. For the scan, process and output SDK, see the <a href="https://github.com/Web8kameleon-hub/Lightning-SPP-3.14#readme">.NET SDK installation and examples</a>.</p>
+    <p>The SDK's Scan, Process and Output interfaces and Linux CUPS/SANE adapters are separate from these HTTP operations. Longo storage uses a private API and is not exposed through this reference.</p>
   </header>
   <div id="swagger-ui"></div>
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>

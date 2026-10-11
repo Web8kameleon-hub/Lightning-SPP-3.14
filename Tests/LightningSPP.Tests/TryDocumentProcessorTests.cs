@@ -29,6 +29,22 @@ public class TryDocumentProcessorTests
         await Assert.ThrowsAsync<DocumentException>(() => NewProcessor().ProcessAsync(
             "not an image"u8.ToArray(), false, ScanMode.Lightning));
 
+    [Fact]
+    public async Task CompressedImageAbovePixelLimitIsRejectedBeforeProcessing()
+    {
+        using var bitmap = new SKBitmap(4001, 2000);
+        bitmap.Erase(SKColors.White);
+        using var image = SKImage.FromBitmap(bitmap);
+        using var png = image.Encode(SKEncodedImageFormat.Png, 100);
+        Assert.True(png.Size < 8 * 1024 * 1024);
+        var observed = new ObservedProcessor(ServiceFactory.CreateProcessingService());
+        var error = await Assert.ThrowsAsync<DocumentException>(() =>
+            new TryDocumentProcessor(ServiceFactory.CreateScanService(), observed)
+                .ProcessAsync(png.ToArray(), false, ScanMode.Lightning));
+        Assert.Contains("eight million pixels", error.Message);
+        Assert.Empty(observed.Results);
+    }
+
     [Theory]
     [InlineData("malformed")]
     [InlineData("truncated")]

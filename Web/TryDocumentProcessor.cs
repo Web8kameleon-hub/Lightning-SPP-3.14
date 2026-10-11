@@ -19,6 +19,11 @@ internal sealed class TryDocumentProcessor(IScanService scanner, IProcessingServ
     {
         var clock = Stopwatch.StartNew();
         var pdf = new PdfDocumentService();
+        if (!isPdf)
+        {
+            // Bound decoded memory before the scan pipeline allocates image transforms.
+            using var validated = PdfDocumentService.DecodeImage(input);
+        }
         var first = isPdf ? await pdf.RenderPageAsync(input, 1, cancellationToken) : null;
         var totalPages = first?.TotalPages ?? 0;
         if (totalPages > 32)
@@ -51,9 +56,7 @@ internal sealed class TryDocumentProcessor(IScanService scanner, IProcessingServ
             {
                 processed = processed with { ProcessedData = await RestoreHybridImageAsync(artifact, cancellationToken) };
             }
-            catch (Exception ex) when (ex is InvalidDataException ||
-                (ex is InvalidOperationException && ex.TargetSite?.DeclaringType == typeof(BrotliStream) &&
-                 ex.TargetSite.Name == "TryDecompress" && ex.Message == "Decoder ran into invalid data."))
+            catch (InvalidDataException ex)
             {
                 // Preserve decoder details for the endpoint's internal log, never its client response.
                 throw new DocumentException($"Hybrid image restoration failed: {ex}");
@@ -93,9 +96,17 @@ internal sealed class TryDocumentProcessor(IScanService scanner, IProcessingServ
             using var decoder = new BrotliStream(input, CompressionMode.Decompress);
             using var output = new MemoryStream();
             var buffer = new byte[8192];
-            int count;
-            while ((count = await decoder.ReadAsync(buffer, cancellationToken)) > 0)
+            while (true)
             {
+                int count;
+                try { count = await decoder.ReadAsync(buffer, cancellationToken); }
+                catch (InvalidOperationException ex)
+                {
+                    // .NET's Brotli decoder reports invalid data differently across runtimes.
+                    // Classify only the decoder call, never failures from the processing service.
+                    throw new InvalidDataException("Hybrid decoder rejected the stream.", ex);
+                }
+                if (count == 0) break;
                 if (output.Length + count > MaxPageBytes)
                     throw new DocumentException("Processed page exceeds the image size limit.");
                 output.Write(buffer, 0, count);

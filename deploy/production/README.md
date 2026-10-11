@@ -81,17 +81,31 @@ key at `/root/.ssh/spp-repository-read` and GitHub's verified host key at
 Build each committed revision as `scanprocessprint:<commit>`. Set `RELEASE_ID`
 and `LICENSE_HOSTNAME` when starting this Compose project. Preserve the hostname
 of the currently licensed container because persisted license encryption uses it.
-The application and its loopback proxy start alongside the active release.
+The application starts alongside the active release and the edge reaches it directly on port 8080. Configure LSPP_TRUSTED_PROXY_IPS with the current edge IP; keep Longo on the private scanprocessprint_state network.
 
 Before routing traffic, verify health, all static assets, license validity and
 unauthenticated rejection of license issue/activation. Keep the old containers
 running. Back up `/opt/neuroconic/deploy/scanprocessprint.conf`, update its
-`spp_backend` to `scanprocessprint-<commit>:8081`, copy it into the edge container,
+`spp_backend` to `scanprocessprint-<commit>:8080`, copy it into the edge container,
 run `nginx -t`, then gracefully reload Nginx. On failure restore the saved config
 and reload. Mirror the configuration into the edge image with
 `docker compose build web` from `/opt/neuroconic` so future recreation retains it.
 
 Monitor HTTPS before, during and after switching. Do not stop the old release
 until in-flight requests have drained and the new release is verified.
-Stripe API keys are configured, but automated checkout and fulfillment remain
-unfinished; key presence alone does not establish working payments.
+Configure the Stripe destination as `https://scanprocessprint.com/api/stripe/webhook`.
+Subscription licenses are reconciled from `invoice.paid`, persisted in Longo, and
+notified through the configured mail provider. The authenticated recovery endpoint
+`POST /api/stripe/recover` accepts an existing paid invoice event ID; it reads the
+canonical Stripe invoice and reuses any stored entitlement on repeated requests.
+Provider acceptance does not establish inbox delivery.
+
+The Docker build requires the private Six Labors license at
+`/opt/scanprocessprint/sixlabors.lic` (0600), passed through a BuildKit secret.
+GitHub Actions uses the `SIXLABORS_LICENSE` repository secret. Neither the license
+nor account passwords/cookie files belong in the image or source control.
+Longo must be started with `persistence.yml` before the release; its host data
+directory is `/opt/scanprocessprint/longo`, owned by UID 10001 with mode 0700.
+Back up that directory along with application data before persistence changes.
+Rollback retains the shared Longo state and records each release's backend port
+so the earlier 8081 proxy deployment can be restored if needed.

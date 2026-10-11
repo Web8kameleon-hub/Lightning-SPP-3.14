@@ -16,6 +16,8 @@ Web: https://aba-gmbh.de
 
 ## Licensing Models
 
+Lightning SPP uses component-based licensing: SDK/client components are MIT; engine/runtime components require an applicable written commercial agreement. See [LICENSE](LICENSE), [LICENSE-MIT.txt](LICENSE-MIT.txt) and [LICENSE-COMMERCIAL.txt](LICENSE-COMMERCIAL.txt). Existing MIT grants and third-party licenses remain unchanged. The plans below describe product/service access; an activation key does not by itself grant commercial source redistribution rights.
+
 ### 1. Free Tier - Developer Edition
 
 **Price:** FREE
@@ -34,7 +36,7 @@ Web: https://aba-gmbh.de
 - Educational purposes
 - Proof of concept
 
-**Download:** [NuGet Gallery](https://www.nuget.org/packages/LightningSPP.Universal/)
+**Source:** [GitHub repository](https://github.com/Web8kameleon-hub/Lightning-SPP-3.14). A public NuGet package was not found during the 11 October 2026 distribution audit.
 
 ---
 

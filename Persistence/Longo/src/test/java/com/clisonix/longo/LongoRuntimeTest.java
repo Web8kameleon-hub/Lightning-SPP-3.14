@@ -34,6 +34,13 @@ public final class LongoRuntimeTest {
         Object decoded = JsonCodec.parse(source);
         Object roundTrip = JsonCodec.parse(JsonCodec.stringify(decoded));
         check(decoded.equals(roundTrip), "JSON round trip changed the document");
+
+        Object integerValue = JsonCodec.parse("1");
+        Object decimalValue = JsonCodec.parse("1.0");
+        check(integerValue instanceof Long, "Integer JSON values must remain Long, not Double");
+        check(Long.valueOf(1L).equals(integerValue), "Integer JSON value 1 was not preserved as 1");
+        check(decimalValue instanceof Double, "Decimal JSON values must remain Double");
+        check(Double.valueOf(1.0d).equals(decimalValue), "Decimal JSON value 1.0 was not preserved as 1.0");
     }
 
     private static void testDurableStoreAndDuplicateProtection() throws Exception {

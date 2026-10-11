@@ -34,6 +34,25 @@ public class CustomerLifecycleTests : IClassFixture<LongoFixture>
         Assert.Null(store.Login(first.Email,"another long password!")); Assert.NotNull(store.Login(first.Email,Password));
     }
     [Fact]
+    public void RegistrationAndRepeatedPaidEventsReuseTheExistingKey()
+    {
+        var store = new CustomerStore(TempDirectory());
+        var issued = 0;
+        var grant = new CustomerStore.PaidGrant("in_once", "evt_once", "cus_once", "sub_once",
+            "once@example.test", "PayAsYouGo", DateTimeOffset.UtcNow.AddDays(30), "active");
+        var original = store.CommitPaid(grant, () => { issued++; return "test-only-existing-key"; });
+        var user = Verified(store, grant.Email);
+        Assert.Equal(original.LicenseKey, Assert.Single(store.Entitlements(user.Id)).LicenseKey);
+        Assert.Equal(user.Id, store.Register("ONCE@EXAMPLE.TEST", "different long password 123!").Id);
+        var replay = store.CommitPaid(grant with { EventId = "evt_repeated_delivery" },
+            () => { issued++; return "test-only-unexpected-key"; });
+        Assert.Equal(original.LicenseKey, replay.LicenseKey);
+        Assert.Equal(1, issued);
+        Assert.Single(store.Entitlements(user.Id));
+        Assert.Single(store.ReadState().Receipts);
+    }
+
+    [Fact]
     public void TokensAreHashedPurposeBoundExpiringAndResetRevokesAllSessions()
     {
         var clock = new MutableClock(); var store = new CustomerStore(TempDirectory(),clock); var user = Verified(store,"a@example.test");

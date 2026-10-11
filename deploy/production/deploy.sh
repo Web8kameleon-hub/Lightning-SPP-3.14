@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Zero-downtime blue-green deploy for the hel-core-01 production host.
+# Blue-green application deploy for the hel-core-01 production host.
 #
 # Automates the manual runbook described in README.md: build a new release
 # container alongside the currently running one, verify it end-to-end over
-# its own internal proxy, only then hot-swap the shared nginx edge
+# its own network address, only then hot-swap the shared nginx edge
 # (neurosonic-web-1) to point at the new release, and finally drain + stop
 # the old release. The old release is never touched until the new one has
 # passed every check, so a failed deploy leaves production exactly as it
@@ -39,9 +39,9 @@ EDGE_CONTAINER=neurosonic-web-1
 DOMAIN=https://scanprocessprint.com
 
 # Line in $EDGE_CONF that pins the active backend, e.g.:
-#   set $spp_backend scanprocessprint-<sha>:8081;
+#   set $spp_backend scanprocessprint-<sha>:8080;
 # VERIFY this regex matches your real file before relying on this script.
-BACKEND_LINE_REGEX='^(\s*set\s+\$spp_backend\s+)scanprocessprint-[a-zA-Z0-9_-]+:8081;'
+BACKEND_LINE_REGEX='^(\s*set\s+\$spp_backend\s+)scanprocessprint-[a-zA-Z0-9_-]+:808[01];'
 
 HEALTH_RETRIES=10
 HEALTH_INTERVAL=3
@@ -56,6 +56,8 @@ require_state_file() {
   source "$STATE_FILE"
   [ -n "${ACTIVE_RELEASE_ID:-}" ] || die "ACTIVE_RELEASE_ID missing in $STATE_FILE"
   [ -n "${LICENSE_HOSTNAME:-}" ] || die "LICENSE_HOSTNAME missing in $STATE_FILE"
+  ACTIVE_BACKEND_PORT="${ACTIVE_BACKEND_PORT:-8081}"
+  PREVIOUS_BACKEND_PORT="${PREVIOUS_BACKEND_PORT:-8081}"
 }
 
 write_state_file() {
@@ -63,6 +65,8 @@ write_state_file() {
 ACTIVE_RELEASE_ID=$1
 LICENSE_HOSTNAME=$2
 PREVIOUS_RELEASE_ID=$3
+ACTIVE_BACKEND_PORT=${4:-8080}
+PREVIOUS_BACKEND_PORT=${5:-8081}
 EOF
 }
 
@@ -70,9 +74,9 @@ compose_project() { echo "scanprocessprint-$1"; }
 
 # Internal health/sanity checks against one release's own containers,
 # bypassing the shared edge entirely (talks straight to the app over the
-# edge docker network alias scanprocessprint-<release>:8081).
+# edge docker network alias scanprocessprint-<release>:8080).
 verify_release() {
-  local release="$1" backend="scanprocessprint-$1:8081" attempt=1
+  local release="$1" backend="scanprocessprint-$1:${2:-8080}" attempt=1
   while [ "$attempt" -le "$HEALTH_RETRIES" ]; do
     if docker run --rm --network neurosonic_default curlimages/curl:8.10.1 \
         -fsS "http://$backend/api/health" >/dev/null 2>&1; then
@@ -89,7 +93,7 @@ verify_release() {
     -fsS "http://$backend/dashboard" >/dev/null 2>&1 || { log "release $release: /dashboard not reachable"; return 1; }
 
   local path
-  for path in / /features /technology /pricing /benchmarks /try /swagger /robots.txt /sitemap.xml /site.css /try.js; do
+  for path in / /features /technology /pricing /benchmarks /try /pdf /account /swagger /openapi.json /robots.txt /sitemap.xml /site.css /try.js; do
     docker run --rm --network neurosonic_default curlimages/curl:8.10.1 \
       -fsS "http://$backend$path" >/dev/null 2>&1 || { log "release $release: $path not reachable"; return 1; }
   done
@@ -108,11 +112,20 @@ verify_release() {
     -s -o /dev/null -w '%{http_code}' --data 'key=invalid' "http://$backend/api/license/activate") || status="000"
   [ "$status" = "400" ] || { log "release $release: expected 400 from invalid license activation, got $status"; return 1; }
 
+  status=$(docker run --rm --network neurosonic_default curlimages/curl:8.10.1 \
+    -s -o /dev/null -w '%{http_code}' "http://$backend/api/account") || status="000"
+  [ "$status" = "401" ] || { log "release $release: expected 401 from anonymous account request, got $status"; return 1; }
+
+  docker run --rm --network neurosonic_default curlimages/curl:8.10.1 \
+    -fsS "http://$backend/openapi.json" | python3 -c \
+    'import json,sys; s=json.load(sys.stdin); assert len(s["paths"]) == 25; assert "/api/account/login" in s["paths"]; assert "/api/try/process" in s["paths"]' \
+    || { log "release $release: incomplete OpenAPI reference"; return 1; }
+
   log "release $release passed all internal checks"
 }
 
 swap_edge_to() {
-  local release="$1" backup
+  local release="$1" port="${2:-8080}" backup
   backup="$EDGE_CONF.bak.$(date +%Y%m%d%H%M%S)"
   [ -f "$EDGE_CONF" ] || die "$EDGE_CONF not found - cannot swap edge backend"
   cp "$EDGE_CONF" "$backup"
@@ -121,7 +134,7 @@ swap_edge_to() {
   if ! grep -Eq "$BACKEND_LINE_REGEX" "$EDGE_CONF"; then
     die "BACKEND_LINE_REGEX did not match any line in $EDGE_CONF - update the regex, then retry"
   fi
-  sed -i -E "s/$BACKEND_LINE_REGEX/\\1scanprocessprint-$release:8081;/" "$EDGE_CONF"
+  sed -i -E "s/$BACKEND_LINE_REGEX/\\1scanprocessprint-$release:$port;/" "$EDGE_CONF"
 
   docker cp "$EDGE_CONF" "$EDGE_CONTAINER:/etc/nginx/conf.d/scanprocessprint.conf"
   if ! docker exec "$EDGE_CONTAINER" nginx -t; then
@@ -158,7 +171,16 @@ cmd_deploy() {
   [ "$release" != "$ACTIVE_RELEASE_ID" ] || die "release $release is already active"
 
   log "building scanprocessprint:$release from $REPO_DIR"
-  docker build -t "scanprocessprint:$release" "$REPO_DIR"
+  docker build --secret "id=sixlabors_license,src=${SIXLABORS_LICENSE_FILE:-$STATE_DIR/sixlabors.lic}" \
+    -t "scanprocessprint:$release" "$REPO_DIR"
+
+  # Shared persistence is independent of release lifecycle and never exposed on edge.
+  docker build -t "scanprocessprint-longo:$release" "$REPO_DIR/Persistence/Longo"
+  mkdir -p "$STATE_DIR/longo"
+  chown 10001:10001 "$STATE_DIR/longo"
+  chmod 700 "$STATE_DIR/longo"
+  LONGO_RELEASE_ID="$release" docker compose -p scanprocessprint-state \
+    -f "$REPO_DIR/deploy/production/persistence.yml" up -d --wait
 
   log "starting release $release alongside the active release ($ACTIVE_RELEASE_ID)"
   RELEASE_ID="$release" LICENSE_HOSTNAME="$LICENSE_HOSTNAME" \
@@ -174,11 +196,12 @@ cmd_deploy() {
   fi
 
   local old_release="$ACTIVE_RELEASE_ID"
+  local old_port="$ACTIVE_BACKEND_PORT"
   swap_edge_to "$release"
 
   if ! verify_public_domain; then
     log "public domain check failed after swap - swapping edge back to $old_release"
-    swap_edge_to "$old_release"
+    swap_edge_to "$old_release" "$old_port"
     die "deploy aborted after edge swap; rolled back to $old_release automatically"
   fi
 
@@ -196,7 +219,7 @@ cmd_deploy() {
       --env-file "$ENV_FILE" down 2>/dev/null || true
   fi
 
-  write_state_file "$release" "$LICENSE_HOSTNAME" "$old_release"
+  write_state_file "$release" "$LICENSE_HOSTNAME" "$old_release" 8080 "$old_port"
   log "deploy complete: active=$release previous=$old_release (stopped, not removed - use rollback to bring it back fast)"
 }
 
@@ -204,16 +227,20 @@ cmd_rollback() {
   require_state_file
   [ -n "${PREVIOUS_RELEASE_ID:-}" ] || die "no PREVIOUS_RELEASE_ID recorded - nothing to roll back to"
   local target="$PREVIOUS_RELEASE_ID"
+  local target_port="$PREVIOUS_BACKEND_PORT"
 
   log "restarting previous release $target"
   RELEASE_ID="$target" LICENSE_HOSTNAME="$LICENSE_HOSTNAME" \
     docker compose -p "$(compose_project "$target")" -f "$COMPOSE_FILE" \
     --env-file "$ENV_FILE" start
 
-  verify_release "$target" || die "previous release $target is not healthy either - manual intervention required"
+  if [ "$target_port" = 8081 ]; then
+    docker restart "$(compose_project "$target")-proxy-1"
+  fi
+  verify_release "$target" "$target_port" || die "previous release $target is not healthy either - manual intervention required"
 
   local bad_release="$ACTIVE_RELEASE_ID"
-  swap_edge_to "$target"
+  swap_edge_to "$target" "$target_port"
   verify_public_domain || die "public domain still unhealthy after rollback - manual intervention required"
 
   sleep "$DRAIN_SECONDS"
@@ -221,7 +248,7 @@ cmd_rollback() {
     docker compose -p "$(compose_project "$bad_release")" -f "$COMPOSE_FILE" \
     --env-file "$ENV_FILE" stop
 
-  write_state_file "$target" "$LICENSE_HOSTNAME" "$bad_release"
+  write_state_file "$target" "$LICENSE_HOSTNAME" "$bad_release" "$target_port" "$ACTIVE_BACKEND_PORT"
   log "rollback complete: active=$target (previous bad release=$bad_release stopped, kept for inspection)"
 }
 

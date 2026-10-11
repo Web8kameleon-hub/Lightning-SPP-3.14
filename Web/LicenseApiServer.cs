@@ -28,6 +28,7 @@ internal static class LicenseApiServer
     private static readonly TimeSpan TryRateLimitWindow = TimeSpan.FromMinutes(5);
     private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _tryRateLimits = new();
     private const long TryMaxUploadBytes = 8 * 1024 * 1024; // 8 MB
+    private static readonly SemaphoreSlim TryProcessingSlots = new(1, 1);
 
     private static readonly HashSet<string> AllowedTryContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -318,7 +319,7 @@ internal static class LicenseApiServer
             {
                 if (!IsAdminAuthorized(context.Request))
                 { await TextAsync(context, HttpStatusCode.Unauthorized, "ok=false\nerror=Administrator authorization required"); return; }
-                var fields = ParseForm(await ReadBodyAsync(context.Request));
+                var fields = await ReadFormAsync(context.Request);
                 if (!fields.TryGetValue("eventId", out var eventId) || !System.Text.RegularExpressions.Regex.IsMatch(eventId, "^evt_[A-Za-z0-9]{1,100}$"))
                 { await TextAsync(context, HttpStatusCode.BadRequest, "ok=false\nerror=Existing Stripe event ID required"); return; }
                 using var record = await new StripeGateway().GetAsync("events/" + Uri.EscapeDataString(eventId));
@@ -357,7 +358,15 @@ internal static class LicenseApiServer
             }
             if (path == "/api/try/process" && context.Request.HttpMethod == "POST")
             {
-                await HandleTryProcessAsync(context, clientIp);
+                if (!await TryProcessingSlots.WaitAsync(0))
+                {
+                    context.Response.Headers["Retry-After"] = "5";
+                    await JsonAsync(context, HttpStatusCode.ServiceUnavailable,
+                        "{\"ok\":false,\"error\":\"Document processing is busy. Please retry shortly.\"}");
+                    return;
+                }
+                try { await HandleTryProcessAsync(context, clientIp); }
+                finally { TryProcessingSlots.Release(); }
                 return;
             }
 
@@ -785,7 +794,7 @@ internal static class LicenseApiServer
             "true",
             StringComparison.OrdinalIgnoreCase);
 
-        if (trustProxy && remote is not null && IPAddress.IsLoopback(remote))
+        if (trustProxy && remote is not null && IsTrustedProxy(remote))
         {
             var forwarded = request.Headers["X-Forwarded-For"]?.Split(',')[0].Trim();
             if (IPAddress.TryParse(forwarded, out var forwardedIp))
@@ -793,6 +802,16 @@ internal static class LicenseApiServer
         }
 
         return remote?.ToString() ?? "unknown";
+    }
+
+    internal static bool IsTrustedProxy(IPAddress remote)
+    {
+        if (remote.IsIPv4MappedToIPv6) remote = remote.MapToIPv4();
+        if (IPAddress.IsLoopback(remote)) return true;
+        var configured = Environment.GetEnvironmentVariable("LSPP_TRUSTED_PROXY_IPS") ?? string.Empty;
+        return configured.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(value => IPAddress.TryParse(value, out var trusted) &&
+                remote.Equals(trusted.IsIPv4MappedToIPv6 ? trusted.MapToIPv4() : trusted));
     }
 
     private static void ApplyCorsHeaders(HttpListenerContext context)

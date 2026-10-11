@@ -27,5 +27,14 @@ README.md
 Lightning-SPP-3.14/
 artifacts/
 tools/
+!tools/
+tools/*
+!tools/*.cs
+!Tools/
+Tools/*
+!Tools/*.cs
 nupkg/
+cookies.txt
+register-body.json
+sixlabors.lic
 **/*.mp4
