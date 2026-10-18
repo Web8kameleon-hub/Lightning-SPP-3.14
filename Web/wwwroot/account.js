@@ -4,12 +4,18 @@ let csrf;
 let linkToken;
 function message(text, error = false) { byId('accountMessage').textContent = text; byId('accountMessage').className = 'message ' + (error ? 'error' : ''); }
 async function request(action, data) {
-  const response = await fetch('/api/account' + action, data ? {
+  let response;
+  try { response = await fetch('/api/account' + action, data ? {
     method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrf},
     body: JSON.stringify(data), signal: AbortSignal.timeout(60000)
-  } : {signal: AbortSignal.timeout(10000)});
+  } : {signal: AbortSignal.timeout(10000)}); }
+  catch (error) {
+    if (error.name === 'TimeoutError' || error.name === 'AbortError')
+      throw new Error('The request timed out. An account or email request may already have been saved. Use Account recovery or refresh before retrying; do not pay again.');
+    throw error;
+  }
   const body = await response.json();
-  if (!response.ok) throw Object.assign(new Error(body.error || body.message || 'Account request failed.'), {status:response.status});
+  if (!response.ok) throw Object.assign(new Error(body.error || body.message || 'Account request failed.'), {status:response.status, code:body.code});
   return body;
 }
 async function refresh() {
@@ -18,6 +24,7 @@ async function refresh() {
   try { account = await request(''); }
   catch (error) {
     byId('customer').hidden = true; byId('anonymous').hidden = false;
+    byId('accountState').hidden = true; byId('accountState').textContent = '';
     byId('entitlements').replaceChildren();
     if (error.status !== 401) throw error;
     return;
@@ -25,17 +32,19 @@ async function refresh() {
   csrf = account.csrfToken;
   byId('customer').hidden = false; byId('anonymous').hidden = true;
   byId('accountEmail').textContent = account.email + ' · email verified';
+  byId('accountState').textContent = 'Account: VERIFIED'; byId('accountState').hidden = false;
   byId('emptyEntitlements').hidden = account.entitlements.length !== 0;
   byId('entitlements').replaceChildren();
   for (const entitlement of account.entitlements) {
     const card = document.createElement('article'); card.className = 'card';
     const title = document.createElement('h3'); title.textContent = entitlement.tier;
-    const status = document.createElement('p'); status.textContent = 'License: ' + entitlement.state + ' · subscription: ' + entitlement.subscriptionStatus;
+    const status = document.createElement('p'); status.textContent = 'License: ' + (entitlement.licenseState || entitlement.state) + ' · subscription: ' + entitlement.subscriptionStatus;
+    const activation = document.createElement('p'); activation.textContent = entitlement.activationRecorded ? 'This account has a registered browser.' : 'Browser registration is optional here. Use your license key to activate installed software.';
     const expiry = document.createElement('p'); expiry.textContent = 'Paid period ends: ' + new Date(entitlement.expires * 1000).toISOString().slice(0,10);
     const email = document.createElement('p'); email.textContent = entitlement.emailState === 'PROVIDER_ACCEPTED' ? 'Notification accepted by the email provider; inbox arrival is not confirmed.' : 'Your existing license is stored here. Use Show license to retrieve it; Retry notification sends the same key.';
     const key = document.createElement('input'); key.readOnly = true; key.setAttribute('aria-label','Your signed license key'); key.autocomplete = 'off';
-    card.append(title,status,expiry,email,key);
-    for (const [label, action] of [['Show license','license'], ['Activate this device','activate'], ['Retry notification','retry-email']]) {
+    card.append(title,status,activation,expiry,email,key);
+    for (const [label, action] of [['Show license','license'], ['Register this browser','activate'], ['Resend existing license','retry-email']]) {
       const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
       button.addEventListener('click', () => busy(button, async () => {
         const payload = {entitlementId:entitlement.id};
@@ -59,12 +68,23 @@ async function refresh() {
 }
 async function busy(button, action) {
   button.disabled = true;
-  try { await action(); } catch (error) { message(error.message,true); }
+  try { await action(); } catch (error) {
+    message(error.message,true);
+    if (error.code === 'email_not_verified') {
+      byId('accountState').textContent = 'Account: UNVERIFIED · Action required: Verify email';
+      byId('accountState').hidden = false;
+      byId('recoveryEmail').value = byId('loginEmail').value.trim().toLowerCase();
+      byId('recoveryAction').value = 'request-verification';
+      byId('loginPassword').value = '';
+      byId('recoveryForm').querySelector('button').focus();
+    }
+  }
   finally { button.disabled = false; }
 }
 function form(id, action, payload, after = async result => message(result.message)) {
   byId(id).addEventListener('submit', event => {
     event.preventDefault();
+    if (id === 'loginForm') { byId('accountState').hidden = true; byId('accountState').textContent = ''; }
     busy(event.currentTarget.querySelector('button'), async () => {
       const result = await request(typeof action === 'function' ? action() : action,payload());
       await after(result);

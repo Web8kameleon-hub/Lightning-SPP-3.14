@@ -104,12 +104,12 @@ internal static class CustomerAccounts
                 if (userId is null) { await Reply(transport, context, 401, new { error = "Sign in to view your account." }); return; }
                 var user = store.FindUser(userId)!;
                 var entitlements = store.Entitlements(userId).Select(e => new { e.Id, e.Tier, e.Expires, e.SubscriptionStatus, e.EmailState,
-                    state = State(e, store.Now), e.Activated });
+                    state = State(e, store.Now), licenseState = LicenseState(e, store.Now), activationRecorded = e.Activated, e.Activated });
                 // Free PDF demo remains free: no commercial product access is fabricated.
                 var availablePlans = new List<object>();
                 try { foreach (var plan in StripeFulfillment.LoadPlans()) availablePlans.Add(new { priceId = plan.Key, tier = plan.Value.Tier, mode = plan.Value.Mode }); }
                 catch (InvalidOperationException) { /* No purchase control when mappings are unavailable. */ }
-                await Reply(transport, context, 200, new { userId, email = user.Email, emailVerified = user.EmailVerified,
+                await Reply(transport, context, 200, new { userId, email = CustomerStore.NormalizeEmail(user.Email), emailVerified = user.EmailVerified, accountState = "VERIFIED",
                     csrfToken = antiforgery.GetAndStoreTokens(context).RequestToken, entitlements, plans = availablePlans,
                     canPurchase = store.CanPurchase(userId), pdfDemoRoute = "/pdf" }); return;
             }
@@ -130,21 +130,23 @@ internal static class CustomerAccounts
             if (route is "/register" or "/login" or "/request-reset" or "/request-verification")
             {
                 if (store.RateLimited("auth-ip:" + clientIp, 20, TimeSpan.FromMinutes(15)) ||
-                    store.RateLimited("auth-email:" + email.ToUpperInvariant(), route == "/login" ? 10 : 3, TimeSpan.FromMinutes(15)))
+                    store.RateLimited("auth-email:" + route + ":" + email.Trim().ToUpperInvariant(), route == "/login" ? 10 : 3, TimeSpan.FromMinutes(15)))
                 { await Reply(transport, context, 429, new { error = "Too many account requests. Try again later." }); return; }
             }
             if (route == "/register")
             {
                 var user = store.Register(email, password);
                 if (!user.EmailVerified && !await AccountEmail(store, user, "verify"))
-                { await Reply(transport, context, 503, new { error = "Verification email unavailable. Your account remains unverified; request another email later." }); return; }
+                { await Reply(transport, context, 503, new { code = "verification_email_unavailable", nextAction = "request-verification", error = "Verification email could not be sent. Your account remains unverified. Request another verification email later or contact support; do not pay again." }); return; }
                 await Reply(transport, context, 200, new { message = "If your account needs verification, check your email before signing in." }); return;
             }
             if (route == "/login")
             {
                 if (password.Length > 128) throw new ArgumentException("Invalid credentials.");
-                var user = store.Login(email, password);
-                if (user is null) { await Reply(transport, context, 401, new { error = "Invalid credentials or unverified account." }); return; }
+                var user = store.CheckPassword(email, password);
+                if (user is null) { await Reply(transport, context, 401, new { code = "invalid_credentials", error = "Email or password is incorrect. Use account recovery if you forgot your password." }); return; }
+                if (!user.EmailVerified)
+                { await Reply(transport, context, 401, new { code = "email_not_verified", accountState = "UNVERIFIED", nextAction = "request-verification", error = "Your email is not verified. Open your verification email or request a new link in Account recovery below." }); return; }
                 var session = store.StartSession(user);
                 await context.SignInAsync(Scheme, new ClaimsPrincipal(new ClaimsIdentity(new[] {
                     new Claim(ClaimTypes.NameIdentifier, user.Id), new Claim("session", session) }, Scheme)),
@@ -162,7 +164,10 @@ internal static class CustomerAccounts
             if (route is "/verify" or "/reset")
             {
                 var ok = store.ConsumeToken(Field("token"), route == "/verify" ? "verify" : "reset", password);
-                await Reply(transport, context, ok ? 200 : 400, new { message = ok ? "Account updated. Sign in to continue." : "The link is invalid, expired or already used." }); return;
+                await Reply(transport, context, ok ? 200 : 400, new { message = ok ?
+                    route == "/verify" ? "Email verified. Sign in with your password." :
+                    "Password reset. Sign in with your new password. If your email is still unverified, request a new verification link in Account recovery." :
+                    "The link is invalid, expired or already used. Request a new link in Account recovery." }); return;
             }
             var ownerId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (ownerId is null) { await Reply(transport, context, 401, new { error = "Sign in first." }); return; }
@@ -228,6 +233,8 @@ internal static class CustomerAccounts
     { "past_due" or "unpaid" => "PAST_DUE", "canceled" => "CANCELED", _ => e.Expires <= now ? "EXPIRED" :
         !LightningSPP.Licensing.LicenseKey.Validate(e.LicenseKey, out var license) || license is null || !license.IsValid() ? "FULFILLMENT_FAILED" :
         e.SubscriptionStatus is not ("active" or "paid") ? "PROVISIONING" : e.Activated ? "ACTIVE" : "PAYMENT_CONFIRMED" };
+    internal static string LicenseState(CustomerStore.Entitlement e, long now) =>
+        State(e, now) is "ACTIVE" or "PAYMENT_CONFIRMED" ? "ACTIVE" : State(e, now);
     private static string StripeUrl(JsonElement value, string hostname)
     {
         var url = String(value, "url");

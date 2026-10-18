@@ -80,6 +80,25 @@ public class CustomerLifecycleTests : IClassFixture<LongoFixture>
         clock.Advance(TimeSpan.FromHours(2)); Assert.False(store.RateLimited("registration",1,TimeSpan.FromHours(1)));
     }
     [Fact]
+    public void ResetBeforeVerificationRequiresANewVerificationLinkAndPreservesThePaidKey()
+    {
+        var store = new CustomerStore(TempDirectory());
+        var user = store.Register("pending@example.test", Password);
+        var entitlement = store.CommitPaid(new("in_pending", "evt_pending", "cus_pending", "sub_pending", user.Email,
+            "PayAsYouGo", DateTimeOffset.UtcNow.AddDays(30), "active"), () => "test-only-existing-key");
+        var verify = store.CreateToken(user, "verify", TimeSpan.FromHours(1));
+        var reset = store.CreateToken(user, "reset", TimeSpan.FromHours(1));
+        const string replacement = "new test-only pending password 456!";
+        Assert.True(store.ConsumeToken(reset, "reset", replacement));
+        Assert.False(store.FindUser(user.Id)!.EmailVerified);
+        Assert.Null(store.Login(user.Email, replacement));
+        Assert.False(store.ConsumeToken(verify, "verify"));
+        var current = store.FindUser(user.Id)!;
+        Assert.True(store.ConsumeToken(store.CreateToken(current, "verify", TimeSpan.FromHours(1)), "verify"));
+        Assert.NotNull(store.Login(user.Email.ToUpperInvariant(), replacement));
+        Assert.Equal(entitlement.LicenseKey, Assert.Single(store.Entitlements(user.Id)).LicenseKey);
+    }
+    [Fact]
     public void PaidCustomerOwnershipCannotBeReassignedToAnotherAccount()
     {
         var store=new CustomerStore(TempDirectory()); var a=Verified(store,"a@example.test"); var b=Verified(store,"b@example.test");
@@ -128,12 +147,15 @@ public class CustomerLifecycleTests : IClassFixture<LongoFixture>
             Assert.Empty(store.Entitlements(a.Id)); Assert.Empty(store.Entitlements(b.Id));
             Assert.True(store.ConsumeToken(store.CreateToken(a,"verify",TimeSpan.FromHours(1)),"verify"));
             Assert.Single(store.Entitlements(a.Id));
+            Assert.Equal("PAYMENT_CONFIRMED", CustomerAccounts.State(store.GetEntitlement(entitlement.Id)!, store.Now));
+            Assert.Equal("ACTIVE", CustomerAccounts.LicenseState(store.GetEntitlement(entitlement.Id)!, store.Now));
             var device=Guid.NewGuid().ToString(); Assert.False(store.Activate(b.Id,entitlement.Id,device));
             Assert.True(store.Activate(a.Id,entitlement.Id,device)); Assert.True(store.Activate(a.Id,entitlement.Id,device));
             Assert.False(store.Activate(a.Id,entitlement.Id,Guid.NewGuid().ToString()));
             Assert.Equal("ACTIVE",CustomerAccounts.State(store.GetEntitlement(entitlement.Id)!,store.Now));
             store.SubscriptionState("sub_fixture","cus_fixture","past_due");
             Assert.False(store.Activate(a.Id,entitlement.Id,device)); Assert.Equal("PAST_DUE",CustomerAccounts.State(store.GetEntitlement(entitlement.Id)!,store.Now));
+            Assert.Equal("PAST_DUE", CustomerAccounts.LicenseState(store.GetEntitlement(entitlement.Id)!, store.Now));
             var invalid=store.GetEntitlement(entitlement.Id)! with {LicenseKey="invalid" ,SubscriptionStatus="active"};
             Assert.Equal("FULFILLMENT_FAILED",CustomerAccounts.State(invalid,store.Now));
         }

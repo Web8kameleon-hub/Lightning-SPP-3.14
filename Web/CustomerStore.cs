@@ -100,7 +100,7 @@ internal sealed class CustomerStore
     {
         if (email.Length > 254 || !System.Net.Mail.MailAddress.TryCreate(email.Trim(), out var address) || address.Address != email.Trim() || !address.Host.Contains('.'))
             throw new ArgumentException("Enter a valid email address.");
-        return address.Address.ToUpperInvariant();
+        return address.Address.ToLowerInvariant();
     }
     internal static void ValidatePassword(string password)
     { if (password.Length is < 12 or > 128) throw new ArgumentException("Use a password between 12 and 128 characters."); }
@@ -114,12 +114,16 @@ internal sealed class CustomerStore
         user = user with { PasswordHash = Passwords.HashPassword(user, password) };
         return Change(s => { var existing = Find(s, email, true); if (existing is not null) return existing; s.Users.Add(user.Id, user); return user; });
     }
-    internal User? Login(string email, string password)
+    internal User? Login(string email, string password) => CheckPassword(email, password) is { EmailVerified: true } user ? user : null;
+
+    // Only a correct password permits the HTTP layer to disclose verification status.
+    // This method never creates a session or grants access to an unverified account.
+    internal User? CheckPassword(string email, string password)
     {
         User? user = null;
         try { user = FindUser(NormalizeEmail(email), true); } catch (ArgumentException) { }
         var check = Passwords.VerifyHashedPassword(user ?? Dummy, user?.PasswordHash ?? DummyHash, password);
-        if (check == PasswordVerificationResult.Failed || user is null || !user.EmailVerified || user.Status != "ACTIVE") return null;
+        if (check == PasswordVerificationResult.Failed || user is null || user.Status != "ACTIVE") return null;
         if (check == PasswordVerificationResult.SuccessRehashNeeded)
         {
             var hash = Passwords.HashPassword(user, password);

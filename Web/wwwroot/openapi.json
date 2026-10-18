@@ -54,6 +54,17 @@
         "properties": {
           "error": {
             "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "Machine-readable error, including invalid_credentials, email_not_verified and verification_email_unavailable."
+          },
+          "accountState": {
+            "type": "string",
+            "description": "UNVERIFIED is disclosed at login only after the correct password is verified."
+          },
+          "nextAction": {
+            "type": "string"
           }
         }
       },
@@ -102,6 +113,13 @@
           },
           "activated": {
             "type": "boolean"
+          },
+          "licenseState": {
+            "type": "string",
+            "description": "Signed-license/entitlement validity independent of browser registration."
+          },
+          "activationRecorded": {
+            "type": "boolean"
           }
         }
       },
@@ -116,6 +134,15 @@
             "format": "email"
           },
           "emailVerified": {
+            "type": "boolean"
+          },
+          "accountState": {
+            "type": "string",
+            "enum": [
+              "VERIFIED"
+            ]
+          },
+          "canPurchase": {
             "type": "boolean"
           },
           "csrfToken": {
@@ -727,7 +754,7 @@
             }
           }
         },
-        "description": "Lists this customer\u00e2\u20ac\u2122s entitlements and configured Stripe plans. Does not expose other customers or license keys.",
+        "description": "Lists this customerâ€™s entitlements and configured Stripe plans. Does not expose other customers or license keys.",
         "security": [
           {
             "customerSession": []
@@ -905,7 +932,7 @@
             }
           },
           "403": {
-            "description": "Origin, content type or CSRF validation failed",
+            "description": "Origin, content type or CSRF validation failed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -935,7 +962,7 @@
             }
           },
           "401": {
-            "description": "Invalid credentials or unverified account",
+            "description": "Login unsuccessful. code=invalid_credentials for incorrect credentials; code=email_not_verified only after the correct password is verified. No customer session is issued.",
             "content": {
               "application/json": {
                 "schema": {
