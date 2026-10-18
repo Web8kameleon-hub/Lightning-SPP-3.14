@@ -20,6 +20,16 @@ internal static class WorkflowApi
         if (remote && Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ALLOW_REMOTE_MODELS") == "true") permissions.Add("network.remote");
         return permissions;
     }
+    /// <summary>Production access requires an explicit operator list of verified emails ("*" opens it to every verified
+    /// account). An unset or empty list in production denies everyone, so enabling the flag alone never exposes the workspace.</summary>
+    internal static bool WorkspaceAllowed(CustomerStore.User? user, string? allowedEmails, bool production)
+    {
+        if (string.IsNullOrWhiteSpace(allowedEmails)) return !production && user is not null;
+        if (user is null || !user.EmailVerified) return false;
+        var entries = allowedEmails.Split([',', ';', ' ', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (entries.Contains("*")) return true;
+        return entries.Any(e => { try { return CustomerStore.NormalizeEmail(e) == user.Email; } catch (ArgumentException) { return false; } });
+    }
     internal static async Task HandleAsync(HttpListenerContext transport)
     {
         transport.Response.Headers["Cache-Control"] = "no-store";
@@ -31,6 +41,8 @@ internal static class WorkflowApi
             { await Reply(transport, 503, new { error = "Workflows are not enabled on this release." }); return; }
             if (transport.Request.HttpMethod is not ("GET" or "POST")) { await Reply(transport, 405, new { error = "GET or POST required." }); return; }
             var auth = await CustomerAccounts.AuthorizeWorkspaceAsync(transport, transport.Request.HttpMethod == "POST");
+            if (!WorkspaceAllowed(CustomerAccounts.Store.FindUser(auth.Owner), Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ALLOWED_EMAILS"), RuntimeSecurity.IsProduction))
+                throw new UnauthorizedAccessException("This account is not enabled for the workspace.");
             var workspace = Workspace(auth.Owner); var models = ModelGateway.FromEnvironment(); var registry = Registry(models); var runner = new WorkflowRunner(registry);
             var route = transport.Request.Url!.AbsolutePath["/api/workflow".Length..].TrimEnd('/');
             if (transport.Request.HttpMethod == "GET")
