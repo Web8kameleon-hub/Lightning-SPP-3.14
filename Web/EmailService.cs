@@ -33,6 +33,11 @@ internal static class EmailService
             return (false, "Recipient email address is missing.");
         }
 
+        // CustomerStore uses case-insensitive, uppercase identity keys. Never send that
+        // storage representation to a provider that compares its test-recipient allowlist
+        // case-sensitively. Delivery uses the same case-insensitive address policy.
+        toEmail = DeliveryAddress(toEmail);
+
         var smtpHost = Environment.GetEnvironmentVariable("SMTP_HOST");
         var isResend = string.Equals(smtpHost, "smtp.resend.com", StringComparison.OrdinalIgnoreCase);
         var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY")
@@ -45,6 +50,8 @@ internal static class EmailService
 
         return await SendViaSmtpAsync(toEmail, subject, text);
     }
+
+    internal static string DeliveryAddress(string address) => address.Trim().ToLowerInvariant();
 
     private static async Task<(bool Sent, string Error)> SendViaResendApiAsync(
         string apiKey, string toEmail, string subject, string text)
