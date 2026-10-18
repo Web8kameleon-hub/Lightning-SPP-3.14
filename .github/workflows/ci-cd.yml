@@ -89,7 +89,7 @@ jobs:
         SPP_TEST_NATIVE_DOCUMENTS: '1'
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends poppler-utils
+        sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
         dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=ci-tests.trx"
 
     - name: Run Lightning SPP Demo

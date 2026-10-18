@@ -124,11 +124,44 @@ internal static class FileTools
         await WorkspaceScope.AtomicWriteAsync(path + ".evidence.json", JsonSerializer.SerializeToUtf8Bytes(new { report = relative, sha256 = WorkflowJson.Hash(bytes), sources }, WorkflowJson.Options), token);
         return new(WorkflowJson.Value(new { path = relative, evidencePath = relative + ".evidence.json", bytes = bytes.Length, sha256 = WorkflowJson.Hash(bytes) }), sources);
     }
+    // SkiaSharp.NativeAssets.Linux.NoDependencies has no fontconfig: family lookups return a glyph-less
+    // typeface and would silently produce a PDF without text. Prefer explicit font files and fail closed.
+    private static readonly string[] ReportFontFiles =
+    [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSansMono.ttf",
+        "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
+        "/System/Library/Fonts/Menlo.ttc",
+        @"C:\Windows\Fonts\consola.ttf",
+    ];
+    private static SkiaSharp.SKTypeface ReportTypeface()
+    {
+        var configured = Environment.GetEnvironmentVariable("LSPP_REPORT_FONT_FILE");
+        var candidates = string.IsNullOrWhiteSpace(configured) ? ReportFontFiles : [configured, .. ReportFontFiles];
+        foreach (var file in candidates.Where(File.Exists))
+        {
+            var typeface = SkiaSharp.SKTypeface.FromFile(file);
+            if (Usable(typeface)) return typeface!;
+            typeface?.Dispose();
+        }
+        var family = SkiaSharp.SKTypeface.FromFamilyName("monospace");
+        if (Usable(family)) return family!;
+        family?.Dispose();
+        throw new IOException("No report font with the required glyphs is available. Install fonts-dejavu-core or set LSPP_REPORT_FONT_FILE.");
+        static bool Usable(SkiaSharp.SKTypeface? typeface)
+        {
+            if (typeface is null || typeface.GlyphCount == 0) return false;
+            using var font = new SkiaSharp.SKFont(typeface);
+            // Probe printable ASCII (JSON structure, digits, Latin) so a real font is required without
+            // rejecting reports that contain scripts the chosen font lacks.
+            return font.ContainsGlyphs(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+        }
+    }
     private static byte[] ReportPdf(string text)
     {
         if (text.Length > 250_000) throw new ArgumentException("Split large PDF reports into source-referenced volumes.");
         using var output = new MemoryStream(); using var document = SkiaSharp.SKDocument.CreatePdf(output) ?? throw new IOException("PDF writer unavailable.");
-        using var typeface = SkiaSharp.SKTypeface.FromFamilyName("monospace") ?? throw new IOException("A report font is required.");
+        using var typeface = ReportTypeface();
         using var font = new SkiaSharp.SKFont(typeface, 10); using var paint = new SkiaSharp.SKPaint { Color = SkiaSharp.SKColors.Black, IsAntialias = true };
         SkiaSharp.SKCanvas? page = null; var row = 0;
         foreach (var line in text.Split('\n').SelectMany(line => line.Length == 0 ? [""] : Enumerable.Range(0, (line.Length + 89) / 90).Select(i => line.Substring(i * 90, Math.Min(90, line.Length - i * 90)))))
