@@ -260,12 +260,16 @@ internal sealed class CustomerStore
     }
     internal string CheckoutNonce(string userId, string priceId) => Change(s =>
     {
-        if (s.Entitlements.Values.Any(e => s.Customers[e.CustomerId].UserId == userId && e.Expires > Now && e.SubscriptionStatus == "active")) throw new InvalidOperationException("An active subscription already exists; use billing management.");
+        if (s.Entitlements.Values.Any(e => s.Customers[e.CustomerId].UserId == userId && BlocksPurchase(e, Now))) throw new InvalidOperationException("An existing entitlement or subscription must be managed from your account; another checkout is not available.");
         var existing = s.Checkouts.GetValueOrDefault(userId);
         if (existing is not null && existing.Created > Now - 23 * 3600)
         { if (existing.PriceId != priceId) throw new InvalidOperationException("Another plan checkout is pending."); return existing.Nonce; }
         var nonce = Guid.NewGuid().ToString("N"); s.Checkouts[userId] = new(priceId, nonce, Now); return nonce;
     });
+    internal bool CanPurchase(string userId) => !Entitlements(userId).Any(e => BlocksPurchase(e, Now));
+    private static bool BlocksPurchase(Entitlement e, long now) =>
+        e.SubscriptionStatus is "active" or "trialing" or "past_due" or "incomplete" or "unpaid" or "paused" ||
+        (e.SubscriptionStatus == "paid" && e.Expires > now);
     internal void RecordCheckout(string userId, string nonce, string sessionId) => Change(s =>
     {
         var checkout = s.Checkouts[userId]; if (checkout.Nonce != nonce || !sessionId.StartsWith("cs_", StringComparison.Ordinal)) throw new InvalidOperationException("Checkout mismatch.");

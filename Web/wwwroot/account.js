@@ -32,7 +32,7 @@ async function refresh() {
     const title = document.createElement('h3'); title.textContent = entitlement.tier;
     const status = document.createElement('p'); status.textContent = 'License: ' + entitlement.state + ' · subscription: ' + entitlement.subscriptionStatus;
     const expiry = document.createElement('p'); expiry.textContent = 'Paid period ends: ' + new Date(entitlement.expires * 1000).toISOString().slice(0,10);
-    const email = document.createElement('p'); email.textContent = entitlement.emailState === 'PROVIDER_ACCEPTED' ? 'Notification accepted by the email provider; inbox arrival is not confirmed.' : 'Notification needs retry. Your license remains stored.';
+    const email = document.createElement('p'); email.textContent = entitlement.emailState === 'PROVIDER_ACCEPTED' ? 'Notification accepted by the email provider; inbox arrival is not confirmed.' : 'Your existing license is stored here. Use Show license to retrieve it; Retry notification sends the same key.';
     const key = document.createElement('input'); key.readOnly = true; key.setAttribute('aria-label','Your signed license key'); key.autocomplete = 'off';
     card.append(title,status,expiry,email,key);
     for (const [label, action] of [['Show license','license'], ['Activate this device','activate'], ['Retry notification','retry-email']]) {
@@ -55,7 +55,7 @@ async function refresh() {
   for (const plan of account.plans) {
     const option = document.createElement('option'); option.value = plan.priceId; option.textContent = plan.tier + ' · ' + plan.mode; byId('priceId').append(option);
   }
-  byId('checkoutForm').hidden = account.plans.length === 0 || account.entitlements.length > 0;
+  byId('checkoutForm').hidden = account.plans.length === 0 || account.canPurchase !== true;
 }
 async function busy(button, action) {
   button.disabled = true;

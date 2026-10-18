@@ -96,7 +96,8 @@ byId('tryForm').addEventListener('submit', async (event) => {
     byId('metaCompression').textContent = data.compressionPercent + '%';
 
     byId('results').hidden = false;
-    message('tryStatus', isPdf ? `Done. All ${data.totalPages} pages were scanned and processed. Download your processed PDF below; the preview shows page 1.` : 'Done. Your image was scanned and processed successfully. Your result is ready below.', 'success');
+    const sizeNote = data.afterBytes > data.originalBytes ? ' The output is larger than the original.' : '';
+    message('tryStatus', (isPdf ? `Done. All ${data.totalPages} pages were processed into a rasterized PDF. Text selection, vectors and forms are not preserved. The preview shows page 1.` : 'Done. Your processed image is ready below.') + sizeNote, 'success');
   } catch (error) {
     message('tryStatus', error.message, 'error');
   } finally {

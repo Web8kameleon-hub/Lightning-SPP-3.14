@@ -12,7 +12,7 @@ FROM build AS test
 COPY --from=eclipse-temurin:25-jdk /opt/java/openjdk /opt/java/openjdk
 ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH="/opt/java/openjdk/bin:${PATH}"
-RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils \
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 RUN --mount=type=secret,id=sixlabors_license,env=SixLaborsLicenseKey,required=true \
     SPP_TEST_NATIVE_DOCUMENTS=1 dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj \
@@ -22,7 +22,7 @@ RUN --mount=type=secret,id=sixlabors_license,env=SixLaborsLicenseKey,required=tr
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 USER root
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl poppler-utils cups-client sane-utils \
+    && apt-get install -y --no-install-recommends curl poppler-utils cups-client sane-utils fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /data \
     && chown app:app /data

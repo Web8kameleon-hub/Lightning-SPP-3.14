@@ -50,6 +50,33 @@ internal static class CustomerAccounts
         });
         return services.BuildServiceProvider();
     }
+    internal static async Task<(string Owner, string Csrf, string Session)> AuthorizeWorkspaceAsync(HttpListenerContext transport, bool mutation)
+    {
+        if (!Enabled) throw new InvalidOperationException("Customer accounts are unavailable.");
+        using var scope = Provider.CreateScope();
+        var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+        context.Request.Method = transport.Request.HttpMethod;
+        context.Request.Scheme = RuntimeSecurity.IsProduction ? "https" : transport.Request.Url!.Scheme;
+        context.Request.Host = new HostString(transport.Request.Url!.Authority);
+        context.Request.Path = transport.Request.Url.AbsolutePath;
+        foreach (var key in transport.Request.Headers.AllKeys) if (key is not null) context.Request.Headers[key] = transport.Request.Headers[key];
+        var result = await context.AuthenticateAsync(Scheme);
+        var owner = result.Succeeded ? result.Principal?.FindFirstValue(ClaimTypes.NameIdentifier) : null;
+        if (owner is null) throw new UnauthorizedAccessException("Sign in to access your workspace.");
+        context.User = result.Principal!;
+        var antiforgery = scope.ServiceProvider.GetRequiredService<IAntiforgery>();
+        if (mutation)
+        {
+            var expected = RuntimeSecurity.IsProduction ? PublicOrigin : transport.Request.Url.GetLeftPart(UriPartial.Authority);
+            if (!string.Equals(transport.Request.Headers["Origin"], expected, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(transport.Request.ContentType?.Split(';')[0], "application/json", StringComparison.OrdinalIgnoreCase))
+                throw new AntiforgeryValidationException("Same-origin JSON required.");
+            await antiforgery.ValidateRequestAsync(context);
+        }
+        var csrf = antiforgery.GetAndStoreTokens(context).RequestToken!;
+        foreach (var cookie in context.Response.Headers.SetCookie) if (cookie is not null) transport.Response.Headers.Add("Set-Cookie", cookie);
+        return (owner, csrf, result.Principal!.FindFirstValue("session")!);
+    }
     internal static async Task HandleAsync(HttpListenerContext transport, string clientIp)
     {
         transport.Response.Headers["Cache-Control"] = "no-store";
@@ -83,7 +110,8 @@ internal static class CustomerAccounts
                 try { foreach (var plan in StripeFulfillment.LoadPlans()) availablePlans.Add(new { priceId = plan.Key, tier = plan.Value.Tier, mode = plan.Value.Mode }); }
                 catch (InvalidOperationException) { /* No purchase control when mappings are unavailable. */ }
                 await Reply(transport, context, 200, new { userId, email = user.Email, emailVerified = user.EmailVerified,
-                    csrfToken = antiforgery.GetAndStoreTokens(context).RequestToken, entitlements, plans = availablePlans, pdfDemoRoute = "/pdf" }); return;
+                    csrfToken = antiforgery.GetAndStoreTokens(context).RequestToken, entitlements, plans = availablePlans,
+                    canPurchase = store.CanPurchase(userId), pdfDemoRoute = "/pdf" }); return;
             }
             if (transport.Request.HttpMethod != "POST") { await Reply(transport, context, 405, new { error = "Unsupported account method." }); return; }
             var expectedOrigin = RuntimeSecurity.IsProduction ? PublicOrigin : transport.Request.Url.GetLeftPart(UriPartial.Authority);

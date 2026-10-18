@@ -9,13 +9,30 @@ namespace wwwmmm;
 /// <summary>
 /// Lightning SPP 3.14 - Universal Scan-Process-Print System
 /// Integrating: TideWave, CLX, CLX.i, XCL, Resonance, NanoDecibel, Clisonix Global AI, Stigma
-/// NOW: Optimized for MASSIVE deployment on ANY device!
-/// Ready for wide public usage
+/// Runtime and device support require validation on the target deployment.
 /// </summary>
 internal class Program
 {
     static async Task Main(string[] args)
     {
+        if (args.FirstOrDefault() == "benchmark-documents")
+        {
+            using var cancellation = new CancellationTokenSource();
+            ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
+            Console.CancelKeyPress += cancel;
+            try { Environment.ExitCode = await Documents.DocumentBenchmark.RunAsync(args, cancellation.Token); }
+            finally { Console.CancelKeyPress -= cancel; }
+            return;
+        }
+        if (args.FirstOrDefault() == "workflow")
+        {
+            using var cancellation = new CancellationTokenSource();
+            ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
+            Console.CancelKeyPress += cancel;
+            try { Environment.ExitCode = await Workflow.WorkflowCommands.RunAsync(args, cancellation.Token); }
+            finally { Console.CancelKeyPress -= cancel; }
+            return;
+        }
         if (args.Length > 0 && (args[0].Equals("bridge", StringComparison.OrdinalIgnoreCase) ||
             args[0] is "document" or "device"))
         {
