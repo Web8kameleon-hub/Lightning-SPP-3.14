@@ -39,7 +39,7 @@ async function refresh() {
     const card = document.createElement('article'); card.className = 'card';
     const title = document.createElement('h3'); title.textContent = entitlement.tier;
     const status = document.createElement('p'); status.textContent = 'License: ' + (entitlement.licenseState || entitlement.state) + ' · subscription: ' + entitlement.subscriptionStatus;
-    const activation = document.createElement('p'); activation.textContent = entitlement.activationRecorded ? 'This account has a registered browser.' : 'Browser registration is optional here. Use your license key to activate installed software.';
+    const activation = document.createElement('p'); activation.textContent = entitlement.activationRecorded ? 'This account has a registered browser.' : 'Browser registration is optional here. Your deployment administrator configures the licensed service; downloading a runtime alone does not activate it.';
     const expiry = document.createElement('p'); expiry.textContent = 'Paid period ends: ' + new Date(entitlement.expires * 1000).toISOString().slice(0,10);
     const email = document.createElement('p'); email.textContent = entitlement.emailState === 'PROVIDER_ACCEPTED' ? 'Notification accepted by the email provider; inbox arrival is not confirmed.' : 'Your existing license is stored here. Use Show license to retrieve it; Retry notification sends the same key.';
     const key = document.createElement('input'); key.readOnly = true; key.setAttribute('aria-label','Your signed license key'); key.autocomplete = 'off';

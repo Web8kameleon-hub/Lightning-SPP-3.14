@@ -55,14 +55,22 @@ pipeline, not AI inference, OCR accuracy or clinical suitability.
 
 ## Hosting and activation
 
+**Standalone commercial activation is not established by these archives.** The
+current local validator uses issuer HMAC signing material. Never give an issuer's
+signing secret to a customer device to make activation pass. A secure standalone
+commercial distribution requires public-key verification or an authoritative
+online activation flow, including reviewed migration of existing keys. See the
+[security review](https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/blob/main/Docs/ACCOUNT_SECURITY_REVIEW.md).
+
 Production hosting requires private environment configuration, HTTPS, durable
 Longo state, data-protection keys and verified email-provider configuration.
 Follow [the production deployment guide](https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/blob/main/deploy/production/README.md).
 Do not expose an unconfigured local instance as a customer service.
 
 Existing customers retrieve their existing key from their verified account.
-Re-registering does not purchase or issue another license. Supply keys only
-through the application activation flow; never place them in shared archives.
+Re-registering does not purchase or issue another license. Use a configured
+issuer-managed service for the current hosted activation flow; never place
+keys or issuer secrets in shared archives.
 The component license notices shipped in the archive apply.
 
 ## Upgrade and recovery

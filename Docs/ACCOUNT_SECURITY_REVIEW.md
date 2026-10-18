@@ -25,6 +25,22 @@ configuration migration and transport-contract tests. This account correction
 does not introduce new hostname selectors or claim that this legacy shim is a
 general provider-discovery mechanism.
 
+## Standalone commercial activation — unresolved
+
+| Root Cause | Regression Risk | Scalability Impact | Security Impact | Production Impact | Dynamic Alternative |
+|---|---|---|---|---|---|
+| Local activation validates HMAC using issuer signing material; stored runtime license metadata is loaded independently of a fresh signature check. | Sharing issuer secrets, trusting local tier/expiry fields, or replacing existing paid keys during an unreviewed migration would create regressions. | Offline distribution needs verification-only trust; online activation needs an authoritative, bounded service. | Do not distribute signing secrets or claim local cache encryption proves license authenticity. | The account/browser correction does not establish secure offline commercial activation. Existing keys/state remain untouched. | Asymmetric signed grants with configured public verification keys, or authoritative online activation; migrate legacy HMAC through the issuer without another payment. |
+
+Evidence: `LicenseManager.ActivateLicense` calls `LicenseKey.Validate`, whose
+`ResolveSigningKeys` requires issuer HMAC secrets. `GetActiveLicense` reads local
+storage through `FromStorageString`; `HasValidLicense` then uses `IsValid`, which
+checks active/expiry fields rather than revalidating the stored key signature.
+This is a code-review finding, not a claim of an observed production exploit.
+The authenticated hosted account separately validates its signed entitlement.
+Runtime archive/demo checks must not be reported as offline licensing acceptance.
+The cryptographic protocol requires a separate reviewed migration; this account
+messaging change does not silently replace it or distribute private material.
+
 ## Backward compatibility and recovery
 
 Commit `f0fc737` is the compatibility-reader stage. It accepts schema-1 identities
