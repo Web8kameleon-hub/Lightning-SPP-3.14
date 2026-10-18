@@ -20,6 +20,32 @@ internal static class WorkflowApi
         if (remote && Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ALLOW_REMOTE_MODELS") == "true") permissions.Add("network.remote");
         return permissions;
     }
+    /// <summary>Production access requires an explicit operator list of verified emails ("*" opens it to every verified
+    /// account). An unset or empty list in production denies everyone, so enabling the flag alone never exposes the workspace.</summary>
+    internal static bool WorkspaceAllowed(CustomerStore.User? user, string? allowedEmails, bool production)
+    {
+        if (string.IsNullOrWhiteSpace(allowedEmails)) return !production && user is not null;
+        if (user is null || !user.EmailVerified) return false;
+        var entries = allowedEmails.Split([',', ';', ' ', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (entries.Contains("*")) return true;
+        return entries.Any(e => { try { return CustomerStore.NormalizeEmail(e) == user.Email; } catch (ArgumentException) { return false; } });
+    }
+    /// <summary>Visible page text the user explicitly chose to share from the assistant. Bounded, same-site paths only,
+    /// and labelled as untrusted data so on-page text can never act as instructions.</summary>
+    internal static object ScreenContext(JsonElement screen)
+    {
+        static string Field(JsonElement e, string name, int max)
+        {
+            if (!e.TryGetProperty(name, out var v) || v.ValueKind != JsonValueKind.String) return "";
+            var t = (v.GetString() ?? "").Trim();
+            return t.Length > max ? t[..max] : t;
+        }
+        var page = Field(screen, "page", 200);
+        if (!page.StartsWith('/') || page.StartsWith("//", StringComparison.Ordinal) || page.Any(char.IsControl)) throw new ArgumentException("Screen context must name a same-site page path.");
+        var text = Field(screen, "text", 12000);
+        if (text.Length == 0) throw new ArgumentException("Screen context is empty; nothing visible was shared.");
+        return new { source = "visible-page:" + page, title = Field(screen, "title", 200), trust = "UNTRUSTED_USER_SCREEN_DATA", text };
+    }
     internal static async Task HandleAsync(HttpListenerContext transport)
     {
         transport.Response.Headers["Cache-Control"] = "no-store";
@@ -31,6 +57,8 @@ internal static class WorkflowApi
             { await Reply(transport, 503, new { error = "Workflows are not enabled on this release." }); return; }
             if (transport.Request.HttpMethod is not ("GET" or "POST")) { await Reply(transport, 405, new { error = "GET or POST required." }); return; }
             var auth = await CustomerAccounts.AuthorizeWorkspaceAsync(transport, transport.Request.HttpMethod == "POST");
+            if (!WorkspaceAllowed(CustomerAccounts.Store.FindUser(auth.Owner), Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ALLOWED_EMAILS"), RuntimeSecurity.IsProduction))
+                throw new UnauthorizedAccessException("This account is not enabled for the workspace.");
             var workspace = Workspace(auth.Owner); var models = ModelGateway.FromEnvironment(); var registry = Registry(models); var runner = new WorkflowRunner(registry);
             var route = transport.Request.Url!.AbsolutePath["/api/workflow".Length..].TrimEnd('/');
             if (transport.Request.HttpMethod == "GET")
@@ -115,6 +143,7 @@ internal static class WorkflowApi
                         context.Add(new { input.Source, text = WorkspaceScope.Decode(input.Bytes) }); }
                 }
                 if (data.TryGetProperty("jobId", out var job)) context.Add(await runner.GetAsync(workspace, auth.Owner, job.GetString()!, CancellationToken.None));
+                if (data.TryGetProperty("screen", out var screen) && screen.ValueKind == JsonValueKind.Object) context.Add(ScreenContext(screen));
                 var evidence = JsonSerializer.Serialize(context, WorkflowJson.Options);
                 if (route == "/propose")
                 { var plan = await models.ProposeAsync(modelRoute, goal, registry, permissions, evidence, CancellationToken.None); await Reply(transport, 200, new { plan, state = "PROPOSED_REQUIRES_REVIEW" }); return; }

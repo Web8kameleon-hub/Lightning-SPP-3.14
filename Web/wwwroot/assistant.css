@@ -1,0 +1,63 @@
+.lspp-assist{--lspp-accent:#3bd5ff;position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:2147483000;font-family:"Segoe UI",Inter,system-ui,sans-serif;color:#e5eefc}
+.lspp-launch{all:unset;box-sizing:border-box;display:grid;place-items:center;width:58px;height:58px;border-radius:50%;cursor:pointer;color:#04131d;
+  background:radial-gradient(circle at 30% 25%,#fff8 0,transparent 42%),linear-gradient(140deg,var(--lspp-accent),color-mix(in srgb,var(--lspp-accent) 55%,#8b5cf6));
+  box-shadow:0 12px 34px color-mix(in srgb,var(--lspp-accent) 38%,transparent),0 0 0 1px #ffffff2e inset;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s,background .6s}
+.lspp-launch svg{width:28px;height:28px}
+.lspp-launch:hover{transform:translateY(-2px) scale(1.04)}
+.lspp-launch:focus-visible{outline:3px solid #ff9b38;outline-offset:4px}
+.lspp-assist:not([data-open="true"]) .lspp-launch::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--lspp-accent);opacity:0;animation:lspp-breathe 3.6s ease-in-out infinite}
+@keyframes lspp-breathe{0%,100%{opacity:0;transform:scale(.92)}50%{opacity:.45;transform:scale(1.06)}}
+.lspp-assist[data-open="true"] .lspp-launch{transform:rotate(-8deg) scale(.92)}
+.lspp-panel{position:absolute;right:0;bottom:72px;width:min(400px,calc(100vw - 36px));max-height:min(640px,calc(100vh - 110px));display:flex;flex-direction:column;gap:10px;padding:14px;
+  border-radius:20px;background:rgba(8,16,29,.97);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);
+  border:1px solid color-mix(in srgb,var(--lspp-accent) 30%,transparent);box-shadow:0 24px 70px rgba(0,0,0,.55),0 0 0 1px #ffffff0d inset;
+  transform-origin:bottom right;animation:lspp-in .28s cubic-bezier(.2,.8,.2,1)}
+.lspp-panel[hidden]{display:none}
+@keyframes lspp-in{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+.lspp-panel header{all:unset;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.lspp-panel header div{display:flex;align-items:center;gap:9px}
+.lspp-panel header strong{font:700 15px "Space Grotesk","Segoe UI",sans-serif;letter-spacing:.2px}
+.lspp-dot{width:10px;height:10px;border-radius:50%;background:var(--lspp-accent);box-shadow:0 0 12px var(--lspp-accent);transition:background .6s}
+.lspp-assist[data-busy="true"] .lspp-dot{animation:lspp-pulse 1s ease-in-out infinite}
+@keyframes lspp-pulse{50%{opacity:.35}}
+.lspp-panel button{min-height:0;box-shadow:none;transform:none}
+.lspp-x{all:unset;cursor:pointer;width:32px;height:32px;display:grid;place-items:center;border-radius:10px;font-size:22px;color:#9dc8d8}
+.lspp-x:hover{background:#ffffff12;color:#e5eefc}
+.lspp-x:focus-visible,.lspp-chips button:focus-visible,.lspp-send:focus-visible,.lspp-links a:focus-visible{outline:3px solid #ff9b38;outline-offset:2px}
+.lspp-state{margin:0;font-size:13px;line-height:1.5;color:#9dc8d8}
+.lspp-state a{color:var(--lspp-accent)}
+.lspp-log{flex:1;min-height:40px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;overscroll-behavior:contain}
+.lspp-log:empty{display:none}
+.lspp-msg{max-width:88%;padding:9px 12px;border-radius:14px;animation:lspp-in .22s ease-out}
+.lspp-msg p{margin:0;font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;color:#e5eefc}
+.lspp-msg small{display:block;margin-top:6px;font-size:11px;color:#9dc8d8}
+.lspp-msg.me{align-self:flex-end;background:color-mix(in srgb,var(--lspp-accent) 20%,#0d1a2d);border-bottom-right-radius:4px}
+.lspp-msg.ai{align-self:flex-start;background:#ffffff0d;border:1px solid #ffffff14;border-bottom-left-radius:4px}
+.lspp-msg.err p{color:#ff6b6b}
+.lspp-chips{display:flex;flex-wrap:wrap;gap:6px}
+.lspp-chips[hidden]{display:none}
+.lspp-chips button{all:unset;cursor:pointer;font-size:12.5px;line-height:1.35;padding:6px 10px;border-radius:999px;color:#e5eefc;background:#ffffff0a;border:1px solid color-mix(in srgb,var(--lspp-accent) 35%,transparent);transition:background .2s}
+.lspp-chips button:hover{background:color-mix(in srgb,var(--lspp-accent) 18%,transparent)}
+.lspp-read{display:flex;align-items:center;gap:8px;font-size:13px}
+.lspp-assist .lspp-read input{flex:none;width:16px;height:16px;min-height:0;margin:0;accent-color:var(--lspp-accent)}
+.lspp-read label{margin:0;font-weight:600;font-size:13px;color:#e5eefc;cursor:pointer}
+.lspp-assist[data-mode]:not([data-mode="live"]) :is(.lspp-read,.lspp-form,.lspp-hint,.lspp-preview){display:none}
+.lspp-hint{margin:-4px 0 0;font-size:12px;line-height:1.45;color:#9dc8d8}
+.lspp-hint[hidden],.lspp-preview[hidden]{display:none}
+.lspp-preview{font-size:12px;color:#9dc8d8}
+.lspp-preview summary{font-size:12px;font-weight:600;padding:0;color:#9dc8d8}
+.lspp-preview pre{max-height:120px;overflow:auto;margin:6px 0 0;padding:8px;border-radius:8px;background:#0006;white-space:pre-wrap;font-size:11px;color:#c9d9ea}
+.lspp-form{all:unset;display:flex;align-items:flex-end;gap:8px;padding:6px 6px 6px 12px;border-radius:16px;background:#050b14b3;border:1px solid #ffffff1f;transition:border-color .2s}
+.lspp-form:focus-within{border-color:var(--lspp-accent)}
+.lspp-assist .lspp-form textarea{all:unset;box-sizing:border-box;width:auto;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;flex:1;resize:none;border:0;outline:0;background:transparent;color:#e5eefc;font:14px/1.5 "Segoe UI",Inter,system-ui,sans-serif;padding:6px 0;max-height:140px}
+.lspp-assist .lspp-form textarea:disabled{opacity:.5;cursor:not-allowed}
+.lspp-send{all:unset;cursor:pointer;width:36px;height:36px;display:grid;place-items:center;border-radius:12px;font-weight:700;color:#04131d;background:var(--lspp-accent)}
+.lspp-send:disabled{opacity:.35;cursor:not-allowed}
+.lspp-links{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;padding-top:2px}
+.lspp-links a{color:#9dc8d8;text-decoration:none}
+.lspp-links a:hover{color:var(--lspp-accent)}
+@media(max-width:560px){.lspp-panel{position:fixed;inset:auto 10px 84px 10px;width:auto;max-height:calc(100dvh - 104px)}}
+@media(prefers-reduced-motion:reduce){.lspp-assist *,.lspp-assist *::after{animation:none!important;transition:none!important}}
+@media print{.lspp-assist{display:none}}
+.lspp-assist .lspp-form textarea::placeholder{color:#9dc8d8b3}
+.lspp-assist .lspp-form textarea:focus,.lspp-assist .lspp-form textarea:focus-visible{outline:none;box-shadow:none}

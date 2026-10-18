@@ -9,7 +9,9 @@ identity are reused. Customers cannot submit another customer's root directory.
 ## Enablement and data flow
 
 Production workflows are off unless `LSPP_WORKFLOW_ENABLED=true`. Enabling them
-requires local acceptance, CI and deployment/rollback checks. State lives under
+requires local acceptance, CI and deployment/rollback checks. In production the flag
+alone admits nobody: `LSPP_WORKFLOW_ALLOWED_EMAILS` must list verified account emails
+(comma-separated; `*` admits every verified account). State lives under
 `LSPP_DATA_DIR/workspaces/<authenticated-user-id>`. Imported bytes and immutable
 snapshots are private files, not a replacement database for customer identity.
 No SQL persistence is introduced. Back up this directory with the existing
