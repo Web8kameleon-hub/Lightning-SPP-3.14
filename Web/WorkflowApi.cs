@@ -28,7 +28,7 @@ internal static class WorkflowApi
         if (user is null || !user.EmailVerified) return false;
         var entries = allowedEmails.Split([',', ';', ' ', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (entries.Contains("*")) return true;
-        return entries.Any(e => { try { return CustomerStore.NormalizeEmail(e) == user.Email; } catch (ArgumentException) { return false; } });
+        return entries.Any(e => { try { return string.Equals(CustomerStore.NormalizeEmail(e), user.Email, StringComparison.OrdinalIgnoreCase); } catch (ArgumentException) { return false; } });
     }
     /// <summary>Visible page text the user explicitly chose to share from the assistant. Bounded, same-site paths only,
     /// and labelled as untrusted data so on-page text can never act as instructions.</summary>

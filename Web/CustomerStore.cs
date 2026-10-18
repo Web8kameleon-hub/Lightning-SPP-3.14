@@ -104,7 +104,8 @@ internal sealed class CustomerStore
     }
     internal static void ValidatePassword(string password)
     { if (password.Length is < 12 or > 128) throw new ArgumentException("Use a password between 12 and 128 characters."); }
-    private static User? Find(State s, string value, bool byEmail = false) => byEmail ? s.Users.Values.SingleOrDefault(u => u.Email == value) : s.Users.GetValueOrDefault(value);
+    private static User? Find(State s, string value, bool byEmail = false) => byEmail ?
+        s.Users.Values.SingleOrDefault(u => string.Equals(u.Email, value, StringComparison.OrdinalIgnoreCase)) : s.Users.GetValueOrDefault(value);
     internal User? FindUser(string value, bool byEmail = false) => Find(ReadState(), value, byEmail);
     internal User Register(string email, string password)
     {
@@ -147,7 +148,7 @@ internal sealed class CustomerStore
             if (purpose == "verify")
             {
                 s.Users[user.Id] = user with { EmailVerified = true };
-                var candidates = s.Customers.Values.Where(c => c.Email == user.Email && c.UserId is null).ToArray();
+                var candidates = s.Customers.Values.Where(c => string.Equals(c.Email, user.Email, StringComparison.OrdinalIgnoreCase) && c.UserId is null).ToArray();
                 if (candidates.Length == 1 && !s.Customers.Values.Any(c => c.UserId == user.Id)) s.Customers[candidates[0].Id] = candidates[0] with { UserId = user.Id };
             }
             else
