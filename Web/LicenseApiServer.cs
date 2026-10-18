@@ -186,13 +186,25 @@ internal static class LicenseApiServer
                 context.Response.Close();
                 return;
             }
-            if (path == "/site.css" || path == "/dashboard.js" || path == "/try.js" || path == "/account.js")
+            if (path == "/site.css" || path == "/dashboard.js" || path == "/try.js" || path == "/account.js" || path == "/workspace.js" || path == "/workspace.css" || path == "/screen-context.js")
             {
                 var jsOrCss = path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8";
                 await ServeStaticAsync(context, path[1..], jsOrCss);
                 return;
             }
 
+            if (path == "/api/workflow" || path.StartsWith("/api/workflow/", StringComparison.Ordinal))
+            {
+                await WorkflowApi.HandleAsync(context);
+                return;
+            }
+            if (path == "/workspace" && context.Request.HttpMethod is "GET" or "HEAD")
+            {
+                context.Response.Headers["Cache-Control"] = "no-store";
+                context.Response.Headers["X-Robots-Tag"] = "noindex";
+                await ServeStaticAsync(context, "workspace.html", "text/html; charset=utf-8");
+                return;
+            }
             if (path == "/api/account" || path.StartsWith("/api/account/", StringComparison.Ordinal))
             {
                 await CustomerAccounts.HandleAsync(context, clientIp);
@@ -530,6 +542,10 @@ internal static class LicenseApiServer
                 ["ok"] = true,
                 ["profile"] = profileName,
                 ["inputType"] = isPdf ? "pdf" : "image",
+                ["aiEnabled"] = false,
+                ["pdfRasterized"] = isPdf,
+                ["preservesPdfStructure"] = false,
+                ["sizeReduced"] = result.Output.Length < originalBytes.Length,
                 ["page"] = isPdf ? 1 : 0,
                 ["totalPages"] = result.TotalPages,
                 ["scanTimeMs"] = result.ScanTimeMs,
