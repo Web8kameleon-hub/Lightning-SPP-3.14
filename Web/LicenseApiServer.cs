@@ -164,7 +164,7 @@ internal static class LicenseApiServer
         var isPublicRead = (context.Request.HttpMethod is "GET" or "HEAD") && path is
             "/" or "/index.html" or "/features" or "/technology" or "/try" or "/pdf" or
             "/pricing" or "/benchmarks" or "/swagger" or "/openapi.json" or
-            "/robots.txt" or "/sitemap.xml" or "/site.css" or "/try.js" or
+            "/robots.txt" or "/sitemap.xml" or "/site.css" or "/try.js" or "/assistant.js" or "/assistant.css" or
             "/favicon.ico" or "/favicon-16x16.png" or "/favicon-32x32.png" or
             "/apple-touch-icon.png" or "/site.webmanifest";
 
@@ -186,7 +186,7 @@ internal static class LicenseApiServer
                 context.Response.Close();
                 return;
             }
-            if (path == "/site.css" || path == "/dashboard.js" || path == "/try.js" || path == "/account.js" || path == "/workspace.js" || path == "/workspace.css" || path == "/screen-context.js")
+            if (path == "/site.css" || path == "/dashboard.js" || path == "/try.js" || path == "/account.js" || path == "/workspace.js" || path == "/workspace.css" || path == "/screen-context.js" || path == "/assistant.js" || path == "/assistant.css")
             {
                 var jsOrCss = path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8";
                 await ServeStaticAsync(context, path[1..], jsOrCss);
