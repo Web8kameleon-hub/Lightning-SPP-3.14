@@ -2,7 +2,7 @@ namespace wwwmmm.SDK;
 
 /// <summary>
 /// Universal SDK for Lightning SPP 3.14
-/// Designed for massive deployment on ANY device:
+/// Processing profiles named for integration scenarios; device support must be validated:
 /// - Medical devices
 /// - Smartphones
 /// - IoT devices
@@ -14,7 +14,7 @@ namespace wwwmmm.SDK;
 public static class UniversalSDK
 {
     /// <summary>
-    /// Initialize Lightning SPP on any device
+    /// Initialize a processing profile on a compatible .NET runtime.
     /// </summary>
     public static LightningSPPInstance Initialize(DeviceProfile profile)
     {
@@ -22,7 +22,7 @@ public static class UniversalSDK
     }
 
     /// <summary>
-    /// Quick start with default settings - absolute speed
+    /// Quick start with the default compression profile.
     /// </summary>
     public static LightningSPPInstance QuickStart()
     {
@@ -43,8 +43,8 @@ public class LightningSPPInstance
     }
 
     /// <summary>
-    /// Ultra-fast single operation - optimized for device
-    /// Absolute speed: <5ms
+    /// Process bytes using the selected profile. Latency depends on input and hardware.
+    /// The Medical profile changes bytes before compression; it is not clinically validated.
     /// </summary>
     public async Task<byte[]> ProcessAsync(byte[] data)
     {
@@ -62,8 +62,7 @@ public class LightningSPPInstance
     }
 
     /// <summary>
-    /// Real-time processing - absolute speed
-    /// Target: <1ms latency
+    /// Compress bytes using Brotli Fastest; no real-time latency guarantee.
     /// </summary>
     public async Task<byte[]> RealTimeProcessAsync(byte[] data)
     {
@@ -101,7 +100,7 @@ public class LightningSPPInstance
 
     private async Task<byte[]> MobileOptimizedProcess(byte[] data)
     {
-        // Mobile: CLX.i Optimal — battery-efficient balance
+        // Mobile profile selects Brotli Optimal; battery savings are not measured here.
         using var output = new System.IO.MemoryStream();
         using (var brotli = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.Optimal))
         {
@@ -146,7 +145,7 @@ public class LightningSPPInstance
 
     private async Task<byte[]> WebOptimizedProcess(byte[] data)
     {
-        // Web: CLX.i Optimal — WebAssembly compatible
+        // Web profile selects Brotli Optimal; browser runtime support requires validation.
         using var output = new System.IO.MemoryStream();
         using (var brotli = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.Optimal))
         {
@@ -180,7 +179,7 @@ public class LightningSPPInstance
 
     private static byte[] ApplyResonancePattern(byte[] data)
     {
-        // Resonance NanoDecibel: pattern smoothing (Medical precision)
+        // Byte averaging changes the input and is not a clinical image-quality operation.
         if (data.Length < 2) return data;
         var enhanced = new byte[data.Length];
         Buffer.BlockCopy(data, 0, enhanced, 0, data.Length);

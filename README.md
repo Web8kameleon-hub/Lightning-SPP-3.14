@@ -1,6 +1,11 @@
 # Lightning SPP 3.14
 Universal Scan-Process-Print Platform
 
+Për paketat runtime Windows/Linux, varësitë native dhe përditësimin pa humbur
+të dhënat, shih [udhëzimin e instalimit](Docs/INSTALLATION.md). Arkivat ndërtohen
+dhe kontrollohen me `Scripts/package-release.py` dhe `Scripts/verify-package.py`;
+publikimi dhe përdorimi nga klientët janë verifikime të veçanta.
+
 Lightning SPP 3.14 është një platformë e integruar për skanim, përpunim dhe printim dokumentesh/imazhesh, e ndërtuar për përdorim në desktop, web, IoT dhe cloud. Projekti kombinon performancë të lartë, arkitekturë modulare dhe ndërfaqe të shumta përdorimi (CLI, API, GUI).
 
 ## Çfarë sjell versioni 3.14

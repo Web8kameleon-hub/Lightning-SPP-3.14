@@ -334,6 +334,7 @@ internal class Program
         Console.WriteLine("  serve [port]            - Start REST API + Web Dashboard");
         Console.WriteLine("  bridge <operation>      - Excel Core / Excel service / OS-CLX NodeDB adapters (see Docs/BRIDGES.md)");
         Console.WriteLine("  audit-imagesharp [root] [report.md]");
+        Console.WriteLine("  benchmark-documents <input-directory> <new-report.json> [runs:1-10]");
         Console.WriteLine("                         - Scan the repo for real SixLabors.ImageSharp usage");
         Console.WriteLine("\nTechnologies:");
         Console.WriteLine("  • TideWave - Balanced scanning");
@@ -346,11 +347,9 @@ internal class Program
         Console.WriteLine("  • Stigma - Premium print quality");
         Console.WriteLine("  • Stigma Memory - Optimization");
         Console.WriteLine("\nPricing:");
-        Console.WriteLine("  • FREE Tier: 1,000 operations/month");
-        Console.WriteLine("  • PAY-AS-YOU-GO: €0.001/operation, min €9.99/month");
-        Console.WriteLine("  • UNLIMITED: €99.99/year, unlimited operations");
-        Console.WriteLine("  • ENTERPRISE: Custom pricing and SLA");
-        Console.WriteLine("\nPurchase: https://aba-gmbh.de/lightning-spp");
+        Console.WriteLine("  Current plans and terms: https://scanprocessprint.com/pricing");
+        Console.WriteLine("  Stripe Checkout confirms the configured price and taxes before payment.");
+        Console.WriteLine("\nAccount and existing licenses: https://scanprocessprint.com/account");
         Console.WriteLine("Support:  clisonix@pm.me");
     }
 
@@ -420,7 +419,7 @@ internal class Program
             Console.WriteLine("Usage: wwwmmm generate-license <tier> [email] [company]");
             Console.WriteLine("\nTiers:");
             Console.WriteLine("  free       - Free tier (1,000 ops/month, 1 device)");
-            Console.WriteLine("  unlimited  - Unlimited tier (€99.99/year, 10 devices)");
+            Console.WriteLine("  unlimited  - Unlimited development/test key; does not confirm a purchase");
             Console.WriteLine("  enterprise - Enterprise tier (custom, unlimited devices)");
             Console.WriteLine("\nExample:");
             Console.WriteLine("  wwwmmm generate-license unlimited user@company.com \"Acme Corp\"");

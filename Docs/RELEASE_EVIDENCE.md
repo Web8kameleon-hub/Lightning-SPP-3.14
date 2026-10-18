@@ -7,7 +7,7 @@ This document is the release companion for code, UI, billing, licensing, benchma
 ## Product facts
 
 - Real processing uses SkiaSharp, ML.NET/ONNX integration, Brotli and physical file output.
-- The application implements 25 HTTP operations: four runtime/schema operations, four workspace-license operations, fourteen customer-account/license/billing operations, two Stripe fulfillment operations and one image/PDF processing operation.
+- The base OpenAPI reference documents 25 HTTP operations: four runtime/schema operations, four workspace-license operations, fourteen customer-account/license/billing operations, two Stripe fulfillment operations and one image/PDF processing operation. Additional restricted workflow operations are described in [WORKFLOW_RUNTIME.md](WORKFLOW_RUNTIME.md).
 - Stripe webhooks use signed payload verification with legacy, snapshot and thin destination secrets.
 - Event IDs are deduplicated to prevent immediate replay processing.
 - License tiers are Free, Pay as you go, Unlimited and Enterprise.

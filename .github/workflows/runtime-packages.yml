@@ -1,0 +1,82 @@
+name: Runtime packages
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Scripts/package-release.py'
+      - 'Scripts/verify-package.py'
+      - 'Docs/INSTALLATION.md'
+      - '.github/workflows/runtime-packages.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  packages:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            runtime: win-x64
+          - os: ubuntu-latest
+            runtime: linux-x64
+    runs-on: ${{ matrix.os }}
+    env:
+      SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE }}
+      SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install native PDF dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
+      - name: Build archive with private license supplied only through the environment
+        run: python Scripts/package-release.py --runtime ${{ matrix.runtime }}
+      - name: Verify extracted runtime and real document processing
+        shell: pwsh
+        run: |
+          $archive = Get-ChildItem artifacts/distribution -File | Where-Object { $_.Name -match '\.(zip|tar\.gz)$' }
+          if (@($archive).Count -ne 1) { throw 'Expected one archive' }
+          python Scripts/verify-package.py $archive.FullName artifacts/extracted
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-${{ matrix.runtime }}-${{ github.sha }}
+          path: |
+            artifacts/distribution/*.zip
+            artifacts/distribution/*.tar.gz
+            artifacts/distribution/*.sha256
+            artifacts/extracted/smoke-evidence/measurements.json
+          if-no-files-found: error
+  attach:
+    needs: packages
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: runtime-*-${{ github.sha }}
+          path: artifacts/verified-packages
+      - name: Attach both verified runtimes to the matching release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(python3 -c "import xml.etree.ElementTree as E; print(E.parse('wwwmmm.csproj').findtext('PropertyGroup/Version'))")
+          test "$RELEASE_TAG" = "v$version"
+          mapfile -d '' assets < <(find artifacts/verified-packages -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.sha256' \) -print0)
+          test "${#assets[@]}" -eq 4
+          gh release upload "$RELEASE_TAG" "${assets[@]}"
