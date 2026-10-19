@@ -2476,6 +2476,9 @@
           },
           "503": {
             "description": "Processing busy"
+          },
+          "408": {
+            "description": "Time budget exceeded; no partial archive returned"
           }
         },
         "parameters": [
@@ -2492,6 +2495,20 @@
               ],
               "default": "none"
             }
+          },
+          {
+            "name": "X-Archive-Documents",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "none",
+                "pdf"
+              ],
+              "default": "none"
+            },
+            "description": "Opt-in rasterized PDF outputs inside ZIP. Original files preserved. Up to 4 attempts and 32 aggregate pages, 32 MiB generated document bytes, 2 minute processing deadline. Inspect per-file processing status; ZIP success does not mean all PDFs succeeded."
           }
         ]
       }

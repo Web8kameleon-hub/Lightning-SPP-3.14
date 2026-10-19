@@ -61,15 +61,20 @@ public class ApiTryProcessIntegrationTests
         using var archiveInput = new MemoryStream();
         using (var inputZip = new ZipArchive(archiveInput, ZipArchiveMode.Create, true))
         {
-            using var entry = inputZip.CreateEntry("src/main.py").Open();
-            entry.Write("print('inventory only')"u8);
+            using (var entry = inputZip.CreateEntry("src/main.py").Open()) entry.Write("print('inventory only')"u8);
+            if (Environment.GetEnvironmentVariable("SPP_TEST_NATIVE_DOCUMENTS") == "1")
+            {
+                using var pdfEntry = inputZip.CreateEntry("docs/report.pdf").Open();
+                pdfEntry.Write(new PdfDocumentService().CreateFromImages(new[] { RealTestImage.Png() }));
+            }
         }
-        var r2 = await PostImageAsync(client, archiveInput.ToArray(), "application/zip", null, "/api/try/archive", "structural");
+        var r2 = await PostImageAsync(client, archiveInput.ToArray(), "application/zip", null, "/api/try/archive", "structural", "pdf");
         Assert.Equal(HttpStatusCode.OK, r2.StatusCode);
         Assert.Equal("application/zip", r2.Content.Headers.ContentType!.MediaType);
         using (var imported = new ZipArchive(new MemoryStream(await r2.Content.ReadAsByteArrayAsync())))
         {
             Assert.NotNull(imported.GetEntry("originals/src/main.py"));
+            if (Environment.GetEnvironmentVariable("SPP_TEST_NATIVE_DOCUMENTS") == "1") Assert.NotNull(imported.GetEntry("processed/docs/report.pdf"));
             using var inventory = JsonDocument.Parse(imported.GetEntry("report.json")!.Open());
             Assert.False(inventory.RootElement.GetProperty("codeExecuted").GetBoolean());
             Assert.Equal("INSPECTED", inventory.RootElement.GetProperty("files")[0].GetProperty("analysis").GetProperty("status").GetString());
@@ -167,7 +172,7 @@ public class ApiTryProcessIntegrationTests
         await serverTask;
     }
 
-    private static Task<HttpResponseMessage> PostImageAsync(HttpClient client, byte[] bytes, string contentType, string? profile, string endpoint = "/api/try/process", string? analysis = null)
+    private static Task<HttpResponseMessage> PostImageAsync(HttpClient client, byte[] bytes, string contentType, string? profile, string endpoint = "/api/try/process", string? analysis = null, string? documents = null)
     {
         var content = new ByteArrayContent(bytes);
         content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
@@ -177,6 +182,7 @@ public class ApiTryProcessIntegrationTests
             request.Headers.Add("X-Stigma-Profile", profile);
         }
 
+        if (documents is not null) request.Headers.Add("X-Archive-Documents", documents);
         if (analysis is not null) request.Headers.Add("X-Archive-Analysis", analysis);
         return client.SendAsync(request);
     }

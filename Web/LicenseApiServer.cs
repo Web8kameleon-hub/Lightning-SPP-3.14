@@ -523,7 +523,16 @@ internal static class LicenseApiServer
                 await JsonAsync(context, HttpStatusCode.BadRequest, "{\"ok\":false,\"error\":\"Use X-Archive-Analysis: none or structural.\"}");
                 return;
             }
-            var package = ArchivePackage.Create(input.ToArray(), analysisMode == "structural");
+            var documentMode = context.Request.Headers["X-Archive-Documents"];
+            if (!string.IsNullOrWhiteSpace(documentMode) && documentMode is not ("none" or "pdf"))
+            {
+                await JsonAsync(context, HttpStatusCode.BadRequest, "{\"ok\":false,\"error\":\"Use X-Archive-Documents: none or pdf.\"}");
+                return;
+            }
+            using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            byte[] package;
+            try { package = documentMode == "pdf" ? await ArchiveDocuments.ProcessAsync(input.ToArray(), analysisMode == "structural", deadline.Token) : ArchivePackage.Create(input.ToArray(), analysisMode == "structural"); }
+            catch (OperationCanceledException) { await JsonAsync(context, HttpStatusCode.RequestTimeout, "{\"ok\":false,\"error\":\"Archive processing exceeded its time budget. No partial ZIP returned.\"}"); return; }
             context.Response.StatusCode = 200;
             context.Response.ContentType = "application/zip";
             context.Response.Headers["Content-Disposition"] = "attachment; filename=\"lightning-inventory.zip\"";

@@ -81,6 +81,13 @@
   root.style.setProperty('--lspp-accent', profile.accent);
   document.body.append(root);
 
+  let latestPdf = null;
+  window.addEventListener('lightning:pdf-result', event => {
+    const d = event.detail;
+    if (path !== '/pdf' || !d || !Number.isInteger(d.pages) || d.pages < 1 || d.pages > 32 ||
+        ![d.originalBytes, d.afterBytes, d.totalTimeMs].every(n => Number.isFinite(n) && n >= 0) || d.originalBytes === 0) return;
+    latestPdf = { ...d };
+  });
   let csrf = null, route = null, mode = 'unknown', loaded = false;
   const say = (who, text, note) => { const m = h('div', { class: 'lspp-msg ' + who }, h('p', {}, text)); if (note) m.append(h('small', {}, note)); log.append(m); log.scrollTop = log.scrollHeight; return m; };
   function renderChips() { chips.replaceChildren(); for (const q of profile.asks) chips.append(h('button', { type: 'button', onclick: () => { input.value = q; if (/screen|ekran|faqe|page/i.test(q)) { readToggle.checked = true; updateRead(); } ask(); } }, q)); }
@@ -114,7 +121,18 @@
   }
   readToggle.addEventListener('change', updateRead);
   async function ask() {
-    const goal = input.value.trim(); if (!goal || mode !== 'live') return;
+    const goal = input.value.trim();
+    if (goal && latestPdf && path === '/pdf' && goal === profile.asks[0]) {
+      say('me', goal); input.value = ''; grow();
+      const d = latestPdf, size = Math.round(1000 * (d.afterBytes / d.originalBytes - 1)) / 10;
+      const text = sq
+        ? `${d.pages} faqe u përpunuan në ${(d.totalTimeMs / 1000).toFixed(2)} sekonda. Madhësia: ${(d.originalBytes / 1024).toFixed(1)} → ${(d.afterBytes / 1024).toFixed(1)} KiB (${size >= 0 ? '+' : ''}${size}%). PDF-ja është rasterizuar; teksti i përzgjedhshëm, vektorët dhe formularët nuk ruhen. Këto matje nuk provojnë përmirësim cilësie ose optimizim madhësie.`
+        : `${d.pages} page(s) processed in ${(d.totalTimeMs / 1000).toFixed(2)} seconds. Size: ${(d.originalBytes / 1024).toFixed(1)} → ${(d.afterBytes / 1024).toFixed(1)} KiB (${size >= 0 ? '+' : ''}${size}%). The PDF was rasterized; selectable text, vectors and forms are not preserved. These measurements do not establish better quality or size optimization.`;
+      const message = say('ai', text, sq ? 'Nga përgjigjja e fundit e përpunimit; pa inferencë modeli.' : 'From the latest processing response; no model inference.');
+      message.append(h('a', { href: '/pdf#results' }, sq ? 'Burimi: rezultati i këtij përpunimi' : 'Source: this processing result'));
+      return;
+    }
+    if (!goal || mode !== 'live') return;
     say('me', goal); input.value = ''; grow(); sendBtn.disabled = true; root.dataset.busy = 'true';
     const pending = say('ai', T.thinking);
     const screen = readToggle.checked ? { page: path, title: document.title, text: visibleText() } : null;
