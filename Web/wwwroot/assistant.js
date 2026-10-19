@@ -84,6 +84,7 @@
   let latestPdf = null;
   window.addEventListener('lightning:pdf-result', event => {
     const d = event.detail;
+    if (d === null) { latestPdf = null; return; }
     if (path !== '/pdf' || !d || !Number.isInteger(d.pages) || d.pages < 1 || d.pages > 32 ||
         ![d.originalBytes, d.afterBytes, d.totalTimeMs].every(n => Number.isFinite(n) && n >= 0) || d.originalBytes === 0) return;
     latestPdf = { ...d };

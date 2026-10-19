@@ -13,6 +13,7 @@ function formatBytes(bytes) {
 
 byId('tryForm').addEventListener('submit', async (event) => {
   event.preventDefault();
+  window.dispatchEvent(new CustomEvent('lightning:pdf-result', { detail: null }));
   byId('zipResult').hidden = true;
   byId('zipDownload').removeAttribute('href');
   if (zipUrl) { URL.revokeObjectURL(zipUrl); zipUrl = undefined; }
