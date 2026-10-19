@@ -64,7 +64,7 @@ public class ApiTryProcessIntegrationTests
             using var entry = inputZip.CreateEntry("src/main.py").Open();
             entry.Write("print('inventory only')"u8);
         }
-        var r2 = await PostImageAsync(client, archiveInput.ToArray(), "application/zip", null, "/api/try/archive");
+        var r2 = await PostImageAsync(client, archiveInput.ToArray(), "application/zip", null, "/api/try/archive", "structural");
         Assert.Equal(HttpStatusCode.OK, r2.StatusCode);
         Assert.Equal("application/zip", r2.Content.Headers.ContentType!.MediaType);
         using (var imported = new ZipArchive(new MemoryStream(await r2.Content.ReadAsByteArrayAsync())))
@@ -72,6 +72,7 @@ public class ApiTryProcessIntegrationTests
             Assert.NotNull(imported.GetEntry("originals/src/main.py"));
             using var inventory = JsonDocument.Parse(imported.GetEntry("report.json")!.Open());
             Assert.False(inventory.RootElement.GetProperty("codeExecuted").GetBoolean());
+            Assert.Equal("INSPECTED", inventory.RootElement.GetProperty("files")[0].GetProperty("analysis").GetProperty("status").GetString());
             Assert.Equal("code", inventory.RootElement.GetProperty("files")[0].GetProperty("category").GetString());
         }
 
@@ -166,7 +167,7 @@ public class ApiTryProcessIntegrationTests
         await serverTask;
     }
 
-    private static Task<HttpResponseMessage> PostImageAsync(HttpClient client, byte[] bytes, string contentType, string? profile, string endpoint = "/api/try/process")
+    private static Task<HttpResponseMessage> PostImageAsync(HttpClient client, byte[] bytes, string contentType, string? profile, string endpoint = "/api/try/process", string? analysis = null)
     {
         var content = new ByteArrayContent(bytes);
         content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
@@ -176,6 +177,7 @@ public class ApiTryProcessIntegrationTests
             request.Headers.Add("X-Stigma-Profile", profile);
         }
 
+        if (analysis is not null) request.Headers.Add("X-Archive-Analysis", analysis);
         return client.SendAsync(request);
     }
 

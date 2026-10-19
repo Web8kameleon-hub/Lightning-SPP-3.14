@@ -517,7 +517,13 @@ internal static class LicenseApiServer
                 }
                 input.Write(buffer, 0, count);
             }
-            var package = ArchivePackage.Create(input.ToArray());
+            var analysisMode = context.Request.Headers["X-Archive-Analysis"];
+            if (!string.IsNullOrWhiteSpace(analysisMode) && analysisMode is not ("none" or "structural"))
+            {
+                await JsonAsync(context, HttpStatusCode.BadRequest, "{\"ok\":false,\"error\":\"Use X-Archive-Analysis: none or structural.\"}");
+                return;
+            }
+            var package = ArchivePackage.Create(input.ToArray(), analysisMode == "structural");
             context.Response.StatusCode = 200;
             context.Response.ContentType = "application/zip";
             context.Response.Headers["Content-Disposition"] = "attachment; filename=\"lightning-inventory.zip\"";

@@ -2477,7 +2477,23 @@
           "503": {
             "description": "Processing busy"
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "X-Archive-Analysis",
+            "in": "header",
+            "required": false,
+            "description": "Optional bounded structural inspection; no code execution or conversion. CSV comma, TSV tab. Invalid files remain preserved with per-file status.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "none",
+                "structural"
+              ],
+              "default": "none"
+            }
+          }
+        ]
       }
     }
   },

@@ -11,7 +11,7 @@ internal static class ArchivePackage
     internal const int MaxExpandedBytes = 32 * 1024 * 1024;
     internal const int MaxEntries = 256;
 
-    internal static byte[] Create(byte[] input)
+    internal static byte[] Create(byte[] input, bool analyze = false)
     {
         if (input.Length == 0 || input.Length > MaxUploadBytes)
             throw new InvalidDataException("ZIP upload must be between 1 byte and 8 MiB.");
@@ -62,12 +62,13 @@ internal static class ArchivePackage
                 files.Add(new { path, outputPath = destination, bytes = data.Length,
                     sha256 = Convert.ToHexStringLower(SHA256.HashData(data)),
                     category = Category(path), identification = "extension-only", status = "PRESERVED",
-                    processing = "NOT_PERFORMED" });
+                    processing = analyze ? "INSPECTION_REQUESTED" : "NOT_PERFORMED",
+                    analysis = analyze ? ArchiveAnalysis.Inspect(path, data) : null });
             }
-            var report = new { schemaVersion = 1, operation = "archive-inventory", createdUtc = DateTimeOffset.UtcNow,
+            var report = new { schemaVersion = 1, operation = analyze ? "archive-analysis" : "archive-inventory", createdUtc = DateTimeOffset.UtcNow,
                 inputSha256 = Convert.ToHexStringLower(SHA256.HashData(input)), expandedBytes = expanded,
                 files, codeExecuted = false, nestedArchivesExpanded = false,
-                scope = "Original bytes preserved. Categories use filename extensions only; no semantic analysis, document conversion or malware scan is claimed." };
+                scope = "Original bytes preserved. Categories use filename extensions only; optional bounded structural inspection only; no semantic analysis, document conversion or malware scan is claimed." };
             using var reportStream = target.CreateEntry("report.json").Open();
             JsonSerializer.Serialize(reportStream, report, new JsonSerializerOptions { WriteIndented = true });
         }

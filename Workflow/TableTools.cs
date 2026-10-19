@@ -10,7 +10,14 @@ internal static class TableTools
         {
             var input = await c.Workspace.ReadAsync(WorkflowJson.Text(a, "path"), token); var delimiter = WorkflowJson.Text(a, "delimiter");
             if (delimiter.Length != 1 || delimiter is not ("," or ";" or "\t")) throw new ArgumentException("Explicit comma, semicolon or tab delimiter required.");
-            using var reader = new TextFieldParser(new StringReader(WorkspaceScope.Decode(input.Bytes))) { HasFieldsEnclosedInQuotes = true, TrimWhiteSpace = false };
+            var (columns, rows) = ParseCsv(WorkspaceScope.Decode(input.Bytes), delimiter, token);
+            return new ToolResult(WorkflowJson.Value(new { columns, rows, interpretation = "RAW_FIELDS_REQUIRE_EXPLICIT_SCHEMA_AND_BANK_CONVENTION" }), [input.Source]);
+        });
+    }
+    internal static (string[] Columns, List<Dictionary<string, string>> Rows) ParseCsv(string text, string delimiter, CancellationToken token = default)
+    {
+        if (delimiter.Length != 1 || delimiter is not ("," or ";" or "\t")) throw new ArgumentException("Explicit delimiter required.");
+            using var reader = new TextFieldParser(new StringReader(text)) { HasFieldsEnclosedInQuotes = true, TrimWhiteSpace = false };
             reader.SetDelimiters(delimiter); var columns = reader.ReadFields() ?? throw new ArgumentException("CSV header required.");
             if (columns.Any(string.IsNullOrWhiteSpace) || columns.Distinct(StringComparer.Ordinal).Count() != columns.Length) throw new ArgumentException("Unique nonempty column names required.");
             var rows = new List<Dictionary<string, string>>();
@@ -21,7 +28,7 @@ internal static class TableTools
                 rows.Add(columns.Select((name, i) => (name, value: fields[i])).ToDictionary(p => p.name, p => p.value, StringComparer.Ordinal));
                 if (rows.Count > 30_000) throw new ArgumentException("Split imports larger than the configured 30,000-row batch budget.");
             }
-            return new ToolResult(WorkflowJson.Value(new { columns, rows, interpretation = "RAW_FIELDS_REQUIRE_EXPLICIT_SCHEMA_AND_BANK_CONVENTION" }), [input.Source]);
-        });
+        return (columns, rows);
     }
+
 }
