@@ -92,7 +92,7 @@ function form(id, action, payload, after = async result => message(result.messag
   });
 }
 form('registerForm','/register',() => ({email:byId('registerEmail').value,password:byId('registerPassword').value}), async result => { byId('registerPassword').value=''; message(result.message); });
-form('loginForm','/login',() => ({email:byId('loginEmail').value,password:byId('loginPassword').value}),async result => { byId('loginPassword').value=''; message(result.message); await refresh(); });
+form('loginForm','/login',() => ({email:byId('loginEmail').value,password:byId('loginPassword').value}),async result => { byId('loginPassword').value=''; message(result.message); await refresh(); window.dispatchEvent(new Event('lightning:account-changed')); });
 form('recoveryForm',() => '/' + byId('recoveryAction').value,() => ({email:byId('recoveryEmail').value}));
 form('verifyForm','/verify',() => ({token:linkToken}),async result => { linkToken=undefined; byId('verifyForm').hidden=true; message(result.message); await refresh(); });
 form('resetForm','/reset',() => ({token:linkToken,password:byId('resetPassword').value}),async result => { linkToken=undefined; byId('resetPassword').value=''; byId('resetForm').hidden=true; message(result.message); await refresh(); });
@@ -101,7 +101,7 @@ function redirect(result, host) {
 }
 form('checkoutForm','/checkout',() => ({priceId:byId('priceId').value}),async result => redirect(result,'checkout.stripe.com'));
 byId('billing').addEventListener('click',event => busy(event.currentTarget,async () => redirect(await request('/billing',{}),'billing.stripe.com')));
-byId('logout').addEventListener('click',event => busy(event.currentTarget,async () => { await request('/logout',{}); await refresh(); message('Signed out.'); }));
+byId('logout').addEventListener('click',event => busy(event.currentTarget,async () => { await request('/logout',{}); await refresh(); window.dispatchEvent(new Event('lightning:account-changed')); message('Signed out.'); }));
 byId('refreshAccount').addEventListener('click',event => busy(event.currentTarget,refresh));
 const fragment = new URLSearchParams(location.hash.slice(1));
 for (const purpose of ['verify','reset']) if (fragment.has(purpose)) {

@@ -15,6 +15,8 @@ const wait=async condition=>{const end=Date.now()+20000;while(!condition()){if(D
 const login=async(email,password)=>{el('loginEmail').value=email;el('loginPassword').value=password;el('loginForm').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await wait(()=>!el('loginForm').querySelector('button').disabled);};
 try {
  await wait(()=>typeof csrf==='string');
+ document.querySelector('.lspp-launch').click();
+ await wait(()=>document.querySelector('.lspp-assist').dataset.mode==='signin');
  await login('ANOTHER@DIFFERENT.EXAMPLE','test-only-starting-password-123!');
  check(el('accountState').textContent.includes('UNVERIFIED'),'Unverified account status missing');
  check(el('accountMessage').textContent.includes('not verified'),'Verification action missing');
@@ -27,12 +29,15 @@ try {
  await login('BUYER+TRIAL@EXAMPLE.TEST','test-only-replacement-password-456!');
  await wait(()=>!el('customer').hidden);
  check(el('accountState').textContent==='Account: VERIFIED','Verified state missing');
+ await wait(()=>['live','nomodel'].includes(document.querySelector('.lspp-assist').dataset.mode));
+ check(!document.querySelector('.lspp-state').textContent.includes('Sign in'),'Assistant retained stale sign-in state');
  check(el('entitlements').textContent.includes('License: ACTIVE'),'Valid paid key not shown as active');
  check(el('entitlements').textContent.includes('Browser registration is optional'),'Browser and license state still coupled');
  check(el('loginPassword').value==='','Login password retained in form after login');
  el('logout').click();await wait(()=>!el('logout').disabled&&!el('anonymous').hidden);
  check(el('accountState').hidden,'Verified status remained visible after logout');
- await fetch('/__acceptance/result',{method:'POST',body:JSON.stringify({passed:true,checks:['correct-password unverified state','wrong-password privacy','canonical recovery address','verified login','active license independent of browser registration','password form cleared','logout clears account status']})});
+ await wait(()=>document.querySelector('.lspp-assist').dataset.mode==='signin');
+ await fetch('/__acceptance/result',{method:'POST',body:JSON.stringify({passed:true,checks:['correct-password unverified state','wrong-password privacy','canonical recovery address','verified login','active license independent of browser registration','password form cleared','logout clears account status','open assistant refreshes after login and logout']})});
 } catch(error){await fetch('/__acceptance/result',{method:'POST',body:JSON.stringify({passed:false,error:error.message})});}
 })();`;
 const server = createServer(async (req,res)=>{

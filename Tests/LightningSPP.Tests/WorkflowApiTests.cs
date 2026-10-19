@@ -13,7 +13,7 @@ public sealed class WorkflowApiTests : IClassFixture<LongoFixture>
     [Fact]
     public async Task CustomerWorkspaceRequiresCsrfAndKeepsDocumentsJobsAndReportsPrivate()
     {
-        var names = new[] { "LSPP_DATA_DIR", "LSPP_TRUST_PROXY_HEADERS", "LSPP_MODEL_ROUTES_FILE" };
+        var names = new[] { "LSPP_DATA_DIR", "LSPP_TRUST_PROXY_HEADERS", "LSPP_MODEL_ROUTES_FILE", "LSPP_WORKFLOW_ALLOWED_EMAILS" };
         var old = names.ToDictionary(n => n, Environment.GetEnvironmentVariable);
         var directory = Path.Combine(Path.GetTempPath(), "lightning-workflow-api-" + Guid.NewGuid().ToString("N"));
         Environment.SetEnvironmentVariable("LSPP_DATA_DIR", directory); Environment.SetEnvironmentVariable("LSPP_TRUST_PROXY_HEADERS", "true"); Environment.SetEnvironmentVariable("LSPP_MODEL_ROUTES_FILE", null);
@@ -25,11 +25,22 @@ public sealed class WorkflowApiTests : IClassFixture<LongoFixture>
         const string password = "test-only-workspace-password-123!";
         try
         {
-            Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/workflow")).StatusCode);
+            using (var signedOut = await client.GetAsync("/api/workflow"))
+            {
+                Assert.Equal(HttpStatusCode.Forbidden, signedOut.StatusCode); // Keep the legacy HTTP contract.
+                Assert.Equal("authentication_required", (await signedOut.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+            }
             var store = CustomerAccounts.Store; var user = store.Register("workspace-fixture@example.test", password);
             Assert.True(store.ConsumeToken(store.CreateToken(user, "verify", TimeSpan.FromHours(1)), "verify"));
             var anonymous = await client.GetFromJsonAsync<JsonElement>("/api/account/csrf"); client.DefaultRequestHeaders.Add("X-CSRF-Token", anonymous.GetProperty("csrfToken").GetString());
             Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/account/login", new { email = user.Email, password })).StatusCode);
+            Environment.SetEnvironmentVariable("LSPP_WORKFLOW_ALLOWED_EMAILS", "different-fixture@example.test");
+            using (var forbidden = await client.GetAsync("/api/workflow"))
+            {
+                Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+                Assert.Equal("workspace_access_denied", (await forbidden.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+            }
+            Environment.SetEnvironmentVariable("LSPP_WORKFLOW_ALLOWED_EMAILS", user.Email);
             var manifest = await client.GetFromJsonAsync<JsonElement>("/api/workflow"); Assert.True(manifest.GetProperty("tools").GetArrayLength() >= 10);
             client.DefaultRequestHeaders.Remove("X-CSRF-Token");
             Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/workflow/import", new { filename = "test.txt", base64 = "eA==" })).StatusCode);
@@ -41,6 +52,7 @@ public sealed class WorkflowApiTests : IClassFixture<LongoFixture>
             var id = (await saved.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
             var executed = await client.PostAsJsonAsync("/api/workflow/run", new { id }); Assert.Equal(HttpStatusCode.OK, executed.StatusCode);
             Assert.Equal("SUCCEEDED", (await executed.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("state").GetString());
+            Environment.SetEnvironmentVariable("LSPP_WORKFLOW_ALLOWED_EMAILS", null);
             // A second valid customer's session still cannot name the first customer's job or file.
             var other = store.Register("other-workspace-fixture@example.test", password); Assert.True(store.ConsumeToken(store.CreateToken(other, "verify", TimeSpan.FromHours(1)), "verify"));
             Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/account/logout", new { })).StatusCode);

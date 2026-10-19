@@ -51,12 +51,14 @@ internal static class WorkflowApi
         transport.Response.Headers["Cache-Control"] = "no-store";
         transport.Response.Headers["X-Content-Type-Options"] = "nosniff";
         transport.Response.Headers["X-Robots-Tag"] = "noindex";
+        var authenticated = false;
         try
         {
             if (RuntimeSecurity.IsProduction && Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ENABLED") != "true")
             { await Reply(transport, 503, new { error = "Workflows are not enabled on this release." }); return; }
             if (transport.Request.HttpMethod is not ("GET" or "POST")) { await Reply(transport, 405, new { error = "GET or POST required." }); return; }
             var auth = await CustomerAccounts.AuthorizeWorkspaceAsync(transport, transport.Request.HttpMethod == "POST");
+            authenticated = true;
             if (!WorkspaceAllowed(CustomerAccounts.Store.FindUser(auth.Owner), Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ALLOWED_EMAILS"), RuntimeSecurity.IsProduction))
                 throw new UnauthorizedAccessException("This account is not enabled for the workspace.");
             var workspace = Workspace(auth.Owner); var models = ModelGateway.FromEnvironment(); var registry = Registry(models); var runner = new WorkflowRunner(registry);
@@ -170,7 +172,7 @@ internal static class WorkflowApi
             await Reply(transport, 404, new { error = "Workspace action not found." });
         }
         catch (AntiforgeryValidationException) { await Reply(transport, 403, new { error = "Refresh your session and use a same-origin request with CSRF protection." }); }
-        catch (UnauthorizedAccessException) { await Reply(transport, 403, new { error = "Workspace authentication or permission denied. Sign in to your own account." }); }
+        catch (UnauthorizedAccessException) { await Reply(transport, 403, new { code = authenticated ? "workspace_access_denied" : "authentication_required", error = authenticated ? "You are signed in, but this account does not have permission for this workspace. Contact your workspace administrator." : "Sign in to your customer account to use the private workspace. An active service license does not sign you in." }); }
         catch (FileNotFoundException) { await Reply(transport, 404, new { error = "Workspace resource not found." }); }
         catch (Exception ex) when (ex is ArgumentException or JsonException or FormatException or OverflowException) { await Reply(transport, 400, new { error = "Invalid workspace input or plan. No operation is implied successful." }); }
         catch (Exception ex)

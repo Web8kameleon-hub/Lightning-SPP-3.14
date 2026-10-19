@@ -12,7 +12,8 @@
     read: 'Lexo ekranin', readHint: n => `Do të dërgohen ${n} karaktere teksti të dukshëm nga kjo faqe. Fushat e formularëve dhe fjalëkalimet nuk lexohen kurrë.`,
     nothing: 'Nuk ka tekst të dukshëm për t’u lexuar në këtë faqe.', preview: 'Shiko çfarë dërgohet',
     live: model => `Model lokal në server: ${model}`, thinking: 'Duke menduar…',
-    signIn: 'Asistenti me AI është i disponueshëm për llogaritë e aktivizuara.', signInLink: 'Hyr në llogari',
+    signIn: 'Hyr në llogari për asistentin privat. Licenca aktive e shërbimit nuk të identifikon automatikisht.', signInLink: 'Hyr në llogari',
+    denied: 'Je i identifikuar, por kjo llogari nuk ka leje për workspace. Kontakto administratorin.',
     disabled: 'Asistenti me AI nuk është aktivizuar ende në këtë version. Lidhjet më poshtë funksionojnë.',
     noModel: 'Nuk ka model të konfiguruar në server ende.', error: 'Kërkesa nuk përfundoi. Asgjë nuk u ekzekutua; provo përsëri.',
     review: 'Përgjigje modeli — kontrolloje para se të veprosh.', workspace: 'Hap në Workspace', shortcuts: 'Shkurtore',
@@ -21,7 +22,8 @@
     read: 'Read my screen', readHint: n => `${n} characters of visible text from this page will be sent. Form fields and passwords are never read.`,
     nothing: 'There is no visible text to read on this page.', preview: 'Preview what is sent',
     live: model => `Server-local model: ${model}`, thinking: 'Thinking…',
-    signIn: 'The AI assistant is available to enabled accounts.', signInLink: 'Sign in',
+    signIn: 'Sign in to use your private assistant. An active service license does not sign you in.', signInLink: 'Sign in',
+    denied: 'You are signed in, but this account does not have workspace access. Contact your workspace administrator.',
     disabled: 'The AI assistant is not enabled on this release yet. The links below work.',
     noModel: 'No model is configured on the server yet.', error: 'The request did not complete. Nothing was executed; try again.',
     review: 'Model answer — review before acting.', workspace: 'Open in Workspace', shortcuts: 'Shortcuts',
@@ -91,7 +93,11 @@
     try {
       const r = await fetch('/api/workflow', { credentials: 'same-origin', signal: AbortSignal.timeout(15000) });
       if (r.status === 503) return setMode('disabled', T.disabled);
-      if (r.status === 401 || r.status === 403) return setMode('signin', T.signIn, ['/account', T.signInLink]);
+      if (r.status === 401 || r.status === 403) {
+        const failure = await r.json().catch(() => ({}));
+        if (failure.code === 'workspace_access_denied') return setMode('denied', T.denied);
+        return setMode('signin', T.signIn, ['/account', T.signInLink]);
+      }
       if (!r.ok) throw new Error();
       const m = await r.json(); csrf = m.csrfToken;
       const routes = Array.isArray(m.models) ? m.models : [];
@@ -127,8 +133,9 @@
   input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } });
   function toggle(force) {
     const open = force ?? panel.hidden; panel.hidden = !open; launcher.setAttribute('aria-expanded', String(open)); root.dataset.open = String(open);
-    if (open) { if (!loaded) load(); setTimeout(() => (input.disabled ? panel.querySelector('.lspp-x') : input).focus(), 60); } else launcher.focus();
+    if (open) { if (!loaded || mode === 'signin' || mode === 'error') load(); setTimeout(() => (input.disabled ? panel.querySelector('.lspp-x') : input).focus(), 60); } else launcher.focus();
   }
+  window.addEventListener('lightning:account-changed', () => { loaded = false; if (!panel.hidden) load(); });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !panel.hidden) toggle(false);
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !e.altKey) { e.preventDefault(); toggle(true); }

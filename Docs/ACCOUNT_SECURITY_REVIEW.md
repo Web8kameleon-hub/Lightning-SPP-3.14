@@ -122,3 +122,34 @@ This policy applies equally to any organization or personal site. It cannot
 guarantee access to every external service: authentication, permissions, supported
 formats and source availability remain prerequisites. Identity, payment and
 verification operations fail closed; they do not use content-source fallbacks.
+
+## Chat sign-in and service-license distinction — 2026-10-19
+
+Root cause: the public shared-service dashboard called its server license "your
+license", while the private assistant treated all authorization failures as a
+request to sign in. An already-open assistant also cached its signed-out state
+after account login in the same page.
+
+Regression risk: changing existing workflow HTTP 403 responses to 401 could break
+clients. Keep HTTP 403 and add `authentication_required` versus
+`workspace_access_denied`; authenticated permission failures must not suggest
+repeated login. Existing configured workspace restrictions remain enforced.
+
+Scalability impact: authentication state is refreshed on account login/logout and
+when reopening a signed-out assistant; no background polling or recipient-specific
+rule is introduced. Security impact: no license grants a session, no paid key is
+exposed anonymously, and cookies, CSRF and access checks are retained. Production
+impact: dashboard copy now identifies the shared server license; the assistant
+refreshes its state after login/logout without a page reload. Dynamic alternative:
+derive the next action from actual session and authorization outcomes rather than
+license status or a named account. The new fields are additive and require no
+state migration; the preceding compatible runtime remains the recovery path.
+
+Verification: release build passed with zero warnings/errors. Eight relevant
+account/workspace API and authorization tests passed. The real local browser
+fixture passed eight checks, including an assistant opened before login refreshing
+after login and returning to sign-in after logout. Fixtures do not prove the
+owner has entered a working password in production. Production inspection found
+a verified active owner account and an allowed workspace policy, with no active
+owner session at the time inspected. No password or verification state was
+modified to obtain that result.

@@ -29,11 +29,11 @@ async function refreshStatus() {
     if (!('valid' in data) || !('hasLicense' in data)) throw new Error('Your license information is unavailable. Please try again.');
     const valid = isTrue(data.valid);
     const exists = isTrue(data.hasLicense);
-    message('status', valid ? 'Your license is active.' : exists ? 'Your license is no longer active.' : 'No license has been activated yet.', valid ? 'success' : '');
+    message('status', valid ? 'This server’s license is active. This does not mean you are signed in.' : exists ? 'This server’s license is no longer active.' : 'No license has been activated on this server yet.', valid ? 'success' : '');
     byId('plan').textContent = plans[String(data.tier).toLowerCase()] || 'Contact your administrator';
     const uses = Number(data.usageThisMonth);
     byId('usage').textContent = Number.isFinite(uses) && uses >= 0 ? uses.toLocaleString('en') : 'Unavailable';
-    byId('nextStep').textContent = valid ? 'You can continue in the connected app your organization uses for scanning and printing.' : 'Ask your workspace administrator to activate a license. If you manage this workspace, open “Workspace administration” below.';
+    byId('nextStep').textContent = valid ? 'For your private account or chat, sign in through Customer account. This status describes the shared service license.' : 'Ask your workspace administrator to activate a license. If you manage this workspace, open “Workspace administration” below.';
   } catch (error) {
     message('status',error.message,'error');
     byId('plan').textContent = 'Unavailable'; byId('usage').textContent = 'Unavailable';
