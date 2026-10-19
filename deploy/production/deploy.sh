@@ -118,7 +118,7 @@ verify_release() {
 
   docker run --rm --network neurosonic_default curlimages/curl:8.10.1 \
     -fsS "http://$backend/openapi.json" | python3 -c \
-    'import json,sys; s=json.load(sys.stdin); assert len(s["paths"]) == 25; assert "/api/account/login" in s["paths"]; assert "/api/try/process" in s["paths"]' \
+    'import json,sys; s=json.load(sys.stdin); required=["/api/health","/api/metrics","/api/alerts","/api/stigma/schema","/api/license/status","/api/license/activate","/api/license/issue","/api/license/signing-status","/api/account","/api/account/csrf","/api/account/register","/api/account/login","/api/account/request-reset","/api/account/request-verification","/api/account/verify","/api/account/reset","/api/account/logout","/api/account/license","/api/account/activate","/api/account/retry-email","/api/account/checkout","/api/account/billing","/api/stripe/recover","/api/stripe/webhook","/api/try/process","/api/try/package"]; assert set(required).issubset(s["paths"]); assert s["paths"]["/api/try/package"]["post"]["responses"]["200"]["content"]["application/zip"]["schema"]["format"] == "binary"' \
     || { log "release $release: incomplete OpenAPI reference"; return 1; }
 
   log "release $release passed all internal checks"
