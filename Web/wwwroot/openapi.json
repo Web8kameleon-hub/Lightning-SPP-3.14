@@ -2438,6 +2438,47 @@
           }
         }
       }
+    },
+    "/api/try/archive": {
+      "post": {
+        "summary": "Inventory a mixed ZIP archive without executing or converting its files",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Original files and extension-based inventory report",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unsafe, invalid or unsupported archive"
+          },
+          "413": {
+            "description": "Upload exceeds 8 MiB"
+          },
+          "429": {
+            "description": "Rate limit"
+          },
+          "503": {
+            "description": "Processing busy"
+          }
+        }
+      }
     }
   },
   "tags": [

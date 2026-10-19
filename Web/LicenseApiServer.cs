@@ -368,6 +368,18 @@ internal static class LicenseApiServer
                 await TextAsync(context, outcome.Status, outcome.Message);
                 return;
             }
+            if (path == "/api/try/archive" && context.Request.HttpMethod == "POST")
+            {
+                if (!await TryProcessingSlots.WaitAsync(0))
+                {
+                    context.Response.Headers["Retry-After"] = "5";
+                    await JsonAsync(context, HttpStatusCode.ServiceUnavailable, "{\"ok\":false,\"error\":\"Archive processing is busy.\"}");
+                    return;
+                }
+                try { await HandleArchiveAsync(context, clientIp); }
+                finally { TryProcessingSlots.Release(); }
+                return;
+            }
             if (path is "/api/try/process" or "/api/try/package" && context.Request.HttpMethod == "POST")
             {
                 if (!await TryProcessingSlots.WaitAsync(0))
@@ -478,6 +490,49 @@ internal static class LicenseApiServer
     /// without installing anything. PDF input is validated and rendered through the real
     /// document core before every page enters the Scan + Process pipeline.
     /// </summary>
+    private static async Task HandleArchiveAsync(HttpListenerContext context, string clientIp)
+    {
+        if (IsTryRateLimited(clientIp))
+        {
+            context.Response.Headers["Retry-After"] = "300";
+            await JsonAsync(context, HttpStatusCode.TooManyRequests, "{\"ok\":false,\"error\":\"Too many demo requests.\"}");
+            return;
+        }
+        if (!(context.Request.ContentType ?? "").Split(';')[0].Trim().Equals("application/zip", StringComparison.OrdinalIgnoreCase))
+        {
+            await JsonAsync(context, HttpStatusCode.BadRequest, "{\"ok\":false,\"error\":\"Upload an application/zip body.\"}");
+            return;
+        }
+        try
+        {
+            using var input = new MemoryStream();
+            var buffer = new byte[8192];
+            int count;
+            while ((count = await context.Request.InputStream.ReadAsync(buffer)) > 0)
+            {
+                if (input.Length + count > ArchivePackage.MaxUploadBytes)
+                {
+                    await JsonAsync(context, HttpStatusCode.RequestEntityTooLarge, "{\"ok\":false,\"error\":\"ZIP exceeds 8 MiB.\"}");
+                    return;
+                }
+                input.Write(buffer, 0, count);
+            }
+            var package = ArchivePackage.Create(input.ToArray());
+            context.Response.StatusCode = 200;
+            context.Response.ContentType = "application/zip";
+            context.Response.Headers["Content-Disposition"] = "attachment; filename=\"lightning-inventory.zip\"";
+            context.Response.Headers["Cache-Control"] = "no-store";
+            context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+            context.Response.ContentLength64 = package.Length;
+            await context.Response.OutputStream.WriteAsync(package);
+            context.Response.Close();
+        }
+        catch (Exception ex) when (ex is InvalidDataException or ArgumentException or NotSupportedException)
+        {
+            await JsonAsync(context, HttpStatusCode.BadRequest, "{\"ok\":false,\"error\":\"Invalid or unsupported ZIP. Limits: 256 entries, 32 MiB expanded, expansion ratio 200. Unsafe paths and links are rejected.\"}");
+        }
+    }
+
     private static async Task HandleTryProcessAsync(HttpListenerContext context, string clientIp, bool zipPackage = false)
     {
         if (IsTryRateLimited(clientIp))

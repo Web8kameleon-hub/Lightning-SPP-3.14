@@ -38,8 +38,9 @@
 <!-- LIGHTNING-PRODUCT:END -->
 <h2 id="try-title">Upload a document</h2>
 <form id="tryForm">
-  <label for="fileInput">Document or image file</label>
-  <input id="fileInput" type="file" accept="application/pdf,image/png,image/jpeg,image/bmp,image/tiff,image/gif" required>
+  <p>ZIP import inventories mixed folders and preserves original files. Code is not executed; format-specific processing is not performed.</p>
+  <label for="fileInput">ZIP archive, document or image file</label>
+  <input id="fileInput" type="file" accept=".zip,application/zip,application/pdf,image/png,image/jpeg,image/bmp,image/tiff,image/gif" required>
   <label for="profileSelect">Profile</label>
   <select id="profileSelect">
     <option value="lightning">Lightning — fastest</option>

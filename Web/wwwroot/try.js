@@ -25,9 +25,10 @@ byId('tryForm').addEventListener('submit', async (event) => {
   if (pdfOnly && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
     message('tryStatus', 'Choose a PDF file for PDF Processor.', 'error'); return;
   }
-  const contentType = pdfOnly ? 'application/pdf' : file.type;
+  const archiveInput = !pdfOnly && /\.zip$/i.test(file.name);
+  const contentType = archiveInput ? 'application/zip' : pdfOnly ? 'application/pdf' : file.type;
 
-  const wantsZip = byId('zipPackage').checked;
+  const wantsZip = archiveInput || byId('zipPackage').checked;
   const profile = byId('profileSelect').value;
   if (pdfOnly && !pdfProfiles.includes(profile)) {
     message('tryStatus', 'This profile is not available in PDF Processor.', 'error'); return;
@@ -36,12 +37,12 @@ byId('tryForm').addEventListener('submit', async (event) => {
   const oldLabel = button.textContent;
   button.disabled = true; button.textContent = 'Processing…';
   fileInput.disabled = true; byId('profileSelect').disabled = true;
-  message('tryStatus', contentType === 'application/pdf' ? 'Submitting PDF for validation and processing of all pages (maximum 32). Waiting for the server result…' : 'Submitting image to the Scan and Process pipeline. Waiting for the server result…');
+  message('tryStatus', archiveInput ? 'Validating ZIP and inventorying files without executing code…' : contentType === 'application/pdf' ? 'Submitting PDF for validation and processing of all pages (maximum 32). Waiting for the server result…' : 'Submitting image to the Scan and Process pipeline. Waiting for the server result…');
   byId('results').hidden = true;
   byId('downloadLink').removeAttribute('href');
 
   try {
-    const response = await fetch(wantsZip ? '/api/try/package' : '/api/try/process', {
+    const response = await fetch(archiveInput ? '/api/try/archive' : wantsZip ? '/api/try/package' : '/api/try/process', {
       method: 'POST',
       headers: { 'Content-Type': contentType, 'X-Stigma-Profile': profile },
       body: file,
@@ -56,7 +57,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
       zipUrl = URL.createObjectURL(blob);
       byId('zipDownload').href = zipUrl;
       byId('zipResult').hidden = false;
-      message('tryStatus', 'Done. Your processed document and verification report are ready in one ZIP. No supplier classification was performed.', 'success');
+      message('tryStatus', archiveInput ? 'Done. Original files and inventory report are ready. Categories are based on extensions; no code was executed or content converted.' : 'Done. Your processed document and verification report are ready in one ZIP. No supplier classification was performed.', 'success');
       return;
     }
     const data = await response.json();
