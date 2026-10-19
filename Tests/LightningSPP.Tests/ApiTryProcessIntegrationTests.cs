@@ -57,10 +57,23 @@ public class ApiTryProcessIntegrationTests
         Assert.Equal(after.Length, json.RootElement.GetProperty("afterBytes").GetInt32());
         Assert.Equal(after.Length, json.RootElement.GetProperty("compressedBytes").GetInt32());
 
-        // 2. Valid upload, explicit profile -> echoed back.
-        var r2 = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: "nanodecibel");
+        // 2. Mixed ZIP import returns original bytes and an honest inventory.
+        using var archiveInput = new MemoryStream();
+        using (var inputZip = new ZipArchive(archiveInput, ZipArchiveMode.Create, true))
+        {
+            using var entry = inputZip.CreateEntry("src/main.py").Open();
+            entry.Write("print('inventory only')"u8);
+        }
+        var r2 = await PostImageAsync(client, archiveInput.ToArray(), "application/zip", null, "/api/try/archive");
         Assert.Equal(HttpStatusCode.OK, r2.StatusCode);
-        Assert.Contains("\"profile\": \"nanodecibel\"", await r2.Content.ReadAsStringAsync());
+        Assert.Equal("application/zip", r2.Content.Headers.ContentType!.MediaType);
+        using (var imported = new ZipArchive(new MemoryStream(await r2.Content.ReadAsByteArrayAsync())))
+        {
+            Assert.NotNull(imported.GetEntry("originals/src/main.py"));
+            using var inventory = JsonDocument.Parse(imported.GetEntry("report.json")!.Open());
+            Assert.False(inventory.RootElement.GetProperty("codeExecuted").GetBoolean());
+            Assert.Equal("code", inventory.RootElement.GetProperty("files")[0].GetProperty("category").GetString());
+        }
 
         // ZIP export shares the same processing path and request budget.
         var package = await PostImageAsync(client, RealTestImage.Png(), "image/png", "lightning", "/api/try/package");
@@ -80,8 +93,8 @@ public class ApiTryProcessIntegrationTests
             }
         }
 
-        // 3. Unknown profile header -> 400, not silently defaulted.
-        var r3 = await PostImageAsync(client, RandomBytes(1024), "image/png", profile: "not-a-real-profile", endpoint: "/api/try/package");
+        // 3. Invalid ZIP is rejected without exposing internal errors.
+        var r3 = await PostImageAsync(client, RandomBytes(1024), "application/zip", profile: null, endpoint: "/api/try/archive");
         Assert.Equal(HttpStatusCode.BadRequest, r3.StatusCode);
 
         // 4. PDF MIME is accepted, but an invalid PDF is rejected by the real PDF validator
