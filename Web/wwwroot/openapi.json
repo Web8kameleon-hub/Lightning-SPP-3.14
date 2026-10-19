@@ -754,7 +754,7 @@
             }
           }
         },
-        "description": "Lists this customerâ€™s entitlements and configured Stripe plans. Does not expose other customers or license keys.",
+        "description": "Lists this customer\u00e2\u20ac\u2122s entitlements and configured Stripe plans. Does not expose other customers or license keys.",
         "security": [
           {
             "customerSession": []
@@ -2245,6 +2245,143 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProcessedDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid size, media type, profile or document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Document could not be validated, rendered or processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demo rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected processing failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Another demo job is running; retry shortly",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/try/package": {
+      "post": {
+        "operationId": "packageProcessedDocument",
+        "tags": [
+          "Document processing"
+        ],
+        "summary": "Process a document and download ZIP with a verification report",
+        "description": "Same validation, 8 MiB input limit, 32-page PDF limit, profiles, concurrency and shared demo rate budget as /api/try/process. Returns processed.pdf or processed.png, preview.png and report.json. No ZIP input, supplier classification or splitting. Report license status describes the server runtime, not the visitor entitlement.",
+        "parameters": [
+          {
+            "name": "X-Stigma-Profile",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "lightning",
+                "tidewave",
+                "resonance",
+                "nanodecibel"
+              ],
+              "default": "lightning"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/pdf": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/bmp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/tiff": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/gif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Complete processed document and verification report ZIP",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
                 }
               }
             }

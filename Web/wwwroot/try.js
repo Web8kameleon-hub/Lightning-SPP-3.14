@@ -3,6 +3,7 @@ const byId = id => document.getElementById(id);
 const pdfOnly = byId('tryForm').dataset.product === 'pdf-processor';
 const pdfProfiles = (byId('tryForm').dataset.profiles || '').split(',');
 let beforeUrl;
+let zipUrl;
 function message(id, text, kind = '') { const el = byId(id); el.textContent = text; el.className = 'message ' + kind; }
 function formatBytes(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -12,6 +13,9 @@ function formatBytes(bytes) {
 
 byId('tryForm').addEventListener('submit', async (event) => {
   event.preventDefault();
+  byId('zipResult').hidden = true;
+  byId('zipDownload').removeAttribute('href');
+  if (zipUrl) { URL.revokeObjectURL(zipUrl); zipUrl = undefined; }
   byId('results').hidden = true;
   byId('downloadLink').removeAttribute('href');
   const fileInput = byId('fileInput');
@@ -23,6 +27,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
   }
   const contentType = pdfOnly ? 'application/pdf' : file.type;
 
+  const wantsZip = byId('zipPackage').checked;
   const profile = byId('profileSelect').value;
   if (pdfOnly && !pdfProfiles.includes(profile)) {
     message('tryStatus', 'This profile is not available in PDF Processor.', 'error'); return;
@@ -36,13 +41,24 @@ byId('tryForm').addEventListener('submit', async (event) => {
   byId('downloadLink').removeAttribute('href');
 
   try {
-    const response = await fetch('/api/try/process', {
+    const response = await fetch(wantsZip ? '/api/try/package' : '/api/try/process', {
       method: 'POST',
       headers: { 'Content-Type': contentType, 'X-Stigma-Profile': profile },
       body: file,
       signal: AbortSignal.timeout(contentType === 'application/pdf' ? 2100000 : 30000)
     });
 
+    if (wantsZip && response.ok) {
+      if (!(response.headers.get('Content-Type') || '').startsWith('application/zip')) throw new Error('Unexpected package response.');
+      const blob = await response.blob();
+      const signature = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+      if (signature.join(',') !== '80,75,3,4') throw new Error('Invalid ZIP package.');
+      zipUrl = URL.createObjectURL(blob);
+      byId('zipDownload').href = zipUrl;
+      byId('zipResult').hidden = false;
+      message('tryStatus', 'Done. Your processed document and verification report are ready in one ZIP. No supplier classification was performed.', 'success');
+      return;
+    }
     const data = await response.json();
     if (!response.ok || !data.ok) {
       throw new Error(data.error || 'Processing failed. Please try a different file.');

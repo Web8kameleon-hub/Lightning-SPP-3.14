@@ -1,4 +1,6 @@
 using System.Net;
+using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Text.Json;
@@ -60,8 +62,26 @@ public class ApiTryProcessIntegrationTests
         Assert.Equal(HttpStatusCode.OK, r2.StatusCode);
         Assert.Contains("\"profile\": \"nanodecibel\"", await r2.Content.ReadAsStringAsync());
 
+        // ZIP export shares the same processing path and request budget.
+        var package = await PostImageAsync(client, RealTestImage.Png(), "image/png", "lightning", "/api/try/package");
+        Assert.Equal(HttpStatusCode.OK, package.StatusCode);
+        Assert.Equal("application/zip", package.Content.Headers.ContentType!.MediaType);
+        Assert.Contains("no-store", package.Headers.CacheControl!.ToString());
+        using (var zip = new ZipArchive(new MemoryStream(await package.Content.ReadAsByteArrayAsync())))
+        {
+            Assert.Equal(new[] { "preview.png", "processed.png", "report.json" }, zip.Entries.Select(e => e.FullName).Order().ToArray());
+            using var report = JsonDocument.Parse(zip.GetEntry("report.json")!.Open());
+            Assert.Equal("NOT_PERFORMED", report.RootElement.GetProperty("classification").GetProperty("status").GetString());
+            foreach (var file in report.RootElement.GetProperty("files").EnumerateArray())
+            {
+                using var bytes = new MemoryStream();
+                await zip.GetEntry(file.GetProperty("path").GetString()!)!.Open().CopyToAsync(bytes);
+                Assert.Equal(file.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(bytes.ToArray())));
+            }
+        }
+
         // 3. Unknown profile header -> 400, not silently defaulted.
-        var r3 = await PostImageAsync(client, RandomBytes(1024), "image/png", profile: "not-a-real-profile");
+        var r3 = await PostImageAsync(client, RandomBytes(1024), "image/png", profile: "not-a-real-profile", endpoint: "/api/try/package");
         Assert.Equal(HttpStatusCode.BadRequest, r3.StatusCode);
 
         // 4. PDF MIME is accepted, but an invalid PDF is rejected by the real PDF validator
@@ -74,7 +94,7 @@ public class ApiTryProcessIntegrationTests
         Assert.DoesNotContain("Exception", invalidBody);
 
         // 5. Empty body -> 400, not a 500 or hang.
-        var r5 = await PostImageAsync(client, Array.Empty<byte>(), "image/png", profile: null);
+        var r5 = await PostImageAsync(client, Array.Empty<byte>(), "image/png", profile: null, endpoint: "/api/try/package");
         Assert.Equal(HttpStatusCode.BadRequest, r5.StatusCode);
 
         // 6. Oversized body (> 8 MB) -> 400, rejected before full processing.
@@ -83,7 +103,7 @@ public class ApiTryProcessIntegrationTests
         Assert.Equal(HttpStatusCode.BadRequest, r6.StatusCode);
 
         // Keep exactly ten requests before the rate-limit assertion, including native coverage.
-        var fillerCount = 4;
+        var fillerCount = 3;
         if (Environment.GetEnvironmentVariable("SPP_TEST_NATIVE_DOCUMENTS") == "1")
         {
             var pdf = new PdfDocumentService().CreateFromImages([RealTestImage.Png(), RealTestImage.Png()]);
@@ -126,18 +146,18 @@ public class ApiTryProcessIntegrationTests
         }
 
         // 7. The 11th request from this IP within the window must be rate-limited.
-        var r11 = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: null);
+        var r11 = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: null, endpoint: "/api/try/package");
         Assert.Equal(HttpStatusCode.TooManyRequests, r11.StatusCode);
 
         cts.Cancel();
         await serverTask;
     }
 
-    private static Task<HttpResponseMessage> PostImageAsync(HttpClient client, byte[] bytes, string contentType, string? profile)
+    private static Task<HttpResponseMessage> PostImageAsync(HttpClient client, byte[] bytes, string contentType, string? profile, string endpoint = "/api/try/process")
     {
         var content = new ByteArrayContent(bytes);
         content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/try/process") { Content = content };
+        var request = new HttpRequestMessage(HttpMethod.Post, endpoint) { Content = content };
         if (profile is not null)
         {
             request.Headers.Add("X-Stigma-Profile", profile);

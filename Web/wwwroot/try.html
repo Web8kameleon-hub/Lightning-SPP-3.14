@@ -47,11 +47,14 @@
     <option value="resonance">Resonance — high precision</option>
     <option value="nanodecibel">NanoDecibel — maximum quality</option>
   </select>
+  <label><input id="zipPackage" type="checkbox" style="width:auto;min-height:auto"> Export ZIP with verification report</label>
+  <p class="muted">Contains the processed file, preview and JSON report. Supplier classification and splitting are not included. ZIP upload is not supported.</p>
   <button type="submit">Process this file</button>
   <p id="tryStatus" class="message" role="status" aria-live="polite"></p>
 </form>
 </section>
 
+<section id="zipResult" class="section" hidden><h2>ZIP package ready</h2><a id="zipDownload" class="button" download="lightning-document.zip">Download ZIP package</a><p>The report records processing scope, file hashes, page mapping and the server license status.</p></section>
 <section id="results" class="section" hidden>
   <h2>Result</h2>
   <div class="grid two">

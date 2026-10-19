@@ -368,7 +368,7 @@ internal static class LicenseApiServer
                 await TextAsync(context, outcome.Status, outcome.Message);
                 return;
             }
-            if (path == "/api/try/process" && context.Request.HttpMethod == "POST")
+            if (path is "/api/try/process" or "/api/try/package" && context.Request.HttpMethod == "POST")
             {
                 if (!await TryProcessingSlots.WaitAsync(0))
                 {
@@ -377,7 +377,7 @@ internal static class LicenseApiServer
                         "{\"ok\":false,\"error\":\"Document processing is busy. Please retry shortly.\"}");
                     return;
                 }
-                try { await HandleTryProcessAsync(context, clientIp); }
+                try { await HandleTryProcessAsync(context, clientIp, path == "/api/try/package"); }
                 finally { TryProcessingSlots.Release(); }
                 return;
             }
@@ -478,7 +478,7 @@ internal static class LicenseApiServer
     /// without installing anything. PDF input is validated and rendered through the real
     /// document core before every page enters the Scan + Process pipeline.
     /// </summary>
-    private static async Task HandleTryProcessAsync(HttpListenerContext context, string clientIp)
+    private static async Task HandleTryProcessAsync(HttpListenerContext context, string clientIp, bool zipPackage = false)
     {
         if (IsTryRateLimited(clientIp))
         {
@@ -536,6 +536,19 @@ internal static class LicenseApiServer
             var isPdf = contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase);
             var result = await new TryDocumentProcessor(ServiceFactory.CreateScanService(),
                 ServiceFactory.CreateProcessingService()).ProcessAsync(originalBytes, isPdf, scanMode);
+            if (zipPackage)
+            {
+                var package = DocumentPackage.Create(originalBytes, result, isPdf, profileName);
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "application/zip";
+                context.Response.Headers["Content-Disposition"] = "attachment; filename=\"lightning-document.zip\"";
+                context.Response.Headers["Cache-Control"] = "no-store";
+                context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+                context.Response.ContentLength64 = package.Length;
+                await context.Response.OutputStream.WriteAsync(package);
+                context.Response.Close();
+                return;
+            }
             var compressionPercent = Math.Round(100.0 * (1 - (double)result.Output.Length / originalBytes.Length), 1);
             var response = new Dictionary<string, object>
             {
