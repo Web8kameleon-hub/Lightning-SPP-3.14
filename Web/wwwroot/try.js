@@ -29,6 +29,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
   const contentType = archiveInput ? 'application/zip' : pdfOnly ? 'application/pdf' : file.type;
 
   const structural = archiveInput && Boolean(byId('archiveAnalysis')?.checked);
+  const documents = archiveInput && Boolean(byId('archiveDocuments')?.checked);
   const wantsZip = archiveInput || byId('zipPackage').checked;
   const profile = byId('profileSelect').value;
   if (pdfOnly && !pdfProfiles.includes(profile)) {
@@ -45,9 +46,9 @@ byId('tryForm').addEventListener('submit', async (event) => {
   try {
     const response = await fetch(archiveInput ? '/api/try/archive' : wantsZip ? '/api/try/package' : '/api/try/process', {
       method: 'POST',
-      headers: { 'Content-Type': contentType, 'X-Stigma-Profile': profile, ...(archiveInput ? { 'X-Archive-Analysis': structural ? 'structural' : 'none' } : {}) },
+      headers: { 'Content-Type': contentType, 'X-Stigma-Profile': profile, ...(archiveInput ? { 'X-Archive-Analysis': structural ? 'structural' : 'none', 'X-Archive-Documents': documents ? 'pdf' : 'none' } : {}) },
       body: file,
-      signal: AbortSignal.timeout(contentType === 'application/pdf' ? 2100000 : 30000)
+      signal: AbortSignal.timeout(contentType === 'application/pdf' ? 2100000 : documents ? 110000 : 30000)
     });
 
     if (wantsZip && response.ok) {
@@ -58,7 +59,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
       zipUrl = URL.createObjectURL(blob);
       byId('zipDownload').href = zipUrl;
       byId('zipResult').hidden = false;
-      message('tryStatus', archiveInput ? (structural ? 'Done. Structural analysis is included in report.json. Check each file status for invalid, unsupported or size-limited files; originals are preserved.' : 'Done. Original files and inventory report are ready. Categories are based on extensions; no code was executed or content converted.') : 'Done. Your processed document and verification report are ready in one ZIP. No supplier classification was performed.', 'success');
+      message('tryStatus', documents ? 'Package ready. Read documentProcessing for each file in report.json: PDFs may be processed, failed or skipped by limits. Originals are preserved; successful PDF outputs are rasterized.' : archiveInput ? (structural ? 'Done. Structural analysis is included in report.json. Check each file status for invalid, unsupported or size-limited files; originals are preserved.' : 'Done. Original files and inventory report are ready. Categories are based on extensions; no code was executed or content converted.') : 'Done. Your processed document and verification report are ready in one ZIP. No supplier classification was performed.', 'success');
       return;
     }
     const data = await response.json();

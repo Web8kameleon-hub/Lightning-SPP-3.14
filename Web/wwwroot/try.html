@@ -40,6 +40,7 @@
 <form id="tryForm">
   <p>ZIP import inventories mixed folders and preserves original files. Code is not executed. Optional structural analysis validates JSON/CSV/TSV and measures UTF-8 text; other formats are preserved.</p>
   <label><input id="archiveAnalysis" type="checkbox" style="width:auto;min-height:auto"> Analyze supported files inside ZIP (JSON, CSV/TSV, text/code)</label>
+  <label><input id="archiveDocuments" type="checkbox" style="width:auto;min-height:auto"> Process PDFs inside ZIP (up to 4 PDFs, 32 pages each, 20 seconds each). Originals preserved; processed PDFs are rasterized.</label>
   <p class="muted">CSV uses comma; TSV uses tab. Inspection is limited to 1 MiB per file. No code execution, document conversion or semantic audit.</p>
   <label for="fileInput">ZIP archive, document or image file</label>
   <input id="fileInput" type="file" accept=".zip,application/zip,application/pdf,image/png,image/jpeg,image/bmp,image/tiff,image/gif" required>

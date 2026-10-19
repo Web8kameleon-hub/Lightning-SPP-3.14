@@ -2441,7 +2441,7 @@
     },
     "/api/try/archive": {
       "post": {
-        "summary": "Inventory a mixed ZIP archive without executing or converting its files",
+        "summary": "Inventory a mixed ZIP with optional structural inspection and PDF processing",
         "requestBody": {
           "required": true,
           "content": {
@@ -2455,7 +2455,7 @@
         },
         "responses": {
           "200": {
-            "description": "Original files and extension-based inventory report",
+            "description": "Preserved originals and report; optional rasterized PDF results with per-file success, failure or skipped status",
             "content": {
               "application/zip": {
                 "schema": {
@@ -2489,6 +2489,20 @@
               "enum": [
                 "none",
                 "structural"
+              ],
+              "default": "none"
+            }
+          },
+          {
+            "name": "X-Archive-Documents",
+            "in": "header",
+            "required": false,
+            "description": "Opt-in PDF processing: up to 4 PDFs, 8 MiB and 32 pages per PDF, 20 seconds per PDF, 32 MiB generated output. Original files preserved. PDF text, signatures and interactive structure are not preserved in rasterized outputs. Failures and limits are recorded per file.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "none",
+                "pdf"
               ],
               "default": "none"
             }

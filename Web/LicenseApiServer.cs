@@ -523,7 +523,20 @@ internal static class LicenseApiServer
                 await JsonAsync(context, HttpStatusCode.BadRequest, "{\"ok\":false,\"error\":\"Use X-Archive-Analysis: none or structural.\"}");
                 return;
             }
-            var package = ArchivePackage.Create(input.ToArray(), analysisMode == "structural");
+            var documentMode = context.Request.Headers["X-Archive-Documents"];
+            if (!string.IsNullOrWhiteSpace(documentMode) && documentMode is not ("none" or "pdf"))
+            {
+                await JsonAsync(context, HttpStatusCode.BadRequest, "{\"ok\":false,\"error\":\"Use X-Archive-Documents: none or pdf.\"}");
+                return;
+            }
+            if (!TryParseScanMode(context.Request.Headers["X-Stigma-Profile"], out var mode, out _))
+            {
+                await JsonAsync(context, HttpStatusCode.BadRequest, "{\"ok\":false,\"error\":\"Unknown processing profile.\"}");
+                return;
+            }
+            var package = documentMode == "pdf"
+                ? await ArchiveDocumentPackage.CreateAsync(input.ToArray(), analysisMode == "structural", mode)
+                : ArchivePackage.Create(input.ToArray(), analysisMode == "structural");
             context.Response.StatusCode = 200;
             context.Response.ContentType = "application/zip";
             context.Response.Headers["Content-Disposition"] = "attachment; filename=\"lightning-inventory.zip\"";
