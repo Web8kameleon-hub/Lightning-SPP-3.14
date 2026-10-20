@@ -74,7 +74,8 @@ public class ApiTryProcessIntegrationTests
         using (var imported = new ZipArchive(new MemoryStream(await r2.Content.ReadAsByteArrayAsync())))
         {
             Assert.NotNull(imported.GetEntry("originals/src/main.py"));
-            if (Environment.GetEnvironmentVariable("SPP_TEST_NATIVE_DOCUMENTS") == "1") Assert.NotNull(imported.GetEntry("processed/docs/report.pdf"));
+            if (Environment.GetEnvironmentVariable("SPP_TEST_NATIVE_DOCUMENTS") == "1")
+                Assert.Contains(imported.Entries, entry => entry.FullName.StartsWith("processed/", StringComparison.Ordinal) && entry.FullName.EndsWith("/processed.pdf", StringComparison.Ordinal));
             using var inventory = JsonDocument.Parse(imported.GetEntry("report.json")!.Open());
             Assert.False(inventory.RootElement.GetProperty("codeExecuted").GetBoolean());
             Assert.Equal("INSPECTED", inventory.RootElement.GetProperty("files")[0].GetProperty("analysis").GetProperty("status").GetString());
