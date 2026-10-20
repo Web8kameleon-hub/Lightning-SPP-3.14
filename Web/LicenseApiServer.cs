@@ -536,8 +536,17 @@ internal static class LicenseApiServer
             }
             using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(2));
             byte[] package;
-            try { package = documentMode == "pdf" ? await ArchiveDocuments.ProcessAsync(input.ToArray(), analysisMode == "structural", deadline.Token) : ArchivePackage.Create(input.ToArray(), analysisMode == "structural"); }
-            catch (OperationCanceledException) { await JsonAsync(context, HttpStatusCode.RequestTimeout, "{\"ok\":false,\"error\":\"Archive processing exceeded its time budget. No partial ZIP returned.\"}"); return; }
+            try
+            {
+                package = documentMode == "pdf"
+                    ? await ArchiveDocumentPackage.CreateAsync(input.ToArray(), analysisMode == "structural", ScanMode.Lightning, deadline.Token)
+                    : ArchivePackage.Create(input.ToArray(), analysisMode == "structural");
+            }
+            catch (OperationCanceledException)
+            {
+                await JsonAsync(context, HttpStatusCode.RequestTimeout, "{\"ok\":false,\"error\":\"Archive processing exceeded its time budget. No partial ZIP returned.\"}");
+                return;
+            }
             context.Response.StatusCode = 200;
             context.Response.ContentType = "application/zip";
             context.Response.Headers["Content-Disposition"] = "attachment; filename=\"lightning-inventory.zip\"";

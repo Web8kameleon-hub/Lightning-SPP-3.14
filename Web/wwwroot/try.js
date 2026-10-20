@@ -30,8 +30,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
   const contentType = archiveInput ? 'application/zip' : pdfOnly ? 'application/pdf' : file.type;
 
   const structural = archiveInput && Boolean(byId('archiveAnalysis')?.checked);
-  const processDocuments = archiveInput && Boolean(byId('archiveDocuments')?.checked);
-  if (pdfOnly && !byId('pdfConsent')?.checked) { message('tryStatus', 'Confirm the PDF rasterization notice before processing.', 'error'); return; }
+
   const wantsZip = archiveInput || byId('zipPackage').checked;
   const profile = byId('profileSelect').value;
   if (pdfOnly && !pdfProfiles.includes(profile)) {
@@ -48,9 +47,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
   try {
     const response = await fetch(archiveInput ? '/api/try/archive' : wantsZip ? '/api/try/package' : '/api/try/process', {
       method: 'POST',
-      headers: { 'Content-Type': contentType, 'X-Stigma-Profile': profile, ...(archiveInput ? { 'X-Archive-Analysis': structural ? 'structural' : 'none', 'X-Archive-Documents': processDocuments ? 'pdf' : 'none' } : {}) },
-      body: file,
-      signal: AbortSignal.timeout(contentType === 'application/pdf' ? 2100000 : processDocuments ? 180000 : 30000)
+
     });
 
     if (wantsZip && response.ok) {
@@ -61,7 +58,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
       zipUrl = URL.createObjectURL(blob);
       byId('zipDownload').href = zipUrl;
       byId('zipResult').hidden = false;
-      message('tryStatus', archiveInput ? (processDocuments ? 'ZIP ready. Read report.json for PDF successes, failures and skipped files. Originals are preserved; processed PDFs are rasterized.' : structural ? 'Done. Structural analysis is included in report.json. Check each file status for invalid, unsupported or size-limited files; originals are preserved.' : 'Done. Original files and inventory report are ready. Categories are based on extensions; no code was executed or content converted.') : 'Done. Your processed document and verification report are ready in one ZIP. No supplier classification was performed.', 'success');
+
       return;
     }
     const data = await response.json();
