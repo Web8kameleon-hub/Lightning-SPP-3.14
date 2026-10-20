@@ -53,6 +53,44 @@ WWWMMM_STIGMA_LEVEL=1 dotnet run -- pipeline document.pdf   # quality profile</c
 </tbody></table>
 <p class="muted">Hardware: Intel Core i9-14900KF (24 cores/32 threads), Windows 11 Pro 64-bit, .NET 10.0.300, developer workstation. This is one data point from one machine — it is not a guarantee for your hardware, and the Instant mode target was not met here. Run the command yourself for numbers that apply to your deployment.</p></section>
 
+<section class="section" aria-labelledby="evidence-title"><h2 id="evidence-title">Evidence matrix</h2>
+<p>This page separates <strong>measured evidence</strong>, <strong>CI regression gates</strong>, and <strong>reference records</strong>. They are not interchangeable.</p>
+<table style="width:100%;border-collapse:collapse;margin-top:12px">
+<thead><tr><th style="text-align:left;padding:8px 0;border-bottom:1px solid #dce4dc">Evidence</th><th style="text-align:left;padding:8px 0;border-bottom:1px solid #dce4dc">Scope</th><th style="text-align:left;padding:8px 0;border-bottom:1px solid #dce4dc">Meaning</th></tr></thead>
+<tbody>
+<tr><td style="padding:8px 0;border-bottom:1px solid #edf1ed">Published workstation run</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">3 repetitions, speed CLI</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">Observed on the hardware documented above; not a universal guarantee.</td></tr>
+<tr><td style="padding:8px 0;border-bottom:1px solid #edf1ed">CI performance gates</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">Instant ≤50ms; UltraFast ≤100ms; Lightning ≤150ms; real pipeline ≤1500ms</td><td style="padding:8px 0;border-bottom:1px solid #edf1ed">Regression budgets for shared CI runners, deliberately wider than dedicated-machine measurements.</td></tr>
+<tr><td style="padding:8px 0">Repository reference record</td><td style="padding:8px 0">0.3ms Instant; 3.7ms UltraFast; 15ms Lightning; 3.1M ops/s cloud throughput</td><td style="padding:8px 0">Historical/reference values. Repeat only with a generated environment record.</td></tr>
+</tbody></table></section>
+
+<section class="section" aria-labelledby="record-title"><h2 id="record-title">Reproducibility record</h2>
+<p>A publishable benchmark should carry the exact execution context. The repository benchmark protocol requires the following record:</p>
+<pre style="background:#0d1b14;color:#d9f2e6;padding:18px;border-radius:12px;overflow:auto"><code>commit_sha:
+version:
+utc_timestamp:
+dotnet_runtime:
+os:
+cpu:
+logical_cores:
+memory:
+power_mode:
+containerized:
+payload_sha256:
+payload_bytes:
+profile:
+warmup_runs:
+measured_runs:
+median_ms:
+p95_ms:
+p99_ms:
+throughput_ops_s:
+peak_working_set_mb:</code></pre>
+<p class="muted">If a field was not captured during a run, it should remain undisclosed rather than inferred later.</p></section>
+
+<section class="section" aria-labelledby="claims-title"><h2 id="claims-title">What we will not claim without evidence</h2>
+<p>Lightning-only measurements do not establish superiority over another product. Comparative statements such as faster, cheaper, or higher quality require equivalent inputs, feature parity, product versions, regional pricing, timestamps and raw results for every product being compared.</p>
+<p><strong>No fake evidence:</strong> engineering targets are not customer guarantees, CI gates are not benchmark results, and a successful test does not establish performance on hardware that was not measured.</p></section>
+
 <section class="section" aria-labelledby="methodology-title"><h2 id="methodology-title">What a valid benchmark report includes</h2><div class="grid two">
 <article class="card"><h3>Hardware</h3><p>CPU, RAM, disk type, OS and .NET runtime version used for the run.</p></article>
 <article class="card"><h3>Dataset</h3><p>File types, sizes, and count of documents processed.</p></article>
