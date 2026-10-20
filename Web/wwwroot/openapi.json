@@ -2500,15 +2500,12 @@
             "name": "X-Archive-Documents",
             "in": "header",
             "required": false,
-
             "schema": {
               "type": "string",
-              "enum": [
-                "none",
-                "pdf"
-              ],
+              "enum": ["none", "pdf"],
               "default": "none"
-
+            },
+            "description": "Optional PDF processing inside ZIP; originals preserved, per-file outcomes reported, rasterized output."
           }
         ]
       }
