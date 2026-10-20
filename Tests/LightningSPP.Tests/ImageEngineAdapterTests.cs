@@ -62,6 +62,54 @@ public class ImageEngineAdapterTests
         Console.WriteLine(
             $"LR_RESULT|{engine}|{mode}|SUCCESS|{elapsed.TotalMilliseconds:F2}|{result.Data.Length}");
     }
+
+    [Theory]
+    [InlineData(ImageEngine.Skia)]
+    [InlineData(ImageEngine.ImageSharp)]
+    public void Get_ReturnsTheExplicitlySelectedRealEngine(ImageEngine engine)
+    {
+        var skia = new RealImageProcessor();
+        var imageSharp = new FastScanService(NullLogger<FastScanService>.Instance);
+        var adapter = new ImageEngineAdapter(skia, imageSharp);
+
+        var selected = adapter.Get(engine);
+
+        if (engine == ImageEngine.Skia)
+            Assert.Same(skia, selected);
+        else
+            Assert.Same(imageSharp, selected);
+    }
+
+    [Fact]
+    public void Get_RejectsUnknownEngineWithoutFallback()
+    {
+        var adapter = new ImageEngineAdapter(
+            new RealImageProcessor(),
+            new FastScanService(NullLogger<FastScanService>.Instance));
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => adapter.Get((ImageEngine)int.MaxValue));
+    }
+
+    [Fact]
+    public async Task ProcessAsync_RejectsNullInput()
+    {
+        var adapter = new ImageEngineAdapter(
+            new RealImageProcessor(),
+            new FastScanService(NullLogger<FastScanService>.Instance));
+
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => adapter.ProcessAsync(ImageEngine.Skia, null!));
+    }
+
+    [Fact]
+    public async Task ResonanceAsync_RejectsNullInput()
+    {
+        var adapter = new ImageEngineAdapter(
+            new RealImageProcessor(),
+            new FastScanService(NullLogger<FastScanService>.Instance));
+
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => adapter.ResonanceAsync(ImageEngine.Skia, null!));
+    }
 }
-
-
