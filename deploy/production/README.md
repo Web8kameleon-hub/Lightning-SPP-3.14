@@ -109,3 +109,34 @@ directory is `/opt/scanprocessprint/longo`, owned by UID 10001 with mode 0700.
 Back up that directory along with application data before persistence changes.
 Rollback retains the shared Longo state and records each release's backend port
 so the earlier 8081 proxy deployment can be restored if needed.
+
+
+## Selective production deployment
+
+CI validates every push to main/develop and every pull request to main. Documentation
+and test changes still receive validation but do not by themselves request deployment.
+Automatic production deployment compares the entire current main tree against the last
+successful GitHub deployment in the `production` environment, rather than only the latest
+commit. Renames are evaluated as removal plus addition. Missing baseline evidence,
+API errors, divergent history, and unknown paths block automatic deployment.
+
+Only changes under `Services/`, `PublicAPI/`, `SDK/`, and `Web/wwwroot/` are eligible
+for automatic deployment after Build & Test and Docker Build & Test succeed. Changes
+to auth/account server code, licensing, configuration, persistence, dependencies,
+Docker, workflows, deployment scripts, or other paths require an explicit deployment.
+A sensitive change remains a blocker in later pushes until a successful controlled
+deployment establishes a new baseline. See `Scripts/select-production-deploy.py`.
+
+For the initial rollout of this policy, or another reviewed sensitive change, run
+**Lightning SPP CI/CD** on **main** with **deploy_production=true** and
+**publish_ghcr=false**. Default manual runs only validate. Release publication no
+longer requests a production deployment. Existing NuGet, Docker Hub, and GHCR
+publication conditions remain separate. Never select both publication and deployment.
+The deployment still uses the restricted SSH entrypoint, production environment,
+serial deployment lock, candidate checks, public health check, and existing rollback
+command. This policy does not change persistence formats or application behavior.
+
+Acceptance: verify the PR validation runs before merge; after merge use the explicit
+production run, inspect its deployment log and public health verification, and record
+the successful SHA. A successful CI run with a skipped deployment is not deployment
+evidence. If a deployment fails, inspect state before retrying; do not bypass gates.
