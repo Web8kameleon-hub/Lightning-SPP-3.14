@@ -14,8 +14,11 @@ public sealed class ModelGateway
     private static readonly SemaphoreSlim InferenceSlots = new(2, 2);
     private readonly Dictionary<string, ModelRoute> routes;
     private readonly HttpClient client;
-    public ModelGateway(IEnumerable<ModelRoute> routes, HttpClient? transport = null)
+    private readonly ModelQualityPolicy? quality;
+    public bool QualityRoutingEnabled => quality is not null;
+    public ModelGateway(IEnumerable<ModelRoute> routes, HttpClient? transport = null, ModelQualityPolicy? qualityPolicy = null)
     {
+        quality = qualityPolicy;
         this.routes = new(StringComparer.Ordinal);
         foreach (var route in routes)
         {
@@ -31,7 +34,7 @@ public sealed class ModelGateway
         var file = Environment.GetEnvironmentVariable("LSPP_MODEL_ROUTES_FILE");
         if (string.IsNullOrWhiteSpace(file)) return new([]);
         if (!Path.IsPathFullyQualified(file) || new FileInfo(file).Length > 1024 * 1024) throw new ArgumentException("Model routes require a bounded operator-owned configuration file.");
-        return new(JsonSerializer.Deserialize<ModelRoute[]>(File.ReadAllBytes(file), WorkflowJson.Options) ?? throw new ArgumentException("Model route array required."));
+        return new(JsonSerializer.Deserialize<ModelRoute[]>(File.ReadAllBytes(file), WorkflowJson.Options) ?? throw new ArgumentException("Model route array required."), qualityPolicy: ModelQualityPolicy.FromEnvironment());
     }
     public IEnumerable<object> Routes => routes.Values.Select(r => new { r.Id, r.Model, r.Provider, r.Remote, state = "DISCOVERY_REQUIRED" });
     private ModelRoute Route(string id, IReadOnlySet<string> permissions)
@@ -75,28 +78,87 @@ public sealed class ModelGateway
             ? values.EnumerateArray().Select(v => v.GetString() ?? "").ToArray() : [];
         return new(id, route.Model, digest, capabilities, "PROVIDER_REPORTED_IDENTITY");
     }
-    public async Task<(string Text, ModelIdentity Identity)> ChatAsync(string id, ConversationMessage[] messages, IReadOnlySet<string> permissions, CancellationToken token, byte[]? image = null, bool json = false)
+    public async Task<(string Text, ModelIdentity Identity)> ChatAsync(string id, ConversationMessage[] messages, IReadOnlySet<string> permissions, CancellationToken token, byte[]? image = null, bool json = false, string? expectedDigest = null)
     {
         if (messages.Length is < 1 or > 40 || messages.Any(m => m.Role is not ("system" or "user" or "assistant") || m.Content.Length > 64 * 1024) || messages.Sum(m => (long)m.Content.Length) > 256 * 1024)
             throw new ArgumentException("Conversation exceeds configured context budget; select a smaller evidence batch.");
+        if (expectedDigest is not null) messages = FitQualityConversation(messages, 8192 - 1536 - 512);
         if (!await InferenceSlots.WaitAsync(0, token)) throw new InvalidOperationException("Model inference capacity is busy; retry later.");
         try
         {
         var route = Route(id, permissions); var identity = await DiscoverAsync(id, permissions, token);
+        if (expectedDigest is not null && identity.Digest != expectedDigest) throw new InvalidOperationException("Model changed after its quality evaluation was selected.");
         if (image is not null && (route.Provider != "ollama" || !identity.Capabilities.Contains("vision"))) throw new InvalidOperationException("Discovered route does not report a verified vision transport capability.");
         object body;
-        if (route.Provider == "ollama") body = new { model = route.Model, stream = false, format = json ? "json" : null,
-            messages = messages.Select((m, i) => new { role = m.Role, content = m.Content, images = image is not null && i == messages.Length - 1 ? new[] { Convert.ToBase64String(image) } : null }) };
+        if (route.Provider == "ollama")
+        {
+            var payload = new Dictionary<string, object?> { ["model"] = route.Model, ["stream"] = false, ["format"] = json ? "json" : null,
+                ["messages"] = messages.Select((m, i) => new { role = m.Role, content = m.Content, images = image is not null && i == messages.Length - 1 ? new[] { Convert.ToBase64String(image) } : null }) };
+            if (expectedDigest is not null)
+            {
+                payload["options"] = new { temperature = 0, num_ctx = 8192, num_predict = 1536 };
+                if (identity.Capabilities.Contains("thinking")) payload["think"] = false;
+            }
+            body = payload;
+        }
         else body = new { model = route.Model, stream = false, messages = messages.Select(m => new { role = m.Role, content = m.Content }) };
         using var result = await Send(route, HttpMethod.Post, route.Provider == "ollama" ? "api/chat" : "chat/completions", body, token);
         var actualModel = WorkflowJson.Text(result.RootElement, "model");
         if (actualModel != route.Model) throw new InvalidOperationException("Inference model differs from the discovered configured identity.");
-        if (route.Provider == "ollama" && (!result.RootElement.TryGetProperty("done", out var done) || done.ValueKind != JsonValueKind.True)) throw new IOException("Incomplete model response.");
+        if (route.Provider == "ollama" && (!result.RootElement.TryGetProperty("done", out var done) || done.ValueKind != JsonValueKind.True || WorkflowJson.Text(result.RootElement, "done_reason") == "length")) throw new IOException("Incomplete model response.");
         var text = route.Provider == "ollama" ? WorkflowJson.Text(result.RootElement.GetProperty("message"), "content") : WorkflowJson.Text(result.RootElement.GetProperty("choices")[0].GetProperty("message"), "content");
+        if (string.IsNullOrWhiteSpace(text)) throw new IOException("Empty model response.");
         return (text, identity);
         }
         finally { InferenceSlots.Release(); }
     }
+    internal static ConversationMessage[] FitQualityConversation(ConversationMessage[] messages, int byteBudget)
+    {
+        // UTF-8 bounds tokens conservatively. Omit only complete older turns, never safety or the current question.
+        var selected = messages.ToList();
+        while (selected.Sum(m => (long)System.Text.Encoding.UTF8.GetByteCount(m.Content)) > byteBudget)
+        {
+            if (selected.Count < 4 || selected[0].Role != "system" || selected[1].Role != "user" ||
+                selected[2].Role != "assistant" || selected[^1].Role != "user")
+                throw new ArgumentException("The current question and evidence exceed the model context budget; select less evidence.");
+            selected.RemoveRange(1, 2);
+        }
+        return selected.ToArray();
+    }
+    public async Task<(string Text, ModelQualitySelection Selection)> ChatBestAsync(ConversationMessage[] messages,
+        string language, string scope, IReadOnlySet<string> permissions, CancellationToken token)
+    {
+        if (quality is null) throw new InvalidOperationException("Automatic quality routing is not configured.");
+        if (!permissions.Contains("model.invoke")) throw new UnauthorizedAccessException("Model permission required.");
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+        deadline.CancelAfter(TimeSpan.FromSeconds(150)); token = deadline.Token;
+        var candidates = new List<(ModelRoute Route, ModelIdentity Identity, ModelQualityEvidence Evidence)>();
+        foreach (var route in routes.Values)
+        {
+            if (route.Remote && !permissions.Contains("network.remote")) continue;
+            ModelIdentity identity;
+            try { identity = await DiscoverAsync(route.Id, permissions, token); }
+            catch (HttpRequestException ex) when (ex.StatusCode is System.Net.HttpStatusCode.NotFound ||
+                ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests || (int?)ex.StatusCode >= 500) { continue; }
+            if (identity.Digest is null || !identity.Capabilities.Contains("completion")) continue;
+            var measurement = quality.Evidence(identity.Model, identity.Digest, language, scope, DateTimeOffset.UtcNow);
+            if (measurement is not null) candidates.Add((route, identity, measurement));
+        }
+        if (candidates.Select(c => c.Evidence.SampleCount).Distinct().Count() > 1) throw new InvalidOperationException("Quality candidates have incomparable evaluation coverage.");
+        foreach (var candidate in candidates.OrderByDescending(c => c.Evidence.Score).ThenByDescending(c => c.Evidence.SampleCount).ThenBy(c => c.Route.Id, StringComparer.Ordinal))
+        {
+            try
+            {
+                var answer = await ChatAsync(candidate.Route.Id, messages, permissions, token, expectedDigest: candidate.Identity.Digest);
+                // Re-discovery inside ChatAsync also protects against a tag changing between selection and inference.
+                if (answer.Identity.Digest != candidate.Identity.Digest) throw new InvalidOperationException("Model changed after its quality evaluation was selected.");
+                return (answer.Text, new(answer.Identity, candidate.Evidence));
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests || (int?)ex.StatusCode >= 500) { }
+        }
+        throw new InvalidOperationException("No available permitted route has current quality evidence for the requested language and evaluation scope.");
+    }
+
     internal IEnumerable<IWorkflowTool> Tools()
     {
         yield return new DelegateTool(new("models.ask", "Ask a configured discovered model with explicit source context; output remains an unverified model claim.", ["files.read", "model.invoke"], ["route", "prompt"], ["path"]), async (a, c, token) =>

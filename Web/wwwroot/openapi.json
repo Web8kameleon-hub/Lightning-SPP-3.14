@@ -2476,6 +2476,9 @@
           },
           "503": {
             "description": "Processing busy"
+          },
+          "408": {
+            "description": "Time budget exceeded; no partial archive returned"
           }
         },
         "parameters": [
@@ -2497,7 +2500,7 @@
             "name": "X-Archive-Documents",
             "in": "header",
             "required": false,
-            "description": "Opt-in PDF processing: up to 4 PDFs, 8 MiB and 32 pages per PDF, 20 seconds per PDF, 32 MiB generated output. Original files preserved. PDF text, signatures and interactive structure are not preserved in rasterized outputs. Failures and limits are recorded per file.",
+
             "schema": {
               "type": "string",
               "enum": [
@@ -2505,7 +2508,7 @@
                 "pdf"
               ],
               "default": "none"
-            }
+
           }
         ]
       }

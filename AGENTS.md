@@ -13,3 +13,11 @@ Lightning SPP has been in production since **2 October 2026 (2026-10-02)**. Trea
 - Passing checks is evidence for the cases exercised, not a guarantee that no unknown defect exists. Report any remaining uncertainty honestly; do not mark the change production ready while an acceptance requirement remains unmet.
 
 **If it is not real, verified, and production grade, it does not pass.**
+
+## One active workspace across computers
+
+- Before continuing work or pushing, fetch the configured remote and compare the current branch, remote history, local changes and registered worktrees. Preserve work from other computers.
+- Use the primary checkout for ongoing work. Create another worktree only for a concrete isolation need; consolidate its changes and retire it when that need ends.
+- Before consolidation, preserve tracked and untracked changes in a recoverable backup. Apply changes onto the latest shared history and resolve conflicts explicitly. Never discard local work, rewrite shared history or force-push as a synchronization shortcut.
+- Do not merge an old branch merely because it exists. Check whether its behavior is already integrated; preserve genuinely unique work and identify anything still awaiting review.
+- Keep one current implementation and one recorded acceptance status. Temporary candidates and backups must not become competing active copies. Unaccepted changes remain outside production until the mandatory acceptance gate passes.

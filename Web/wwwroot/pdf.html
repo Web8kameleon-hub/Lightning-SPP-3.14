@@ -30,7 +30,7 @@
 <nav aria-label="Main navigation"><a href="/features">Features</a><a href="/technology">Technology</a><a href="/try" aria-current="page">Try it</a><a href="/pricing">Pricing</a><a href="/benchmarks">Benchmarks</a><a href="/dashboard">Your license</a></nav></header>
 <main id="main">
 <nav aria-label="Breadcrumb"><a href="/">Lightning SPP</a><span aria-hidden="true"> / </span><span>PDF Processor</span></nav>
-<section class="hero"><span class="eyebrow">Lightning SPP · VERIFIED</span><h1>PDF Processor</h1><p class="intro">Upload PDF → Process → Preview page 1 → Download all processed pages</p><p>Process each page with a supported image profile, then download the rebuilt PDF.</p></section>
+<section class="hero"><span class="eyebrow">Lightning SPP · PDF workflow</span><h1>PDF Processor</h1><p class="intro">Upload PDF → Process → Preview page 1 → Download all processed pages</p><p>Process each page with a supported image profile, then download the rebuilt PDF.</p></section>
 
 <section class="card" aria-labelledby="try-title">
 <h2 id="try-title">Upload a PDF</h2>
@@ -40,7 +40,8 @@
   <label for="profileSelect">Profile</label>
   <select id="profileSelect"><option value="lightning">Lightning — grayscale</option></select>
   <label><input id="zipPackage" type="checkbox" style="width:auto;min-height:auto"> Export ZIP with verification report</label>
-  <p class="muted">Contains the processed file, preview and JSON report. Supplier classification and splitting are not included. ZIP upload is not supported.</p>
+  <p class="muted">Contains the processed file, preview and JSON report. Supplier classification and splitting are not included. This page accepts PDF input; use <a href="/try">Try it for ZIP folder imports</a>.</p>
+  <label><input id="pdfConsent" type="checkbox" required style="width:auto;min-height:auto"> I understand that this rebuilds pages as images, removes selectable text, vectors and forms, and may increase file size.</label>
   <button type="submit">Process PDF</button>
   <p id="tryStatus" class="message" role="status" aria-live="polite"></p>
 </form>
@@ -77,7 +78,7 @@
 <li>Output may be larger than the input. This is not a lossless PDF optimizer.</li>
 <li>Requests are rate-limited to 10 per visitor per 5 minutes.</li>
 <li>Native PDF processing requires Poppler in the application environment.</li>
-<li>This product page has not been deployed; commercial readiness is not established.</li>
+<li>This workflow is available on this application instance. Availability alone does not establish suitability for a customer deployment.</li>
 <li>Only the Lightning grayscale profile is offered here. Other profiles need further PDF dimension-limit verification.</li></ul><p>This workflow is available on this application instance; it is not a claim of commercial readiness.</p></section>
 </main>
 <footer><span>Lightning SPP</span><a href="/#help">Need help getting started?</a></footer>
