@@ -186,7 +186,6 @@ public class ApiTryProcessIntegrationTests
 
         if (documents is not null) request.Headers.Add("X-Archive-Documents", documents);
         if (analysis is not null) request.Headers.Add("X-Archive-Analysis", analysis);
-        if (documents is not null) request.Headers.Add("X-Archive-Documents", documents);
         return client.SendAsync(request);
     }
 
