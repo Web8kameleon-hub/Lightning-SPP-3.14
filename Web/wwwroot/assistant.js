@@ -4,47 +4,19 @@
 // user switches it on, reads the visible page text (Clisonix Matia pattern: visible <main>
 // text only, never inputs, passwords or hidden nodes). Answers come exclusively from the
 // server-side model route behind /api/workflow/conversation; nothing is generated locally.
-(() => {
+(async () => {
   if (window.__lsppAssistant) return; window.__lsppAssistant = true;
-  const sq = (navigator.language || '').toLowerCase().startsWith('sq');
-  const T = sq ? {
-    open: 'Hap asistentin', close: 'Mbyll', send: 'Dërgo', placeholder: 'Pyet për këtë faqe ose për punën tënde…',
-    read: 'Lexo ekranin', readHint: n => `Do të dërgohen ${n} karaktere teksti të dukshëm nga kjo faqe. Fushat e formularëve dhe fjalëkalimet nuk lexohen kurrë.`,
-    nothing: 'Nuk ka tekst të dukshëm për t’u lexuar në këtë faqe.', preview: 'Shiko çfarë dërgohet',
-    live: model => `Model lokal në server: ${model}`, thinking: 'Duke menduar…',
-    signIn: 'Hyr në llogari për asistentin privat. Licenca aktive e shërbimit nuk të identifikon automatikisht.', signInLink: 'Hyr në llogari',
-    denied: 'Je i identifikuar, por kjo llogari nuk ka leje për workspace. Kontakto administratorin.',
-    disabled: 'Asistenti me AI nuk është aktivizuar ende në këtë version. Lidhjet më poshtë funksionojnë.',
-    noModel: 'Nuk ka model të konfiguruar në server ende.', error: 'Kërkesa nuk përfundoi. Asgjë nuk u ekzekutua; provo përsëri.',
-    review: 'Përgjigje modeli — kontrolloje para se të veprosh.', workspace: 'Hap në Workspace', shortcuts: 'Shkurtore',
-  } : {
-    open: 'Open assistant', close: 'Close', send: 'Send', placeholder: 'Ask about this page or your work…',
-    read: 'Read my screen', readHint: n => `${n} characters of visible text from this page will be sent. Form fields and passwords are never read.`,
-    nothing: 'There is no visible text to read on this page.', preview: 'Preview what is sent',
-    live: model => `Server-local model: ${model}`, thinking: 'Thinking…',
-    signIn: 'Sign in to use your private assistant. An active service license does not sign you in.', signInLink: 'Sign in',
-    denied: 'You are signed in, but this account does not have workspace access. Contact your workspace administrator.',
-    disabled: 'The AI assistant is not enabled on this release yet. The links below work.',
-    noModel: 'No model is configured on the server yet.', error: 'The request did not complete. Nothing was executed; try again.',
-    review: 'Model answer — review before acting.', workspace: 'Open in Workspace', shortcuts: 'Shortcuts',
-  };
-  // Context profiles: the chameleon changes accent, role and suggestions per page.
-  const P = (role, roleSq, accent, asks, asksSq, links) => ({ role: sq ? roleSq : role, accent, asks: sq ? asksSq : asks, links });
-  const profiles = {
-    '/': P('Product guide', 'Udhërrëfyes produkti', '#3bd5ff', ['What can Lightning SPP do for my documents?', 'Summarize this page for me'], ['Çfarë mund të bëjë Lightning SPP për dokumentet e mia?', 'Përmblidhe këtë faqe'], [['/try', 'Try it'], ['/pricing', 'Pricing']]),
-    '/features': P('Feature explainer', 'Shpjegues aftësish', '#3bd5ff', ['Which feature fits my use case?'], ['Cila aftësi i përshtatet rastit tim?'], [['/try', 'Try it']]),
-    '/technology': P('Technical advisor', 'Këshilltar teknik', '#8b5cf6', ['Explain this architecture simply', 'How do I integrate the SDK?'], ['Shpjegoma këtë arkitekturë thjesht', 'Si e integroj SDK-në?'], [['/swagger', 'API'], ['/benchmarks', 'Benchmarks']]),
-    '/try': P('Processing assistant', 'Asistent përpunimi', '#3ddc84', ['Explain the result on my screen', 'Why was my file rejected?'], ['Shpjegoma rezultatin në ekran', 'Pse u refuzua skedari im?'], [['/pdf', 'PDF'], ['/pricing', 'Pricing']]),
-    '/pdf': P('PDF assistant', 'Asistent PDF', '#3ddc84', ['Explain the PDF result on my screen'], ['Shpjegoma rezultatin PDF në ekran'], [['/try', 'Images']]),
-    '/pricing': P('Plan advisor', 'Këshilltar planesh', '#ff9b38', ['Which plan fits my volume?', 'What happens after I pay?'], ['Cili plan i përshtatet volumit tim?', 'Çfarë ndodh pasi paguaj?'], [['/account', 'Account']]),
-    '/benchmarks': P('Benchmark reader', 'Lexues matjesh', '#8b5cf6', ['What do these measurements prove — and not prove?'], ['Çfarë provojnë këto matje — dhe çfarë jo?'], [['/technology', 'Technology']]),
-    '/account': P('Account helper', 'Ndihmës llogarie', '#ff9b38', ['How do I activate my license?', 'I did not get the verification email'], ['Si e aktivizoj licencën?', 'Nuk më erdhi emaili i verifikimit'], [['/dashboard', 'License'], ['/workspace', 'Workspace']]),
-    '/dashboard': P('License helper', 'Ndihmës licence', '#ff9b38', ['Explain my license status'], ['Shpjegoma statusin e licencës'], [['/account', 'Account']]),
-    '/workspace': P('Workflow copilot', 'Kopilot workflow', '#8b5cf6', ['Propose a plan for the selected files', 'What does this job result mean?'], ['Propozo një plan për skedarët e zgjedhur', 'Çfarë do të thotë rezultati i këtij job-i?'], [['/account', 'Account']]),
-    '/swagger': P('API helper', 'Ndihmës API', '#8b5cf6', ['Show me how to call /api/try/process'], ['Më trego si thirret /api/try/process'], [['/technology', 'Technology']]),
-  };
+  const {negotiateLocale, formatMessage, validateCatalog} = await import('/assistant-i18n.mjs');
+  const response = await fetch('/assistant-locales.json', {signal: AbortSignal.timeout(10000)});
+  if (!response.ok) throw new Error('Assistant language catalog unavailable');
+  const catalog = validateCatalog(await response.json());
+  let savedLocale;
+  try { savedLocale = localStorage.getItem('lightning-assistant-locale'); } catch { /* Storage may be disabled. */ }
+  let locale = negotiateLocale([savedLocale, ...(navigator.languages || [navigator.language])].filter(Boolean), Object.keys(catalog.locales), catalog.defaultLocale);
+  let entry = catalog.locales[locale], T = entry.messages;
+  const text = (key, values) => formatMessage(T[key], values);
   const path = (location.pathname.replace(/\/+$/, '').replace(/\.html$/, '') || '/');
-  const profile = profiles[path] || profiles['/'];
+  let profile = entry.profiles[path] || entry.profiles[catalog.defaultProfile];
 
   // Visible-page reader: same contract as screen-context.js, excluding the assistant itself.
   const visibleText = () => {
@@ -68,16 +40,30 @@
   const chips = h('div', { class: 'lspp-chips' });
   const links = h('nav', { class: 'lspp-links', 'aria-label': T.shortcuts });
   for (const [href, label] of profile.links) links.append(h('a', { href }, label));
-  const form = h('form', { class: 'lspp-form' }, input, sendBtn);
+  const languageSelect = h('select', {class: 'lspp-language'});
+  for (const [tag, translation] of Object.entries(catalog.locales)) languageSelect.append(h('option', {value: tag}, translation.label));
+  languageSelect.value = locale; languageSelect.setAttribute('aria-label', T.language);
+  const responseSelect = h('select', {class: 'lspp-language', 'aria-label': T.responseLanguage});
+  responseSelect.append(h('option', {value: ''}, T.automaticLanguage));
+  for (const [tag, metadata] of Object.entries(catalog.responseLanguages)) {
+    let label = metadata.name;
+    try { label = new Intl.DisplayNames([tag], {type: 'language'}).of(tag); } catch { /* Use provider-supplied name. */ }
+    responseSelect.append(h('option', {value: tag}, label));
+  }
+  try { const saved = localStorage.getItem('lightning-assistant-response-language'); if (saved in catalog.responseLanguages) responseSelect.value = saved; } catch { }
+  responseSelect.addEventListener('change', () => { try { localStorage.setItem('lightning-assistant-response-language', responseSelect.value); } catch { } });
+  const responseLabel = h('label', {}, T.responseLanguage, responseSelect);
+  const form = h('form' , { class: 'lspp-form' }, input, sendBtn);
   const panel = h('section', { class: 'lspp-panel', role: 'dialog', 'aria-modal': 'false', 'aria-labelledby': 'lsppTitle', hidden: '' },
     h('header', {}, h('div', {}, h('span', { class: 'lspp-dot', 'aria-hidden': 'true' }), h('strong', { id: 'lsppTitle' }, profile.role)),
       h('button', { type: 'button', class: 'lspp-x', 'aria-label': T.close, onclick: () => toggle(false) }, '×')),
-    state, log, chips,
+    languageSelect, responseLabel, state, log, chips,
     h('div', { class: 'lspp-read' }, readToggle, h('label', { for: 'lsppRead' }, T.read)), readHint, previewBox, form, links);
   const launcher = h('button', { type: 'button', class: 'lspp-launch', 'aria-label': T.open, 'aria-expanded': 'false', onclick: () => toggle() },
     h('svg', { viewBox: '0 0 32 32', 'aria-hidden': 'true' }));
   launcher.firstChild.innerHTML = '<path d="M6 17c0-6 4.5-10 10-10s10 4 10 9-4 9-9.5 9c-1.6 0-3-.3-4.2-.8L7 26l1.4-4.2C6.9 20.6 6 18.9 6 17Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="20" cy="15" r="1.8" fill="currentColor"/><path d="M11 18.5c1.4 1.4 3.6 1.4 5 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
   const root = h('div', { class: 'lspp-assist' }, panel, launcher);
+  panel.lang = locale; panel.dir = entry.direction;
   root.style.setProperty('--lspp-accent', profile.accent);
   document.body.append(root);
 
@@ -89,9 +75,9 @@
         ![d.originalBytes, d.afterBytes, d.totalTimeMs].every(n => Number.isFinite(n) && n >= 0) || d.originalBytes === 0) return;
     latestPdf = { ...d };
   });
-  let csrf = null, route = null, mode = 'unknown', loaded = false;
+  let csrf = null, route = null, automaticQualityRouting = false, mode = 'unknown', loaded = false;
   const say = (who, text, note) => { const m = h('div', { class: 'lspp-msg ' + who }, h('p', {}, text)); if (note) m.append(h('small', {}, note)); log.append(m); log.scrollTop = log.scrollHeight; return m; };
-  function renderChips() { chips.replaceChildren(); for (const q of profile.asks) chips.append(h('button', { type: 'button', onclick: () => { input.value = q; if (/screen|ekran|faqe|page/i.test(q)) { readToggle.checked = true; updateRead(); } ask(); } }, q)); }
+  function renderChips() { chips.replaceChildren(); for (const [index, q] of profile.asks.entries()) chips.append(h('button', { type: 'button', onclick: () => { input.value = q; if (profile.readScreenOnAsk?.includes(index)) { readToggle.checked = true; updateRead(); } ask(); } }, q)); }
   function setMode(next, message, link) {
     mode = next; state.replaceChildren(message); if (link) state.append(' ', h('a', { href: link[0] }, link[1]));
     const live = next === 'live'; input.disabled = sendBtn.disabled = !live; chips.hidden = !live; root.dataset.mode = next;
@@ -110,14 +96,18 @@
       const m = await r.json(); csrf = m.csrfToken;
       const routes = Array.isArray(m.models) ? m.models : [];
       if (!routes.length) return setMode('nomodel', T.noModel);
-      route = routes[0].id; setMode('live', T.live(routes[0].model)); renderChips();
+      automaticQualityRouting = m.automaticQualityRouting === true;
+      // Existing single-route installations remain compatible. Multiple routes require measured selection.
+      if (!automaticQualityRouting && routes.length !== 1) return setMode('nomodel', T.qualityUnavailable);
+      route = automaticQualityRouting ? null : routes[0].id;
+      setMode('live', automaticQualityRouting ? T.qualityRouting : text('live', {model: routes[0].model})); renderChips();
       if (path !== '/workspace') links.append(h('a', { href: '/workspace' }, T.workspace));
     } catch { setMode('error', T.error); }
   }
   function updateRead() {
     const on = readToggle.checked; const text = on ? visibleText() : '';
     readHint.hidden = previewBox.hidden = !on;
-    readHint.textContent = text ? T.readHint(text.length) : T.nothing; previewBox.querySelector('pre').textContent = text;
+    readHint.textContent = text ? formatMessage(T.readHint, {count: text.length}) : T.nothing; previewBox.querySelector('pre').textContent = text;
     previewBox.hidden = !text;
   }
   readToggle.addEventListener('change', updateRead);
@@ -126,11 +116,9 @@
     if (goal && latestPdf && path === '/pdf' && goal === profile.asks[0]) {
       say('me', goal); input.value = ''; grow();
       const d = latestPdf, size = Math.round(1000 * (d.afterBytes / d.originalBytes - 1)) / 10;
-      const text = sq
-        ? `${d.pages} faqe u përpunuan në ${(d.totalTimeMs / 1000).toFixed(2)} sekonda. Madhësia: ${(d.originalBytes / 1024).toFixed(1)} → ${(d.afterBytes / 1024).toFixed(1)} KiB (${size >= 0 ? '+' : ''}${size}%). PDF-ja është rasterizuar; teksti i përzgjedhshëm, vektorët dhe formularët nuk ruhen. Këto matje nuk provojnë përmirësim cilësie ose optimizim madhësie.`
-        : `${d.pages} page(s) processed in ${(d.totalTimeMs / 1000).toFixed(2)} seconds. Size: ${(d.originalBytes / 1024).toFixed(1)} → ${(d.afterBytes / 1024).toFixed(1)} KiB (${size >= 0 ? '+' : ''}${size}%). The PDF was rasterized; selectable text, vectors and forms are not preserved. These measurements do not establish better quality or size optimization.`;
-      const message = say('ai', text, sq ? 'Nga përgjigjja e fundit e përpunimit; pa inferencë modeli.' : 'From the latest processing response; no model inference.');
-      message.append(h('a', { href: '/pdf#results' }, sq ? 'Burimi: rezultati i këtij përpunimi' : 'Source: this processing result'));
+      const summary = text('pdfMeasurement', {pages:d.pages,seconds:(d.totalTimeMs/1000).toFixed(2),before:(d.originalBytes/1024).toFixed(1),after:(d.afterBytes/1024).toFixed(1),change:(size>=0?'+':'')+size});
+      const message = say('ai', summary, T.pdfMeasurementNote);
+      message.append(h('a', { href: '/pdf#results' }, T.pdfMeasurementSource));
       return;
     }
     if (!goal || mode !== 'live') return;
@@ -139,10 +127,12 @@
     const screen = readToggle.checked ? { page: path, title: document.title, text: visibleText() } : null;
     try {
       const r = await fetch('/api/workflow/conversation', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-        body: JSON.stringify({ route, goal: `[${profile.role} · ${path}] ${goal}`, allowModel: true, ...(screen && screen.text ? { screen } : {}) }), signal: AbortSignal.timeout(200000) });
+        body: JSON.stringify({ ...(automaticQualityRouting ? {automaticQualityRouting:true} : {route}), locale, ...(responseSelect.value ? {responseLanguage: responseSelect.value} : {}), goal: `[${profile.role} · ${path}] ${goal}`, allowModel: true, ...(screen && screen.text ? { screen } : {}) }), signal: AbortSignal.timeout(200000) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || T.error);
-      pending.replaceChildren(h('p', {}, data.text || data.Text || ''), h('small', {}, T.review + (data.identity?.model ? ' · ' + data.identity.model : '')));
+      const answer = data.text || data.Text;
+      if (typeof answer !== 'string' || !answer.trim()) throw new Error(T.error);
+      pending.replaceChildren(h('p', {}, answer), h('small', {}, T.review + (data.identity?.model ? ' · ' + data.identity.model : '') + (data.quality ? ' · '+T.measuredLanguage : '')));
     } catch (e) { pending.classList.add('err'); pending.replaceChildren(h('p', {}, e.message || T.error)); }
     finally { sendBtn.disabled = false; delete root.dataset.busy; readToggle.checked = false; updateRead(); input.focus(); }
   }
@@ -154,9 +144,30 @@
     const open = force ?? panel.hidden; panel.hidden = !open; launcher.setAttribute('aria-expanded', String(open)); root.dataset.open = String(open);
     if (open) { if (!loaded || mode === 'signin' || mode === 'error') load(); setTimeout(() => (input.disabled ? panel.querySelector('.lspp-x') : input).focus(), 60); } else launcher.focus();
   }
-  window.addEventListener('lightning:account-changed', () => { loaded = false; if (!panel.hidden) load(); });
+  languageSelect.addEventListener('change', () => {
+    locale = languageSelect.value; entry = catalog.locales[locale]; T = entry.messages;
+    profile = entry.profiles[path] || entry.profiles[catalog.defaultProfile];
+    try { localStorage.setItem('lightning-assistant-locale', locale); } catch { /* Keep in-memory preference. */ }
+    panel.lang = locale; panel.dir = entry.direction;
+    root.style.setProperty('--lspp-accent', profile.accent);
+    launcher.setAttribute('aria-label', T.open); panel.querySelector('.lspp-x').setAttribute('aria-label', T.close);
+    panel.querySelector('#lsppTitle').textContent = profile.role;
+    input.placeholder = T.placeholder; input.setAttribute('aria-label', T.placeholder);
+    responseLabel.firstChild.textContent = T.responseLanguage; responseSelect.setAttribute('aria-label', T.responseLanguage); responseSelect.options[0].textContent = T.automaticLanguage;
+    sendBtn.setAttribute('aria-label', T.send); languageSelect.setAttribute('aria-label', T.language);
+    panel.querySelector('label[for="lsppRead"]').textContent = T.read;
+    previewBox.querySelector('summary').textContent = T.preview; links.setAttribute('aria-label', T.shortcuts);
+    links.replaceChildren(); for (const [href, label] of profile.links) links.append(h('a', {href}, label));
+    updateRead(); renderChips(); load();
+  });
+  window.addEventListener('lightning:account-changed' , () => { loaded = false; if (!panel.hidden) load(); });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !panel.hidden) toggle(false);
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !e.altKey) { e.preventDefault(); toggle(true); }
   });
-})();
+})().catch(error => {
+  console.error('Assistant initialization failed:', error.message);
+  const warning = document.createElement('p'); warning.className = 'message error'; warning.setAttribute('role', 'alert');
+  warning.textContent = 'Assistant language resources could not load. Reload this page to retry.';
+  document.body.append(warning);
+});

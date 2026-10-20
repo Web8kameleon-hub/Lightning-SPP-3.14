@@ -153,3 +153,81 @@ owner has entered a working password in production. Production inspection found
 a verified active owner account and an allowed workspace policy, with no active
 owner session at the time inspected. No password or verification state was
 modified to obtain that result.
+
+## Multilingual routing — 2026-10-20; acceptance incomplete
+
+The requested scope is Lightning and Ocean/Clisonix, with at least 102 languages
+and model selection based on evidence. The current local catalog contains 122
+canonical reply-language choices. Complete shipped interface catalogs remain
+English, Albanian and German; this is not 122 translated interfaces.
+
+| Root Cause | Regression Risk | Scalability Impact | Security Impact | Production Impact | Dynamic Alternative |
+|---|---|---|---|---|---|
+| The assistant selected the first configured route. Installed model names did not establish comparative quality. | A changed model tag, expired evaluation or incomparable samples could select an unverified model. | New models and language metadata do not require named-model branches. | Permissions are checked before remote discovery; digest is checked again before conversation transfer. | Automatic routing is opt-in and not deployed. Existing explicit routes retain their contract. | Rank permitted completion-capable routes using current, digest-bound evidence from the same evaluation cohort. Fail explicitly when evidence is absent. |
+| Translation Node's running bind-mounted source differed from the host source. Configured local-model variables did not enable the adapter in the old running code. | A restart could adopt unreviewed host code; liveness alone concealed translation failure. | Shared metadata and an operator-owned model policy replace provider-specific fallback ordering in the candidate. | Customer data is not used for benchmarks; no new external translation provider is authorized. | A separate candidate passed real translation checks and was removed; the production container was not replaced. | Validate source hashes, test the exact candidate, distinguish readiness from liveness, preserve legacy response fields and add actual model provenance. |
+| The earlier locale change removed a language boolean still referenced by the newly merged PDF explanation. | A successful PDF job could produce a broken assistant action. | PDF explanations use the same catalog and placeholders as other interface messages. | Render measurements as text, retain source links and identify that no model inference occurred. | Fixed locally; browser regression checks passed after integrating the laptop history. | Format actual processing measurements through complete catalogs, and clear prior evidence when a new upload begins. |
+
+Actual public-reference evaluation used the first three aligned FLORES-200 dev
+sentences per language, with SacreBLEU chrF2. The English target was tested using
+German source references; other targets used English sources. Both models used
+the same references for each target language. These are small language-fidelity
+samples, not factual-accuracy, task-safety or native-fluency certification.
+
+- Gemma: 100 measured targets, 8 failed attempts. Qwen: 95 measured targets,
+  13 failed attempts. Across both models, 105 distinct targets produced complete
+  scored observations; 90 targets were measured by both.
+- On the identical 270-sentence intersection, Gemma scored 52.2801 chrF2 and
+  Qwen 38.0485. These are reference scores, not accuracy percentages.
+- An experimental policy floor of 40 leaves 77 targets with eligible evidence.
+  The floor is not a validated customer-quality guarantee. It does not establish
+  the requested 102-language production acceptance.
+- Gemma's exact digest was also verified on Lightning; a real Albanian canary
+  completed. Downloaded weights and a successful canary do not mean the active
+  application has switched models.
+
+The isolated Clisonix candidate returned HTTP 200 for health, readiness and the
+122-entry metadata endpoint. Real English-to-Albanian, German and Japanese
+translations completed with the selected Gemma identity. Albanian detection
+returned the existing detected_language/language_name fields plus provenance.
+Invalid language input returned 400; a catalog language without evidence
+returned 503. No model confidence was fabricated: confidence_measured is false.
+The candidate and its temporary credential file were removed after verification.
+The production Translation Node remained running.
+
+Executed checks on the unified primary checkout: dotnet build succeeded with
+zero warnings/errors; 258 .NET tests passed and 14 were skipped. Four Node
+catalog/builder tests and 16 Python integration tests passed. The isolated real
+browser passed checks for all advertised reply choices, PDF measurement/source
+handling in all three shipped interfaces, automatic routing requests and actual
+selected-model display. The account browser fixture also passed after the locale
+changes. Fixtures do not prove model proficiency. The full Ocean HTTP/streaming
+candidate, full requested interface coverage and production rollout remain
+unaccepted; no multilingual merge to main or deployment has been performed.
+The consolidated work is shared only on integration/production-readiness, with
+acceptance explicitly pending.
+
+## Workspace consolidation — 2026-10-20
+
+The primary checkout was nine commits behind origin/main. It was advanced by
+fast-forward to f147908, retaining the laptop's PDF/ZIP features and image-adapter
+regression tests. The latest local multilingual/quality work was reapplied here
+without conflicts. Four temporary worktrees were retired. The historical desktop
+snapshot and unique historical branch commits were preserved, not merged blindly.
+
+Recovery snapshots, binary patches, untracked files, candidate evidence and stash
+identifiers were recorded outside the repository under the operator's private
+Codex backups. The older email worktree's source and test matched origin/main
+exactly, so it was archived rather than duplicated. The PDF-copy branch's changes
+were already present in main. The separate document-plan benchmark branch remains
+preserved and unmerged; its native benchmark acceptance has not been established
+by this consolidation.
+
+The shared integration branch is based on the accepted main history at f147908.
+It is the single ongoing work branch, not a separate branch per computer.
+Older conversation turns are bounded as complete pairs so an oversized stored
+history cannot permanently block the next question; safety and the current
+question are never silently removed. That regression check passed.
+
+Ongoing work now belongs in the primary checkout. AGENTS.md records this workflow
+for future sessions across computers. Synchronization preserves local work;
+it does not waive the production acceptance gate.

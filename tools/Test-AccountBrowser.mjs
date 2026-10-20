@@ -17,6 +17,19 @@ try {
  await wait(()=>typeof csrf==='string');
  document.querySelector('.lspp-launch').click();
  await wait(()=>document.querySelector('.lspp-assist').dataset.mode==='signin');
+ const language=document.querySelector('.lspp-language');
+ language.value='sq';language.dispatchEvent(new Event('change'));
+ await wait(()=>document.querySelector('.lspp-state').textContent.includes('Hyr në llogari'));
+ check(document.querySelector('.lspp-panel').lang==='sq','Assistant language metadata missing');
+ language.value='de';language.dispatchEvent(new Event('change'));
+ await wait(()=>document.querySelector('.lspp-state').textContent.includes('Melde dich'));
+ const replyLanguage=document.querySelectorAll('.lspp-language')[1];
+ const catalog=await fetch('/assistant-locales.json').then(r=>r.json());
+ check(replyLanguage.options.length===Object.keys(catalog.responseLanguages).length+1 && replyLanguage.options.length>=103,'Expected auto plus all advertised response languages');
+ replyLanguage.value='ar';replyLanguage.dispatchEvent(new Event('change'));
+ check(localStorage.getItem('lightning-assistant-response-language')==='ar','Reply-language preference not retained');
+ language.value='en';language.dispatchEvent(new Event('change'));
+ await wait(()=>document.querySelector('.lspp-state').textContent.includes('Sign in'));
  await login('ANOTHER@DIFFERENT.EXAMPLE','test-only-starting-password-123!');
  check(el('accountState').textContent.includes('UNVERIFIED'),'Unverified account status missing');
  check(el('accountMessage').textContent.includes('not verified'),'Verification action missing');
@@ -37,7 +50,7 @@ try {
  el('logout').click();await wait(()=>!el('logout').disabled&&!el('anonymous').hidden);
  check(el('accountState').hidden,'Verified status remained visible after logout');
  await wait(()=>document.querySelector('.lspp-assist').dataset.mode==='signin');
- await fetch('/__acceptance/result',{method:'POST',body:JSON.stringify({passed:true,checks:['correct-password unverified state','wrong-password privacy','canonical recovery address','verified login','active license independent of browser registration','password form cleared','logout clears account status','open assistant refreshes after login and logout']})});
+ await fetch('/__acceptance/result',{method:'POST',body:JSON.stringify({passed:true,checks:['correct-password unverified state','wrong-password privacy','canonical recovery address','verified login','active license independent of browser registration','password form cleared','logout clears account status','open assistant refreshes after login and logout','interface language changes without reload','all advertised response-language choices and saved preference']})});
 } catch(error){await fetch('/__acceptance/result',{method:'POST',body:JSON.stringify({passed:false,error:error.message})});}
 })();`;
 const server = createServer(async (req,res)=>{
@@ -67,7 +80,9 @@ try {
  if(result.passed){
   const port=(await readFile(profile+'/DevToolsActivePort','utf8')).split('\n')[0];
   const tabs=await(await fetch('http://127.0.0.1:'+port+'/json/list')).json();
-  const socket=new WebSocket(tabs.find(tab=>tab.type==='page').webSocketDebuggerUrl);
+  const target=tabs.find(tab=>tab.type==='page' && tab.url==='http://localhost:'+server.address().port+'/account');
+  if(!target)throw new Error('Account acceptance tab missing; refusing screenshot of an unrelated tab');
+  const socket=new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});});
   let seq=0;const pending=new Map();socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id&&pending.has(message.id)){const handlers=pending.get(message.id);pending.delete(message.id);message.error?handlers.reject(new Error(message.error.message)):handlers.resolve(message.result);}});
   const command=(method,params={})=>new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}));});

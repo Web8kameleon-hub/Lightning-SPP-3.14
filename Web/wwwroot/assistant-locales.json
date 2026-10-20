@@ -1,0 +1,1278 @@
+{
+  "defaultLocale": "en",
+  "locales": {
+    "en": {
+      "label": "English",
+      "direction": "ltr",
+      "messages": {
+        "open": "Open assistant",
+        "close": "Close",
+        "send": "Send",
+        "placeholder": "Ask about this page or your work…",
+        "read": "Read my screen",
+        "readHint": "{count} characters of visible text from this page will be sent. Form fields and passwords are never read.",
+        "nothing": "There is no visible text to read on this page.",
+        "preview": "Preview what is sent",
+        "live": "Server-local model: {model}",
+        "thinking": "Thinking…",
+        "signIn": "Sign in to use your private assistant. An active service license does not sign you in.",
+        "signInLink": "Sign in",
+        "denied": "You are signed in, but this account does not have workspace access. Contact your workspace administrator.",
+        "disabled": "The AI assistant is not enabled on this release yet. The links below work.",
+        "noModel": "No model is configured on the server yet.",
+        "error": "The request did not complete. Nothing was executed; try again.",
+        "review": "Model answer — review before acting.",
+        "workspace": "Open in Workspace",
+        "shortcuts": "Shortcuts",
+        "language": "Interface language",
+        "responseLanguage": "Reply language",
+        "automaticLanguage": "Match my message",
+        "qualityRouting": "Model selected using measured language fidelity.",
+        "qualityUnavailable": "Automatic model selection needs current evaluation evidence.",
+        "measuredLanguage": "Language reference evaluation; factual accuracy requires review.",
+        "pdfMeasurement": "{pages} page(s) processed in {seconds} seconds. Size: {before} → {after} KiB ({change}%). The PDF was rasterized; selectable text, vectors and forms are not preserved. These measurements do not establish better quality or size optimization.",
+        "pdfMeasurementNote": "From the latest processing response; no model inference.",
+        "pdfMeasurementSource": "Source: this processing result"
+      },
+      "profiles": {
+        "/": {
+          "role": "Product guide",
+          "accent": "#3bd5ff",
+          "asks": [
+            "What can Lightning SPP do for my documents?",
+            "Summarize this page for me"
+          ],
+          "links": [
+            [
+              "/try",
+              "Try it"
+            ],
+            [
+              "/pricing",
+              "Pricing"
+            ]
+          ],
+          "readScreenOnAsk": [
+            1
+          ]
+        },
+        "/features": {
+          "role": "Feature explainer",
+          "accent": "#3bd5ff",
+          "asks": [
+            "Which feature fits my use case?"
+          ],
+          "links": [
+            [
+              "/try",
+              "Try it"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/technology": {
+          "role": "Technical advisor",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Explain this architecture simply",
+            "How do I integrate the SDK?"
+          ],
+          "links": [
+            [
+              "/swagger",
+              "API"
+            ],
+            [
+              "/benchmarks",
+              "Benchmarks"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/try": {
+          "role": "Processing assistant",
+          "accent": "#3ddc84",
+          "asks": [
+            "Explain the result on my screen",
+            "Why was my file rejected?"
+          ],
+          "links": [
+            [
+              "/pdf",
+              "PDF"
+            ],
+            [
+              "/pricing",
+              "Pricing"
+            ]
+          ],
+          "readScreenOnAsk": [
+            0
+          ]
+        },
+        "/pdf": {
+          "role": "PDF assistant",
+          "accent": "#3ddc84",
+          "asks": [
+            "Explain the PDF result on my screen"
+          ],
+          "links": [
+            [
+              "/try",
+              "Images"
+            ]
+          ],
+          "readScreenOnAsk": [
+            0
+          ]
+        },
+        "/pricing": {
+          "role": "Plan advisor",
+          "accent": "#ff9b38",
+          "asks": [
+            "Which plan fits my volume?",
+            "What happens after I pay?"
+          ],
+          "links": [
+            [
+              "/account",
+              "Account"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/benchmarks": {
+          "role": "Benchmark reader",
+          "accent": "#8b5cf6",
+          "asks": [
+            "What do these measurements prove — and not prove?"
+          ],
+          "links": [
+            [
+              "/technology",
+              "Technology"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/account": {
+          "role": "Account helper",
+          "accent": "#ff9b38",
+          "asks": [
+            "How do I activate my license?",
+            "I did not get the verification email"
+          ],
+          "links": [
+            [
+              "/dashboard",
+              "License"
+            ],
+            [
+              "/workspace",
+              "Workspace"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/dashboard": {
+          "role": "License helper",
+          "accent": "#ff9b38",
+          "asks": [
+            "Explain my license status"
+          ],
+          "links": [
+            [
+              "/account",
+              "Account"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/workspace": {
+          "role": "Workflow copilot",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Propose a plan for the selected files",
+            "What does this job result mean?"
+          ],
+          "links": [
+            [
+              "/account",
+              "Account"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/swagger": {
+          "role": "API helper",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Show me how to call /api/try/process"
+          ],
+          "links": [
+            [
+              "/technology",
+              "Technology"
+            ]
+          ],
+          "readScreenOnAsk": []
+        }
+      }
+    },
+    "sq": {
+      "label": "Shqip",
+      "direction": "ltr",
+      "messages": {
+        "open": "Hap asistentin",
+        "close": "Mbyll",
+        "send": "Dërgo",
+        "placeholder": "Pyet për këtë faqe ose për punën tënde…",
+        "read": "Lexo ekranin",
+        "readHint": "Do të dërgohen {count} karaktere teksti të dukshëm nga kjo faqe. Fushat e formularëve dhe fjalëkalimet nuk lexohen kurrë.",
+        "nothing": "Nuk ka tekst të dukshëm për t’u lexuar në këtë faqe.",
+        "preview": "Shiko çfarë dërgohet",
+        "live": "Model lokal në server: {model}",
+        "thinking": "Duke menduar…",
+        "signIn": "Hyr në llogari për asistentin privat. Licenca aktive e shërbimit nuk të identifikon automatikisht.",
+        "signInLink": "Hyr në llogari",
+        "denied": "Je i identifikuar, por kjo llogari nuk ka leje për workspace. Kontakto administratorin.",
+        "disabled": "Asistenti me AI nuk është aktivizuar ende në këtë version. Lidhjet më poshtë funksionojnë.",
+        "noModel": "Nuk ka model të konfiguruar në server ende.",
+        "error": "Kërkesa nuk përfundoi. Asgjë nuk u ekzekutua; provo përsëri.",
+        "review": "Përgjigje modeli — kontrolloje para se të veprosh.",
+        "workspace": "Hap në Workspace",
+        "shortcuts": "Shkurtore",
+        "language": "Gjuha e ndërfaqes",
+        "responseLanguage": "Gjuha e përgjigjes",
+        "automaticLanguage": "Sipas mesazhit tim",
+        "qualityRouting": "Modeli zgjidhet sipas matjeve të besnikërisë gjuhësore.",
+        "qualityUnavailable": "Përzgjedhja automatike kërkon evidencë aktuale vlerësimi.",
+        "measuredLanguage": "Vlerësim me referenca gjuhësore; saktësia faktike kërkon kontroll.",
+        "pdfMeasurement": "{pages} faqe u përpunuan në {seconds} sekonda. Madhësia: {before} → {after} KiB ({change}%). PDF-ja është rasterizuar; teksti i përzgjedhshëm, vektorët dhe formularët nuk ruhen. Këto matje nuk provojnë përmirësim cilësie ose optimizim madhësie.",
+        "pdfMeasurementNote": "Nga përgjigjja e fundit e përpunimit; pa inferencë modeli.",
+        "pdfMeasurementSource": "Burimi: rezultati i këtij përpunimi"
+      },
+      "profiles": {
+        "/": {
+          "role": "Udhërrëfyes produkti",
+          "accent": "#3bd5ff",
+          "asks": [
+            "Çfarë mund të bëjë Lightning SPP për dokumentet e mia?",
+            "Përmblidhe këtë faqe"
+          ],
+          "links": [
+            [
+              "/try",
+              "Provoje"
+            ],
+            [
+              "/pricing",
+              "Planet"
+            ]
+          ],
+          "readScreenOnAsk": [
+            1
+          ]
+        },
+        "/features": {
+          "role": "Shpjegues aftësish",
+          "accent": "#3bd5ff",
+          "asks": [
+            "Cila aftësi i përshtatet rastit tim?"
+          ],
+          "links": [
+            [
+              "/try",
+              "Provoje"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/technology": {
+          "role": "Këshilltar teknik",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Shpjegoma këtë arkitekturë thjesht",
+            "Si e integroj SDK-në?"
+          ],
+          "links": [
+            [
+              "/swagger",
+              "API"
+            ],
+            [
+              "/benchmarks",
+              "Matjet"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/try": {
+          "role": "Asistent përpunimi",
+          "accent": "#3ddc84",
+          "asks": [
+            "Shpjegoma rezultatin në ekran",
+            "Pse u refuzua skedari im?"
+          ],
+          "links": [
+            [
+              "/pdf",
+              "PDF"
+            ],
+            [
+              "/pricing",
+              "Planet"
+            ]
+          ],
+          "readScreenOnAsk": [
+            0
+          ]
+        },
+        "/pdf": {
+          "role": "Asistent PDF",
+          "accent": "#3ddc84",
+          "asks": [
+            "Shpjegoma rezultatin PDF në ekran"
+          ],
+          "links": [
+            [
+              "/try",
+              "Imazhet"
+            ]
+          ],
+          "readScreenOnAsk": [
+            0
+          ]
+        },
+        "/pricing": {
+          "role": "Këshilltar planesh",
+          "accent": "#ff9b38",
+          "asks": [
+            "Cili plan i përshtatet volumit tim?",
+            "Çfarë ndodh pasi paguaj?"
+          ],
+          "links": [
+            [
+              "/account",
+              "Llogaria"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/benchmarks": {
+          "role": "Lexues matjesh",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Çfarë provojnë këto matje — dhe çfarë jo?"
+          ],
+          "links": [
+            [
+              "/technology",
+              "Teknologjia"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/account": {
+          "role": "Ndihmës llogarie",
+          "accent": "#ff9b38",
+          "asks": [
+            "Si e aktivizoj licencën?",
+            "Nuk më erdhi emaili i verifikimit"
+          ],
+          "links": [
+            [
+              "/dashboard",
+              "Licenca"
+            ],
+            [
+              "/workspace",
+              "Hapësira e punës"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/dashboard": {
+          "role": "Ndihmës licence",
+          "accent": "#ff9b38",
+          "asks": [
+            "Shpjegoma statusin e licencës"
+          ],
+          "links": [
+            [
+              "/account",
+              "Llogaria"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/workspace": {
+          "role": "Kopilot workflow",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Propozo një plan për skedarët e zgjedhur",
+            "Çfarë do të thotë rezultati i këtij job-i?"
+          ],
+          "links": [
+            [
+              "/account",
+              "Llogaria"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/swagger": {
+          "role": "Ndihmës API",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Më trego si thirret /api/try/process"
+          ],
+          "links": [
+            [
+              "/technology",
+              "Teknologjia"
+            ]
+          ],
+          "readScreenOnAsk": []
+        }
+      }
+    },
+    "de": {
+      "label": "Deutsch",
+      "direction": "ltr",
+      "messages": {
+        "open": "Assistent öffnen",
+        "close": "Schließen",
+        "send": "Senden",
+        "placeholder": "Frage zu dieser Seite oder deiner Arbeit…",
+        "read": "Sichtbaren Seiteninhalt lesen",
+        "readHint": "{count} Zeichen des sichtbaren Texts dieser Seite werden gesendet. Formularfelder und Passwörter werden niemals gelesen.",
+        "nothing": "Es gibt keinen sichtbaren Text zum Teilen.",
+        "preview": "Vorschau der gesendeten Daten",
+        "live": "Lokales Servermodell: {model}",
+        "thinking": "Antwort wird erstellt…",
+        "signIn": "Melde dich für deinen privaten Assistenten an. Eine aktive Dienstlizenz meldet dich nicht automatisch an.",
+        "signInLink": "Anmelden",
+        "denied": "Du bist angemeldet, aber dieses Konto hat keinen Zugriff auf den Arbeitsbereich. Kontaktiere die Administration.",
+        "disabled": "Der KI-Assistent ist in dieser Version noch nicht aktiviert. Die Links unten funktionieren.",
+        "noModel": "Auf dem Server ist noch kein Modell eingerichtet.",
+        "error": "Die Anfrage wurde nicht abgeschlossen. Prüfe den Status vor einem erneuten Versuch.",
+        "review": "Modellantwort — vor Verwendung prüfen.",
+        "workspace": "Arbeitsbereich öffnen",
+        "shortcuts": "Schnellzugriff",
+        "language": "Sprache der Oberfläche",
+        "responseLanguage": "Antwortsprache",
+        "automaticLanguage": "Wie meine Nachricht",
+        "qualityRouting": "Modellauswahl anhand gemessener sprachlicher Referenztreue.",
+        "qualityUnavailable": "Die automatische Modellauswahl benötigt aktuelle Bewertungsergebnisse.",
+        "measuredLanguage": "Sprachliche Referenzbewertung; sachliche Richtigkeit muss geprüft werden.",
+        "pdfMeasurement": "{pages} Seite(n) in {seconds} Sekunden verarbeitet. Größe: {before} → {after} KiB ({change}%). Die PDF wurde rasterisiert; auswählbarer Text, Vektoren und Formulare bleiben nicht erhalten. Diese Messungen belegen keine bessere Qualität oder Größenoptimierung.",
+        "pdfMeasurementNote": "Aus der letzten Verarbeitungsantwort; ohne Modellinferenz.",
+        "pdfMeasurementSource": "Quelle: Ergebnis dieser Verarbeitung"
+      },
+      "profiles": {
+        "/": {
+          "role": "Produktberatung",
+          "accent": "#3bd5ff",
+          "asks": [
+            "Was kann Lightning SPP mit meinen Dokumenten machen?",
+            "Fasse diese Seite für mich zusammen"
+          ],
+          "links": [
+            [
+              "/try",
+              "Ausprobieren"
+            ],
+            [
+              "/pricing",
+              "Tarife"
+            ]
+          ],
+          "readScreenOnAsk": [
+            1
+          ]
+        },
+        "/features": {
+          "role": "Funktionsberatung",
+          "accent": "#3bd5ff",
+          "asks": [
+            "Welche Funktion passt zu meinem Anwendungsfall?"
+          ],
+          "links": [
+            [
+              "/try",
+              "Ausprobieren"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/technology": {
+          "role": "Technische Beratung",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Erkläre diese Architektur einfach",
+            "Wie integriere ich das SDK?"
+          ],
+          "links": [
+            [
+              "/swagger",
+              "API"
+            ],
+            [
+              "/benchmarks",
+              "Messungen"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/try": {
+          "role": "Verarbeitungsassistent",
+          "accent": "#3ddc84",
+          "asks": [
+            "Erkläre das Ergebnis auf meinem Bildschirm",
+            "Warum wurde meine Datei abgelehnt?"
+          ],
+          "links": [
+            [
+              "/pdf",
+              "PDF"
+            ],
+            [
+              "/pricing",
+              "Tarife"
+            ]
+          ],
+          "readScreenOnAsk": [
+            0
+          ]
+        },
+        "/pdf": {
+          "role": "PDF-Assistent",
+          "accent": "#3ddc84",
+          "asks": [
+            "Erkläre das PDF-Ergebnis auf meinem Bildschirm"
+          ],
+          "links": [
+            [
+              "/try",
+              "Bilder"
+            ]
+          ],
+          "readScreenOnAsk": [
+            0
+          ]
+        },
+        "/pricing": {
+          "role": "Tarifberatung",
+          "accent": "#ff9b38",
+          "asks": [
+            "Welcher Tarif passt zu meinem Volumen?",
+            "Was passiert nach der Zahlung?"
+          ],
+          "links": [
+            [
+              "/account",
+              "Konto"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/benchmarks": {
+          "role": "Messwertanalyse",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Was belegen diese Messungen und was bleibt ungeprüft?"
+          ],
+          "links": [
+            [
+              "/technology",
+              "Technologie"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/account": {
+          "role": "Kontohilfe",
+          "accent": "#ff9b38",
+          "asks": [
+            "Wie aktiviere ich meine Lizenz?",
+            "Die Bestätigungs-E-Mail ist nicht angekommen"
+          ],
+          "links": [
+            [
+              "/dashboard",
+              "Lizenz"
+            ],
+            [
+              "/workspace",
+              "Arbeitsbereich"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/dashboard": {
+          "role": "Lizenzhilfe",
+          "accent": "#ff9b38",
+          "asks": [
+            "Erkläre meinen Lizenzstatus"
+          ],
+          "links": [
+            [
+              "/account",
+              "Konto"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/workspace": {
+          "role": "Workflow-Assistent",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Schlage einen Plan für die ausgewählten Dateien vor",
+            "Was bedeutet dieses Auftragsergebnis?"
+          ],
+          "links": [
+            [
+              "/account",
+              "Konto"
+            ]
+          ],
+          "readScreenOnAsk": []
+        },
+        "/swagger": {
+          "role": "API-Hilfe",
+          "accent": "#8b5cf6",
+          "asks": [
+            "Zeige mir einen Aufruf von /api/try/process"
+          ],
+          "links": [
+            [
+              "/technology",
+              "Technologie"
+            ]
+          ],
+          "readScreenOnAsk": []
+        }
+      }
+    }
+  },
+  "defaultProfile": "/",
+  "responseLanguages": {
+    "en": {
+      "name": "English",
+      "native": "English",
+      "direction": "ltr"
+    },
+    "sq": {
+      "name": "Albanian",
+      "native": "shqip",
+      "direction": "ltr"
+    },
+    "de": {
+      "name": "German",
+      "native": "Deutsch",
+      "direction": "ltr"
+    },
+    "fr": {
+      "name": "French",
+      "native": "français",
+      "direction": "ltr"
+    },
+    "it": {
+      "name": "Italian",
+      "native": "italiano",
+      "direction": "ltr"
+    },
+    "es": {
+      "name": "Spanish",
+      "native": "español",
+      "direction": "ltr"
+    },
+    "pt": {
+      "name": "Portuguese",
+      "native": "português",
+      "direction": "ltr"
+    },
+    "nl": {
+      "name": "Dutch",
+      "native": "Nederlands",
+      "direction": "ltr"
+    },
+    "pl": {
+      "name": "Polish",
+      "native": "polski",
+      "direction": "ltr"
+    },
+    "cs": {
+      "name": "Czech",
+      "native": "čeština",
+      "direction": "ltr"
+    },
+    "sk": {
+      "name": "Slovak",
+      "native": "slovenčina",
+      "direction": "ltr"
+    },
+    "hu": {
+      "name": "Hungarian",
+      "native": "magyar",
+      "direction": "ltr"
+    },
+    "ro": {
+      "name": "Romanian",
+      "native": "română",
+      "direction": "ltr"
+    },
+    "bg": {
+      "name": "Bulgarian",
+      "native": "български",
+      "direction": "ltr"
+    },
+    "hr": {
+      "name": "Croatian",
+      "native": "hrvatski",
+      "direction": "ltr"
+    },
+    "sr": {
+      "name": "Serbian",
+      "native": "српски",
+      "direction": "ltr"
+    },
+    "sl": {
+      "name": "Slovenian",
+      "native": "slovenščina",
+      "direction": "ltr"
+    },
+    "mk": {
+      "name": "Macedonian",
+      "native": "македонски",
+      "direction": "ltr"
+    },
+    "bs": {
+      "name": "Bosnian",
+      "native": "bosanski",
+      "direction": "ltr"
+    },
+    "el": {
+      "name": "Greek",
+      "native": "Ελληνικά",
+      "direction": "ltr"
+    },
+    "uk": {
+      "name": "Ukrainian",
+      "native": "українська",
+      "direction": "ltr"
+    },
+    "ru": {
+      "name": "Russian",
+      "native": "русский",
+      "direction": "ltr"
+    },
+    "be": {
+      "name": "Belarusian",
+      "native": "беларуская",
+      "direction": "ltr"
+    },
+    "lt": {
+      "name": "Lithuanian",
+      "native": "lietuvių",
+      "direction": "ltr"
+    },
+    "lv": {
+      "name": "Latvian",
+      "native": "latviešu",
+      "direction": "ltr"
+    },
+    "et": {
+      "name": "Estonian",
+      "native": "eesti",
+      "direction": "ltr"
+    },
+    "fi": {
+      "name": "Finnish",
+      "native": "suomi",
+      "direction": "ltr"
+    },
+    "sv": {
+      "name": "Swedish",
+      "native": "svenska",
+      "direction": "ltr"
+    },
+    "no": {
+      "name": "Norwegian",
+      "native": "norsk",
+      "direction": "ltr"
+    },
+    "da": {
+      "name": "Danish",
+      "native": "dansk",
+      "direction": "ltr"
+    },
+    "is": {
+      "name": "Icelandic",
+      "native": "íslenska",
+      "direction": "ltr"
+    },
+    "ga": {
+      "name": "Irish",
+      "native": "Gaeilge",
+      "direction": "ltr"
+    },
+    "cy": {
+      "name": "Welsh",
+      "native": "Cymraeg",
+      "direction": "ltr"
+    },
+    "mt": {
+      "name": "Maltese",
+      "native": "Malti",
+      "direction": "ltr"
+    },
+    "zh": {
+      "name": "Chinese",
+      "native": "中文",
+      "direction": "ltr"
+    },
+    "ja": {
+      "name": "Japanese",
+      "native": "日本語",
+      "direction": "ltr"
+    },
+    "ko": {
+      "name": "Korean",
+      "native": "한국어",
+      "direction": "ltr"
+    },
+    "hi": {
+      "name": "Hindi",
+      "native": "हिन्दी",
+      "direction": "ltr"
+    },
+    "bn": {
+      "name": "Bangla",
+      "native": "বাংলা",
+      "direction": "ltr"
+    },
+    "ta": {
+      "name": "Tamil",
+      "native": "தமிழ்",
+      "direction": "ltr"
+    },
+    "te": {
+      "name": "Telugu",
+      "native": "తెలుగు",
+      "direction": "ltr"
+    },
+    "mr": {
+      "name": "Marathi",
+      "native": "मराठी",
+      "direction": "ltr"
+    },
+    "gu": {
+      "name": "Gujarati",
+      "native": "ગુજરાતી",
+      "direction": "ltr"
+    },
+    "pa": {
+      "name": "Punjabi",
+      "native": "ਪੰਜਾਬੀ",
+      "direction": "ltr"
+    },
+    "ur": {
+      "name": "Urdu",
+      "native": "اردو",
+      "direction": "rtl"
+    },
+    "th": {
+      "name": "Thai",
+      "native": "ไทย",
+      "direction": "ltr"
+    },
+    "vi": {
+      "name": "Vietnamese",
+      "native": "Tiếng Việt",
+      "direction": "ltr"
+    },
+    "id": {
+      "name": "Indonesian",
+      "native": "Indonesia",
+      "direction": "ltr"
+    },
+    "ms": {
+      "name": "Malay",
+      "native": "Melayu",
+      "direction": "ltr"
+    },
+    "fil": {
+      "name": "Filipino",
+      "native": "Filipino",
+      "direction": "ltr"
+    },
+    "my": {
+      "name": "Burmese",
+      "native": "မြန်မာ",
+      "direction": "ltr"
+    },
+    "km": {
+      "name": "Khmer",
+      "native": "ខ្មែរ",
+      "direction": "ltr"
+    },
+    "lo": {
+      "name": "Lao",
+      "native": "ລາວ",
+      "direction": "ltr"
+    },
+    "ne": {
+      "name": "Nepali",
+      "native": "नेपाली",
+      "direction": "ltr"
+    },
+    "si": {
+      "name": "Sinhala",
+      "native": "සිංහල",
+      "direction": "ltr"
+    },
+    "ka": {
+      "name": "Georgian",
+      "native": "ქართული",
+      "direction": "ltr"
+    },
+    "hy": {
+      "name": "Armenian",
+      "native": "հայերեն",
+      "direction": "ltr"
+    },
+    "az": {
+      "name": "Azerbaijani",
+      "native": "azərbaycan",
+      "direction": "ltr"
+    },
+    "kk": {
+      "name": "Kazakh",
+      "native": "қазақ тілі",
+      "direction": "ltr"
+    },
+    "uz": {
+      "name": "Uzbek",
+      "native": "o‘zbek",
+      "direction": "ltr"
+    },
+    "mn": {
+      "name": "Mongolian",
+      "native": "монгол",
+      "direction": "ltr"
+    },
+    "ar": {
+      "name": "Arabic",
+      "native": "العربية",
+      "direction": "rtl"
+    },
+    "fa": {
+      "name": "Persian",
+      "native": "فارسی",
+      "direction": "rtl"
+    },
+    "he": {
+      "name": "Hebrew",
+      "native": "עברית",
+      "direction": "rtl"
+    },
+    "tr": {
+      "name": "Turkish",
+      "native": "Türkçe",
+      "direction": "ltr"
+    },
+    "sw": {
+      "name": "Swahili",
+      "native": "Kiswahili",
+      "direction": "ltr"
+    },
+    "am": {
+      "name": "Amharic",
+      "native": "አማርኛ",
+      "direction": "ltr"
+    },
+    "ha": {
+      "name": "Hausa",
+      "native": "Hausa",
+      "direction": "ltr"
+    },
+    "yo": {
+      "name": "Yoruba",
+      "native": "Èdè Yorùbá",
+      "direction": "ltr"
+    },
+    "ig": {
+      "name": "Igbo",
+      "native": "Igbo",
+      "direction": "ltr"
+    },
+    "zu": {
+      "name": "Zulu",
+      "native": "isiZulu",
+      "direction": "ltr"
+    },
+    "af": {
+      "name": "Afrikaans",
+      "native": "Afrikaans",
+      "direction": "ltr"
+    },
+    "as": {
+      "name": "Assamese",
+      "native": "অসমীয়া",
+      "direction": "ltr"
+    },
+    "ay": {
+      "name": "Aymara",
+      "native": "Aymara",
+      "direction": "ltr"
+    },
+    "bho": {
+      "name": "Bhojpuri",
+      "native": "भोजपुरी",
+      "direction": "ltr"
+    },
+    "br": {
+      "name": "Breton",
+      "native": "brezhoneg",
+      "direction": "ltr"
+    },
+    "ceb": {
+      "name": "Cebuano",
+      "native": "Cebuano",
+      "direction": "ltr"
+    },
+    "co": {
+      "name": "Corsican",
+      "native": "Korsisch",
+      "direction": "ltr"
+    },
+    "doi": {
+      "name": "Dogri",
+      "native": "डोगरी",
+      "direction": "ltr"
+    },
+    "dv": {
+      "name": "Divehi",
+      "native": "Dhivehi",
+      "direction": "rtl"
+    },
+    "eo": {
+      "name": "Esperanto",
+      "native": "Esperanto",
+      "direction": "ltr"
+    },
+    "eu": {
+      "name": "Basque",
+      "native": "euskara",
+      "direction": "ltr"
+    },
+    "fo": {
+      "name": "Faroese",
+      "native": "føroyskt",
+      "direction": "ltr"
+    },
+    "fy": {
+      "name": "Western Frisian",
+      "native": "Frysk",
+      "direction": "ltr"
+    },
+    "gd": {
+      "name": "Scottish Gaelic",
+      "native": "Gàidhlig",
+      "direction": "ltr"
+    },
+    "gl": {
+      "name": "Galician",
+      "native": "galego",
+      "direction": "ltr"
+    },
+    "gn": {
+      "name": "Guarani",
+      "native": "Guaraní",
+      "direction": "ltr"
+    },
+    "kok": {
+      "name": "Konkani",
+      "native": "कोंकणी",
+      "direction": "ltr"
+    },
+    "haw": {
+      "name": "Hawaiian",
+      "native": "ʻŌlelo Hawaiʻi",
+      "direction": "ltr"
+    },
+    "hmn": {
+      "name": "Hmong",
+      "native": "Miao",
+      "direction": "ltr"
+    },
+    "ht": {
+      "name": "Haitian Creole",
+      "native": "Haiti-Kreolisch",
+      "direction": "ltr"
+    },
+    "jv": {
+      "name": "Javanese",
+      "native": "Jawa",
+      "direction": "ltr"
+    },
+    "ky": {
+      "name": "Kyrgyz",
+      "native": "кыргызча",
+      "direction": "ltr"
+    },
+    "lb": {
+      "name": "Luxembourgish",
+      "native": "Lëtzebuergesch",
+      "direction": "ltr"
+    },
+    "ln": {
+      "name": "Lingala",
+      "native": "lingála",
+      "direction": "ltr"
+    },
+    "mai": {
+      "name": "Maithili",
+      "native": "मैथिली",
+      "direction": "ltr"
+    },
+    "mg": {
+      "name": "Malagasy",
+      "native": "Malagasy",
+      "direction": "ltr"
+    },
+    "mi": {
+      "name": "Māori",
+      "native": "Māori",
+      "direction": "ltr"
+    },
+    "mni": {
+      "name": "Manipuri",
+      "native": "মৈতৈলোন্",
+      "direction": "ltr"
+    },
+    "nso": {
+      "name": "Northern Sotho",
+      "native": "Sesotho sa Leboa",
+      "direction": "ltr"
+    },
+    "ny": {
+      "name": "Nyanja",
+      "native": "Nyanja",
+      "direction": "ltr"
+    },
+    "om": {
+      "name": "Oromo",
+      "native": "Oromoo",
+      "direction": "ltr"
+    },
+    "or": {
+      "name": "Odia",
+      "native": "ଓଡ଼ିଆ",
+      "direction": "ltr"
+    },
+    "ps": {
+      "name": "Pashto",
+      "native": "پښتو",
+      "direction": "rtl"
+    },
+    "qu": {
+      "name": "Quechua",
+      "native": "Runasimi",
+      "direction": "ltr"
+    },
+    "rw": {
+      "name": "Kinyarwanda",
+      "native": "Ikinyarwanda",
+      "direction": "ltr"
+    },
+    "sa": {
+      "name": "Sanskrit",
+      "native": "संस्कृत भाषा",
+      "direction": "ltr"
+    },
+    "sm": {
+      "name": "Samoan",
+      "native": "Samoanisch",
+      "direction": "ltr"
+    },
+    "sn": {
+      "name": "Shona",
+      "native": "chiShona",
+      "direction": "ltr"
+    },
+    "so": {
+      "name": "Somali",
+      "native": "Soomaali",
+      "direction": "ltr"
+    },
+    "st": {
+      "name": "Southern Sotho",
+      "native": "Sesotho",
+      "direction": "ltr"
+    },
+    "su": {
+      "name": "Sundanese",
+      "native": "Basa Sunda",
+      "direction": "ltr"
+    },
+    "tg": {
+      "name": "Tajik",
+      "native": "тоҷикӣ",
+      "direction": "ltr"
+    },
+    "ti": {
+      "name": "Tigrinya",
+      "native": "ትግርኛ",
+      "direction": "ltr"
+    },
+    "tk": {
+      "name": "Turkmen",
+      "native": "türkmen dili",
+      "direction": "ltr"
+    },
+    "to": {
+      "name": "Tongan",
+      "native": "lea fakatonga",
+      "direction": "ltr"
+    },
+    "ts": {
+      "name": "Tsonga",
+      "native": "Tsonga",
+      "direction": "ltr"
+    },
+    "tt": {
+      "name": "Tatar",
+      "native": "татар",
+      "direction": "ltr"
+    },
+    "ug": {
+      "name": "Uyghur",
+      "native": "ئۇيغۇرچە",
+      "direction": "rtl"
+    },
+    "wo": {
+      "name": "Wolof",
+      "native": "Wolof",
+      "direction": "ltr"
+    },
+    "xh": {
+      "name": "Xhosa",
+      "native": "IsiXhosa",
+      "direction": "ltr"
+    },
+    "yi": {
+      "name": "Yiddish",
+      "native": "ייִדיש",
+      "direction": "rtl"
+    }
+  },
+  "responseLanguageSource": {
+    "service": "Clisonix Translation Node",
+    "catalogCount": 72,
+    "snapshotDate": "2026-10-19",
+    "translationAvailability": "UNVERIFIED_PER_LANGUAGE"
+  }
+}
