@@ -2,7 +2,7 @@ name: Lightning SPP CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, deploy/production ]
   pull_request:
     branches: [ main ]
   release:
@@ -327,7 +327,7 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [select-production, build-and-test, docker-build]
-    if: needs.select-production.outputs.deploy == 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_production && !inputs.publish_ghcr))
+    if: needs.select-production.outputs.deploy == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/production') && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_production && !inputs.publish_ghcr))
     concurrency:
       group: scanprocessprint-production
       cancel-in-progress: false

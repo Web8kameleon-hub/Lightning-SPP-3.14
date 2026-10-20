@@ -140,3 +140,11 @@ Acceptance: verify the PR validation runs before merge; after merge use the expl
 production run, inspect its deployment log and public health verification, and record
 the successful SHA. A successful CI run with a skipped deployment is not deployment
 evidence. If a deployment fails, inspect state before retrying; do not bypass gates.
+
+An alternative explicit deployment request is to create or fast-forward the reserved
+`deploy/production` branch to the exact current `origin/main` commit. CI fetches full
+history and rejects a deployment branch whose SHA differs from main. Build & Test
+and Docker Build & Test remain mandatory. The server forced command independently
+fetches main again and rejects stale commits before building. Never force-push this
+branch or use it for development. Its commit is the deployment request and audit
+record; no application commit is needed merely to request deployment.

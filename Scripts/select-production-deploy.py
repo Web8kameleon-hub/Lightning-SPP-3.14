@@ -45,6 +45,12 @@ def main():
     if event_name == 'workflow_dispatch':
         deploy = event.get('inputs', {}).get('deploy_production') in (True, 'true')
         reason = 'Explicit production deployment requested' if deploy else 'Validation/publication only'
+    elif event_name == 'push' and os.environ['GITHUB_REF'] == 'refs/heads/deploy/production':
+        # This reserved branch is an explicit, auditable deployment request.
+        # The forced SSH command rechecks current origin/main on the server.
+        main_sha = subprocess.check_output(['git', 'rev-parse', 'origin/main']).decode().strip()
+        deploy = os.environ['GITHUB_SHA'] == main_sha
+        reason = 'Explicit deployment branch matches main' if deploy else 'Deployment branch differs from main; blocked'
     elif event_name == 'push' and os.environ['GITHUB_REF'] == 'refs/heads/main':
         try:
             repo = os.environ['GITHUB_REPOSITORY']

@@ -62,6 +62,21 @@ class SelectionTests(unittest.TestCase):
                                env=env, check=True, capture_output=True)
                 self.assertEqual((root / 'output').read_text(), f'deploy={str(expected).lower()}\n')
 
+    def test_deployment_branch_requires_exact_main(self):
+        main_sha = subprocess.check_output(['git', 'rev-parse', 'origin/main']).decode().strip()
+        for head, expected in [(main_sha, True), ('0' * 40, False)]:
+            with self.subTest(head=head), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / 'event.json').write_text('{}')
+                env = dict(os.environ, GITHUB_EVENT_NAME='push',
+                           GITHUB_REF='refs/heads/deploy/production', GITHUB_SHA=head,
+                           GITHUB_EVENT_PATH=str(root / 'event.json'),
+                           GITHUB_OUTPUT=str(root / 'output'),
+                           GITHUB_STEP_SUMMARY=str(root / 'summary'))
+                subprocess.run([sys.executable, str(Path(__file__).with_name('select-production-deploy.py'))],
+                               env=env, check=True, capture_output=True)
+                self.assertEqual((root / 'output').read_text(), f'deploy={str(expected).lower()}\n')
+
     def test_missing_baseline_fails_closed(self):
         with self.assertRaises(RuntimeError):
             selector.last_successful_deployment(lambda _: [])
