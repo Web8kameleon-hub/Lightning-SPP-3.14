@@ -105,7 +105,9 @@ public class BridgeContractTests
                 Assert.Equal("operator", request.Headers.GetValues("X-CLX-Role").Single());
                 Assert.Equal("test-key", request.Headers.GetValues("X-API-Key").Single());
                 var timestamp = request.Headers.GetValues("X-CLX-Timestamp").Single();
-                var signed = $"POST\n{request.RequestUri.AbsolutePath}\n{timestamp}";
+                var bodyBytes = await request.Content!.ReadAsByteArrayAsync(token);
+                var bodyHash = Convert.ToHexStringLower(SHA256.HashData(bodyBytes));
+                var signed = $"POST\n{request.RequestUri.AbsolutePath}\n{timestamp}\n{bodyHash}";
                 var expected = Convert.ToHexStringLower(HMACSHA256.HashData(Encoding.UTF8.GetBytes("test-secret"), Encoding.UTF8.GetBytes(signed)));
                 Assert.Equal(expected, request.Headers.GetValues("X-CLX-Signature").Single());
                 using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync());
