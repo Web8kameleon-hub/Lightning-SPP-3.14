@@ -116,13 +116,34 @@ jobs:
         echo 'Speed CLI: 1024 zero-filled bytes; 0 warm-up runs; 1 measured run per mode. Raw observations, not median/p95/p99 or throughput claims. Regression gates run in the test suite.' >> artifacts/benchmark-environment.txt
         dotnet run --no-build --configuration Release -- speed | tee artifacts/speed-benchmark.txt
 
+    - name: Write failure-safe CI evidence manifest
+      if: always()
+      shell: bash
+      run: |
+        mkdir -p artifacts
+        {
+          printf 'commit=%s\n' "$GITHUB_SHA"
+          printf 'job_status=%s\n' "${{ job.status }}"
+          printf 'test_reports_found='
+          find Tests/LightningSPP.Tests/TestResults -type f -name '*.trx' 2>/dev/null | wc -l
+          for file in artifacts/benchmark-environment.txt artifacts/speed-benchmark.txt; do
+            if test -s "$file"; then
+              printf '%s=PRESENT\n' "$file"
+            else
+              printf '%s=NOT_PRODUCED\n' "$file"
+            fi
+          done
+        } > artifacts/ci-evidence-status.txt
+        cat artifacts/ci-evidence-status.txt
+
     - name: Preserve test and benchmark evidence
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: validation-${{ github.sha }}
         path: |
-          Tests/LightningSPP.Tests/TestResults/*.trx
+          artifacts/ci-evidence-status.txt
+          Tests/LightningSPP.Tests/TestResults/**/*.trx
           artifacts/benchmark-environment.txt
           artifacts/speed-benchmark.txt
         if-no-files-found: error
