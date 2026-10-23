@@ -87,9 +87,13 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
 
+    - name: Require real isolated bridge test services
+      run: python3 Scripts/check-bridge-test-services.py
+
     - name: Run unit tests
       env:
         SPP_TEST_NATIVE_DOCUMENTS: '1'
+        SPP_BRIDGE_TEST_ALLOW_WRITES: 'isolated-loopback'
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
