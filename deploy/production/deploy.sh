@@ -174,10 +174,17 @@ cmd_deploy() {
   # Build-only secret: never add this file to the app's env_file.
   local build_env="${SIXLABORS_BUILD_ENV_FILE:-$STATE_DIR/.env.build}"
   [ -f "$build_env" ] || die "Private build environment file is missing"
+  [ ! -L "$build_env" ] || die "Refusing symlinked private build environment"
+  [ -r "$build_env" ] || die "Private build environment is unreadable"
+  # Fail closed before touching production; never print the private license.
+  local license_entries
+  license_entries=$(grep -Ec "^SIXLABORS_LICENSE=" "$build_env" || true)
+  [ "$license_entries" = "1" ] || die "Expected exactly one SIXLABORS_LICENSE entry in private build environment"
   set -a
   source "$build_env"
   set +a
-  [ -n "${SIXLABORS_LICENSE:-}" ] || die "SIXLABORS_LICENSE is missing"
+  [ -n "${SIXLABORS_LICENSE:-}" ] || die "SIXLABORS_LICENSE is missing or empty"
+  export SIXLABORS_LICENSE
   docker build --secret "id=sixlabors_license,env=SIXLABORS_LICENSE" \
     -t "scanprocessprint:$release" "$REPO_DIR"
   unset SIXLABORS_LICENSE
