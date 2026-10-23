@@ -34,6 +34,11 @@ jobs:
         run: |
           java -version
           javac -version
+          test "$(javac -version 2>&1 | awk '{print $2}' | cut -d. -f1)" -ge 21
+      - name: Install native PDF test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
       - name: Require private build license
         run: test -n "$SixLaborsLicenseKey"
       - name: Restore and build
@@ -41,6 +46,8 @@ jobs:
           dotnet restore
           dotnet build --configuration Release --no-restore
       - name: Run required tests
+        env:
+          SPP_TEST_NATIVE_DOCUMENTS: '1'
         run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --logger "trx;LogFileName=release-evidence.trx"
       - name: Capture real benchmark and changelog
         shell: bash
