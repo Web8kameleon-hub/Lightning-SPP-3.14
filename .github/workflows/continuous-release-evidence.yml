@@ -25,6 +25,15 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Set up Java for Longo persistence tests
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Verify Java runtime
+        run: |
+          java -version
+          javac -version
       - name: Require private build license
         run: test -n "$SixLaborsLicenseKey"
       - name: Restore and build
