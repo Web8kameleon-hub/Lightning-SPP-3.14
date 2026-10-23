@@ -1,0 +1,64 @@
+name: Continuous Release Evidence
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-evidence-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-evidence:
+    name: Changelog, benchmark and release evidence
+    runs-on: ubuntu-latest
+    env:
+      SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Require private build license
+        run: test -n "$SixLaborsLicenseKey"
+      - name: Restore and build
+        run: |
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+      - name: Run required tests
+        run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --logger "trx;LogFileName=release-evidence.trx"
+      - name: Capture real benchmark and changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          git log -1 --format='%H%n%s%n%b' > artifacts/commit.txt
+          git log -20 --date=short --pretty=format:'%h %ad %s' > artifacts/CHANGELOG.generated.md
+          dotnet --info > artifacts/dotnet-environment.txt
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > artifacts/created-at.txt
+          dotnet run --no-build --configuration Release -- speed > artifacts/benchmark.txt
+          test -s artifacts/benchmark.txt
+          sha256sum artifacts/benchmark.txt artifacts/CHANGELOG.generated.md > artifacts/SHA256SUMS
+          printf 'Commit: %s\nBenchmark: measured output, not a performance claim\nDeployment: NOT VERIFIED by this workflow\n' "$GITHUB_SHA" > artifacts/RELEASE-STATUS.txt
+      - name: Publish evidence on every commit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: |
+            artifacts/commit.txt
+            artifacts/CHANGELOG.generated.md
+            artifacts/dotnet-environment.txt
+            artifacts/created-at.txt
+            artifacts/benchmark.txt
+            artifacts/SHA256SUMS
+            artifacts/RELEASE-STATUS.txt
+            Tests/LightningSPP.Tests/TestResults/*.trx
+          if-no-files-found: warn
+          retention-days: 90
