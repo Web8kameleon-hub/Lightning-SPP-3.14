@@ -92,6 +92,7 @@ jobs:
         SPP_TEST_SSH_HOST: ${{ secrets.SPP_TEST_SSH_HOST }}
         SPP_TEST_SSH_USER: ${{ secrets.SPP_TEST_SSH_USER }}
         SPP_TEST_SSH_KEY: ${{ secrets.SPP_TEST_SSH_KEY }}
+        SPP_TEST_SSH_KNOWN_HOSTS: ${{ secrets.SPP_TEST_SSH_KNOWN_HOSTS }}
       run: bash Scripts/open-isolated-bridge-tunnel.sh
 
     - name: Require real isolated bridge test services
