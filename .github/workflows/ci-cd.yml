@@ -113,6 +113,9 @@ jobs:
         echo 'Speed CLI: 1024 zero-filled bytes; 0 warm-up runs; 1 measured run per mode. Raw observations, not median/p95/p99 or throughput claims. Regression gates run in the test suite.' >> artifacts/benchmark-environment.txt
         dotnet run --no-build --configuration Release -- speed | tee artifacts/speed-benchmark.txt
 
+    - name: Generate and verify mandatory analysis documents
+      run: python3 Scripts/verify-release-evidence.py
+
     - name: Preserve test and benchmark evidence
       if: always()
       uses: actions/upload-artifact@v4
@@ -122,6 +125,8 @@ jobs:
           Tests/LightningSPP.Tests/TestResults/*.trx
           artifacts/benchmark-environment.txt
           artifacts/speed-benchmark.txt
+          artifacts/analysis-report.json
+          artifacts/analysis-report.md
         if-no-files-found: error
 
   docker-build:
