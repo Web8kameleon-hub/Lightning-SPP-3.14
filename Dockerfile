@@ -2,10 +2,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY wwwmmm.csproj ./
-RUN dotnet restore wwwmmm.csproj
+COPY wwwmmm.FluidEngine/src/wwwmmm.FluidEngine.Core/wwwmmm.FluidEngine.Core.csproj ./wwwmmm.FluidEngine/src/wwwmmm.FluidEngine.Core/
+RUN dotnet restore
 COPY . .
 RUN --mount=type=secret,id=sixlabors_license,env=SixLaborsLicenseKey,required=true \
-    dotnet publish wwwmmm.csproj -c Release -o /app/publish --no-restore \
+    dotnet publish wwwmmm.csproj -c Release -o /app/publish \
     /p:UseAppHost=false
 
 FROM build AS test
@@ -22,7 +23,7 @@ RUN --mount=type=secret,id=sixlabors_license,env=SixLaborsLicenseKey,required=tr
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 USER root
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl poppler-utils cups-client sane-utils fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends curl poppler-utils cups-client sane-utils fontconfig \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /data \
     && chown app:app /data
