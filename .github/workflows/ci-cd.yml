@@ -87,9 +87,32 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
 
+    - name: Open isolated Hetzner integration tunnel
+      env:
+        SPP_TEST_SSH_HOST: ${{ secrets.SPP_TEST_SSH_HOST }}
+        SPP_TEST_SSH_USER: ${{ secrets.SPP_TEST_SSH_USER }}
+        SPP_TEST_SSH_KEY: ${{ secrets.SPP_TEST_SSH_KEY }}
+        SPP_TEST_SSH_KNOWN_HOSTS: ${{ secrets.SPP_TEST_SSH_KNOWN_HOSTS }}
+      run: bash Scripts/open-isolated-bridge-tunnel.sh
+
+    - name: Require real isolated bridge test services
+      env:
+        SPP_EXCEL_SERVICE_URL: http://127.0.0.1:18002
+        SPP_EXCEL_CORE_URL: http://127.0.0.1:18001
+        SPP_OSCLX_URL: http://127.0.0.1:19094
+        SPP_OSCLX_API_KEY: ${{ secrets.SPP_TEST_OSCLX_API_KEY }}
+        SPP_OSCLX_HMAC_SECRET: ${{ secrets.SPP_TEST_OSCLX_HMAC_SECRET }}
+      run: python3 Scripts/check-bridge-test-services.py
+
     - name: Run unit tests
       env:
         SPP_TEST_NATIVE_DOCUMENTS: '1'
+        SPP_BRIDGE_TEST_ALLOW_WRITES: 'isolated-loopback'
+        SPP_EXCEL_SERVICE_URL: http://127.0.0.1:18002
+        SPP_EXCEL_CORE_URL: http://127.0.0.1:18001
+        SPP_OSCLX_URL: http://127.0.0.1:19094
+        SPP_OSCLX_API_KEY: ${{ secrets.SPP_TEST_OSCLX_API_KEY }}
+        SPP_OSCLX_HMAC_SECRET: ${{ secrets.SPP_TEST_OSCLX_HMAC_SECRET }}
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
@@ -116,13 +139,29 @@ jobs:
         echo 'Speed CLI: 1024 zero-filled bytes; 0 warm-up runs; 1 measured run per mode. Raw observations, not median/p95/p99 or throughput claims. Regression gates run in the test suite.' >> artifacts/benchmark-environment.txt
         dotnet run --no-build --configuration Release -- speed | tee artifacts/speed-benchmark.txt
 
+    - name: Write failure-safe CI evidence manifest
+      if: always()
+      shell: bash
+      run: |
+        mkdir -p artifacts
+        {
+          printf 'commit=%s\\n' "$GITHUB_SHA"
+          printf 'job_status=%s\\n' "${{ job.status }}"
+          printf 'test_reports_found='
+          find Tests/LightningSPP.Tests/TestResults -type f -name '*.trx' 2>/dev/null | wc -l
+          for file in artifacts/benchmark-environment.txt artifacts/speed-benchmark.txt; do
+            if test -s "$file"; then printf '%s=PRESENT\\n' "$file"; else printf '%s=NOT_PRODUCED\\n' "$file"; fi
+          done
+        } > artifacts/ci-evidence-status.txt
+
     - name: Preserve test and benchmark evidence
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: validation-${{ github.sha }}
         path: |
-          Tests/LightningSPP.Tests/TestResults/*.trx
+          artifacts/ci-evidence-status.txt
+          Tests/LightningSPP.Tests/TestResults/**/*.trx
           artifacts/benchmark-environment.txt
           artifacts/speed-benchmark.txt
         if-no-files-found: error
