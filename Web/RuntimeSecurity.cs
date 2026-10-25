@@ -43,20 +43,32 @@ internal static class RuntimeSecurity
 
 internal sealed class RequestRateLimiter
 {
+    private readonly int limit;
+    private readonly TimeSpan window;
+    private readonly int maxClients;
     private readonly Dictionary<string, (int Count, DateTimeOffset Start)> clients = new();
     private readonly object sync = new();
+    internal RequestRateLimiter(int limit = 120, TimeSpan? window = null, int maxClients = 4096)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxClients, 1);
+        this.window = window ?? TimeSpan.FromMinutes(1);
+        if (this.window <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(window));
+        this.limit = limit;
+        this.maxClients = maxClients;
+    }
     public bool IsLimited(string ip, DateTimeOffset now)
     {
         lock (sync)
         {
-            foreach (var key in clients.Where(x => now - x.Value.Start >= TimeSpan.FromMinutes(1)).Select(x => x.Key).ToArray())
+            foreach (var key in clients.Where(x => now - x.Value.Start >= window).Select(x => x.Key).ToArray())
                 clients.Remove(key);
             if (!clients.TryGetValue(ip, out var entry))
             {
-                if (clients.Count >= 4096) return true;
+                if (clients.Count >= maxClients) return true;
                 entry = (0, now);
             }
-            if (entry.Count >= 120) return true;
+            if (entry.Count >= limit) return true;
             clients[ip] = (entry.Count + 1, entry.Start);
             return false;
         }

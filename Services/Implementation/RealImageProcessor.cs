@@ -205,7 +205,7 @@ public class RealImageProcessor : IScanService
     private static SKBitmap ApplyEdgeEnhanced(SKBitmap source, float contrast, float brightness, float saturation = 1.0f)
     {
         using var gray = ApplyColorTransform(source, grayscale: true, contrast: 1.0f);
-        var output = new SKBitmap(gray.Width, gray.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var output = new SKBitmap(gray.Width, gray.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
 
         for (var y = 1; y < gray.Height - 1; y++)
         {

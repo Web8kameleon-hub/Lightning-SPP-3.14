@@ -19,14 +19,14 @@ internal static class LicenseApiServer
     // Rate limiting: max requests per window per IP
     private const int RateLimitMaxRequests = 30;
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
-    private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _rateLimits = new();
+    private static readonly RequestRateLimiter _rateLimits = new(RateLimitMaxRequests, RateLimitWindow);
 
     // A tighter, dedicated limit for /api/try/process: it runs real CPU-bound image
     // processing for anonymous, unauthenticated visitors, so it must not share the
     // general 30/min budget that covers lightweight endpoints like /api/health.
     private const int TryRateLimitMaxRequests = 10;
     private static readonly TimeSpan TryRateLimitWindow = TimeSpan.FromMinutes(5);
-    private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _tryRateLimits = new();
+    private static readonly RequestRateLimiter _tryRateLimits = new(TryRateLimitMaxRequests, TryRateLimitWindow);
     private const long TryMaxUploadBytes = 8 * 1024 * 1024; // 8 MB
     private static readonly SemaphoreSlim TryProcessingSlots = new(1, 1);
 
@@ -36,27 +36,9 @@ internal static class LicenseApiServer
         "application/pdf"
     };
 
-    private static bool IsRateLimited(string ip)
-    {
-        var now = DateTime.UtcNow;
-        var entry = _rateLimits.GetOrAdd(ip, _ => (0, now));
-        if (now - entry.WindowStart > RateLimitWindow)
-            entry = (0, now);
-        entry = (entry.Count + 1, entry.WindowStart);
-        _rateLimits[ip] = entry;
-        return entry.Count > RateLimitMaxRequests;
-    }
+    internal static bool IsRateLimited(string ip) => _rateLimits.IsLimited(ip, DateTimeOffset.UtcNow);
 
-    private static bool IsTryRateLimited(string ip)
-    {
-        var now = DateTime.UtcNow;
-        var entry = _tryRateLimits.GetOrAdd(ip, _ => (0, now));
-        if (now - entry.WindowStart > TryRateLimitWindow)
-            entry = (0, now);
-        entry = (entry.Count + 1, entry.WindowStart);
-        _tryRateLimits[ip] = entry;
-        return entry.Count > TryRateLimitMaxRequests;
-    }
+    internal static bool IsTryRateLimited(string ip) => _tryRateLimits.IsLimited(ip, DateTimeOffset.UtcNow);
 
     public static async Task RunAsync(int port, CancellationToken cancellationToken = default)
     {
@@ -308,6 +290,11 @@ internal static class LicenseApiServer
                 return;
             }
 
+            if (path.StartsWith("/api/fluid/", StringComparison.OrdinalIgnoreCase))
+            {
+                await FluidApiHandler.HandleAsync(context, path);
+                return;
+            }
             if (path == "/api/metrics")
             {
                 await TextAsync(context, HttpStatusCode.OK, LightningMetrics.ToText());

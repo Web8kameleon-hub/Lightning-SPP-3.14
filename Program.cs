@@ -3,6 +3,7 @@ using wwwmmm.Services;
 using wwwmmm.SDK;
 using LightningSPP.Licensing;
 using wwwmmm.Web;
+using wwwmmm.Tools;
 
 namespace wwwmmm;
 
@@ -104,6 +105,12 @@ internal class Program
                 break;
             case "batch":
                 await BatchProcess(args);
+                break;
+            case "aes-bench":
+                Environment.ExitCode = await AesBenchmarkCommand.RunAsync(args);
+                break;
+            case "openapi-export":
+                Environment.ExitCode = wwwmmm.FluidEngine.Core.Registry.OpenApiCommand.Run(args);
                 break;
             case "demo":
                 await RunDemo();

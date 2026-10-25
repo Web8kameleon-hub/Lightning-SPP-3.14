@@ -427,3 +427,6 @@ artifacts/
 !.env.production.example
 
 !.env.build.example
+*.bak
+Quality/Corpus/
+Quality/aes-report.json
