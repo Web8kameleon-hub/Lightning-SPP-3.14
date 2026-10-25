@@ -22,6 +22,7 @@ public static class PipelineRegistry
         new PipelineDescriptor("StigmaMemoryFilmPipeline", "Memory", "byte[]", "Guid", "Store bytes in FluidLayer",       true),
         new PipelineDescriptor("SeltenDataPipeline", "Data", "int[]", "int[]", "Outlier detection (2σ)",                  false),
         new PipelineDescriptor("StandardDataMetaknowPipeline", "Cognitive", "string", "string", "Metadata extraction",    false),
+        new PipelineDescriptor("ModelGatewayStep", "Cognitive", "string", "string", "AI reasoning using existing ModelGateway", false),
         new PipelineDescriptor("SuitabilityPipeline", "Cognitive", "string", "bool", "Pattern-based suitability check",    false)
     };
 
