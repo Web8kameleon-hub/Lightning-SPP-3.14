@@ -16,7 +16,7 @@ public class TypedOrchestrationTests
             .AddStep(new SuitabilityPipeline("ready"));
         var (result, context) = await pipeline.ExecuteAsync("READY for production");
         Assert.True(result);
-        Assert.Single(context.StepTraces);
+        Assert.Equal(2, context.StepTraces.Count);
     }
 
     [Fact]
