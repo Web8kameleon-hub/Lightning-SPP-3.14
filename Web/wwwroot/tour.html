@@ -2,233 +2,63 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lightning SPP - How it Works</title>
+    <title>Lightning SPP - Product Tour</title>
     <style>
-        :root {
-            --bg: #0b1120;
-            --card-bg: #111827;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent: #22d3ee;
-            --border: #1e293b;
-        }
-        body {
-            margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg); color: var(--text-main);
-            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-        }
-        header {
-            padding: 20px 40px; border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .logo { font-size: 1.5rem; font-weight: bold; color: #fff; }
-        
-        /* Video Container */
-        .player-container {
-            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            position: relative; overflow: hidden;
-        }
-        
-        .scene {
-            position: absolute; text-align: center; max-width: 800px; padding: 40px;
-            opacity: 0; transform: translateY(20px); transition: all 0.8s ease-in-out;
-            pointer-events: none;
-        }
-        .scene.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
-        
-        .scene-icon { font-size: 4rem; margin-bottom: 20px; }
-        .scene h1 { font-size: 2.5rem; margin-bottom: 15px; color: #fff; }
-        .scene p { font-size: 1.2rem; color: var(--text-muted); line-height: 1.6; }
-        
-        /* Mockup Graphics */
-        .mockup {
-            margin-top: 30px; background: var(--card-bg); border: 1px solid var(--border);
-            border-radius: 12px; padding: 20px; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .bar { height: 12px; background: #334155; border-radius: 6px; margin-bottom: 10px; }
-        .bar.fill { background: var(--accent); width: 0%; transition: width 1s ease; }
-        
-        /* Controls */
-        .controls {
-            width: 100%; max-width: 800px; margin: 0 auto; padding: 20px;
-            background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border);
-            display: flex; align-items: center; gap: 15px; margin-bottom: 40px;
-        }
-        .play-btn {
-            background: var(--accent); color: #000; border: none; width: 50px; height: 50px;
-            border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: transform 0.2s;
-        }
-        .play-btn:hover { transform: scale(1.1); }
-        .progress-bar { flex: 1; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; position: relative; }
-        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s linear; }
-        
-        .nav-buttons { display: flex; gap: 10px; }
-        .nav-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-        .nav-btn:hover { color: #fff; border-color: var(--text-muted); }
+        body { font-family: 'Segoe UI', sans-serif; background: #0b1120; color: #fff; display: flex; height: 100vh; margin: 0; flex-direction: column; }
+        header { padding: 20px; border-bottom: 1px solid #1e293b; font-size: 1.5rem; font-weight: bold; }
+        .player { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .scene { position: absolute; text-align: center; opacity: 0; transition: opacity 0.8s; max-width: 800px; padding: 40px; }
+        .scene.active { opacity: 1; }
+        .scene h1 { color: #22d3ee; font-size: 2.5rem; margin-bottom: 10px; }
+        .scene p { color: #94a3b8; font-size: 1.2rem; line-height: 1.6; }
+        .mock { background: #111827; border: 1px solid #1e293b; padding: 20px; border-radius: 12px; margin-top: 30px; }
+        .controls { padding: 20px; text-align: center; background: #111827; border-top: 1px solid #1e293b; }
+        button { background: #22d3ee; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; }
     </style>
 </head>
 <body>
-    <header>
-        <div class="logo">Lightning SPP.</div>
-        <a href="/" style="color: var(--accent); text-decoration: none;">Back to App</a>
-    </header>
-
-    <div class="player-container">
-        <!-- Scene 1 -->
-        <div class="scene active" id="scene-0">
-            <div class="scene-icon">‚ö°</div>
+    <header>Lightning SPP. Product Tour</header>
+    <div class="player">
+        <div class="scene active" id="s0">
             <h1>Welcome to Lightning SPP</h1>
-            <p>The fastest universal scan-process-print system powered by real, AI-driven pipelines. No fake demos, just pure performance.</p>
-            <div class="mockup">
-                <div class="bar" style="width: 100%;"></div>
-                <div class="bar" style="width: 80%;"></div>
-                <div class="bar" style="width: 60%;"></div>
-            </div>
+            <p>The fastest universal scan-process-print system powered by real AI pipelines.</p>
+            <div class="mock">‚ú® Ready to process millions of documents.</div>
         </div>
-
-        <!-- Scene 2 -->
-        <div class="scene" id="scene-1">
-            <div class="scene-icon">Ì≥§</div>
-            <h1>1. Upload Your Data</h1>
-            <p>Simply drag and drop your images, PDFs, or raw IoT sensor data. Our system handles the rest automatically.</p>
-            <div class="mockup" style="border: 2px dashed var(--accent);">
-                <p style="color: var(--accent); margin: 0;">+ Drop files here to begin</p>
-            </div>
+        <div class="scene" id="s1">
+            <h1>1. Upload Data</h1>
+            <p>Drag and drop images, PDFs, or IoT sensor data. Our system handles the rest.</p>
+            <div class="mock">Ì≥Å Drop your files here.</div>
         </div>
-
-        <!-- Scene 3 -->
-        <div class="scene" id="scene-2">
-            <div class="scene-icon">‚öôÔ∏è</div>
+        <div class="scene" id="s2">
             <h1>2. Fluid Engine Processing</h1>
-            <p>Choose from multiple engines. Use BitPipeline for extreme compression, or VisionPipeline for smart image enhancements.</p>
-            <div class="mockup">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span>BitPipeline (Compression)</span>
-                    <span id="anim-percent">0%</span>
-                </div>
-                <div class="progress-bar"><div class="progress-fill" id="mock-progress"></div></div>
-            </div>
+            <p>Use BitPipeline for extreme compression, or VisionPipeline for smart enhancements.</p>
+            <div class="mock">‚öôÔ∏è Processing data with 0% fake...</div>
         </div>
-
-        <!-- Scene 4 -->
-        <div class="scene" id="scene-3">
-            <div class="scene-icon">Ì≥¶</div>
-            <h1>3. Download & Export</h1>
-            <p>Get your optimized files instantly. View execution traces, verify metrics, and export to your local machine.</p>
-            <div class="mockup" style="display: flex; gap: 10px;">
-                <button style="flex:1; padding: 10px; background: var(--accent); border:none; border-radius:6px; font-weight:bold;">Download ZIP</button>
-                <button style="flex:1; padding: 10px; background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius:6px; font-weight:bold;">View Trace</button>
-            </div>
+        <div class="scene" id="s3">
+            <h1>3. Download Results</h1>
+            <p>Get optimized files instantly. View execution traces and verify metrics.</p>
+            <div class="mock">Ì≥¶ Ready to download!</div>
         </div>
     </div>
-
-    <!-- Player Controls -->
     <div class="controls">
-        <button class="play-btn" id="playBtn" onclick="togglePlay()">‚ñ∂</button>
-        <div class="progress-bar">
-            <div class="progress-fill" id="mainProgress"></div>
-        </div>
-        <div class="nav-buttons">
-            <button class="nav-btn" onclick="prevScene()">‚óÄ Prev</button>
-            <button class="nav-btn" onclick="nextScene()">Next ‚ñ∂</button>
-        </div>
+        <button id="playBtn" onclick="togglePlay()">‚ñ∂ Play Tour</button>
     </div>
-
     <script>
-        let currentScene = 0;
-        let isPlaying = false;
-        let playInterval = null;
-        let progressInterval = null;
-        let progress = 0;
-        const totalScenes = 4;
-        const sceneDuration = 5000; // 5 seconds per scene
-        const tickRate = 50; // update every 50ms
-
-        function showScene(index) {
+        let current = 0; let playing = false; let interval = null;
+        function show(idx) {
             document.querySelectorAll('.scene').forEach(el => el.classList.remove('active'));
-            document.getElementById(`scene-${index}`).classList.add('active');
-            
-            // Reset mock animations if we hit scene 3
-            if (index === 2) {
-                document.getElementById('mock-progress').style.width = '0%';
-                document.getElementById('anim-percent').innerText = '0%';
-                setTimeout(() => {
-                    document.getElementById('mock-progress').style.width = '100%';
-                    document.getElementById('anim-percent').innerText = '100%';
-                }, 500);
-            }
+            document.getElementById('s' + idx).classList.add('active');
         }
-
-        function nextScene() {
-            if (currentScene < totalScenes - 1) {
-                currentScene++;
-                showScene(currentScene);
-            } else {
-                stopPlay();
-            }
-        }
-
-        function prevScene() {
-            if (currentScene > 0) {
-                currentScene--;
-                showScene(currentScene);
-            }
-        }
-
         function togglePlay() {
-            if (isPlaying) {
-                stopPlay();
-            } else {
-                isPlaying = true;
-                document.getElementById('playBtn').innerText = '‚è∏';
-                if (currentScene === totalScenes - 1) {
-                    currentScene = 0;
-                    showScene(0);
-                    progress = 0;
-                }
-                startPlay();
-            }
+            playing = !playing;
+            document.getElementById('playBtn').innerText = playing ? '‚è∏ Pause' : '‚ñ∂ Play Tour';
+            if (playing) {
+                interval = setInterval(() => {
+                    current = (current + 1) % 4;
+                    show(current);
+                }, 3000);
+            } else { clearInterval(interval); }
         }
-
-        function startPlay() {
-            playInterval = setInterval(() => {
-                progress += (tickRate / sceneDuration) * 100;
-                
-                if (progress >= 100) {
-                    progress = 0;
-                    nextScene();
-                    if (currentScene === totalScenes - 1 && progress === 0) {
-                        // If we finished the last scene, loop back or stop
-                        // stopPlay(); 
-                    }
-                }
-                document.getElementById('mainProgress').style.width = `${progress}%`;
-            }, tickRate);
-        }
-
-        function stopPlay() {
-            isPlaying = false;
-            document.getElementById('playBtn').innerText = '‚ñ∂';
-            clearInterval(playInterval);
-        }
-
-        // Manual navigation resets progress
-        const originalNext = nextScene;
-        nextScene = function() {
-            progress = 0;
-            document.getElementById('mainProgress').style.width = '0%';
-            originalNext();
-        };
-        
-        const originalPrev = prevScene;
-        prevScene = function() {
-            progress = 0;
-            document.getElementById('mainProgress').style.width = '0%';
-            originalPrev();
-        };
     </script>
 </body>
 </html>

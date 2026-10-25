@@ -7,20 +7,20 @@ namespace wwwmmm.Web;
 
 public static class DemoPageHandler
 {
-    public static async Task HandleAsync(HttpListenerContext context)
+    public static async Task HandleAsync(HttpListenerContext context, string fileName)
     {
         var paths = new[] {
-            Path.Combine(Directory.GetCurrentDirectory(), "Web", "wwwroot", "demo.html"),
-            Path.Combine(Directory.GetCurrentDirectory(), "demo.html")
+            Path.Combine(Directory.GetCurrentDirectory(), "Web", "wwwroot", fileName),
+            Path.Combine(Directory.GetCurrentDirectory(), fileName)
         };
 
-        string htmlPath = null;
+        string? htmlPath = null;
         foreach (var p in paths) {
             if (File.Exists(p)) { htmlPath = p; break; }
         }
 
         if (htmlPath == null) {
-            var err = Encoding.UTF8.GetBytes("demo.html nuk u gjet.");
+            var err = Encoding.UTF8.GetBytes($"{fileName} nuk u gjet.");
             context.Response.StatusCode = 404;
             context.Response.ContentType = "text/plain";
             context.Response.ContentLength64 = err.Length;
