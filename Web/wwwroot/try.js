@@ -47,7 +47,12 @@ byId('tryForm').addEventListener('submit', async (event) => {
   try {
     const response = await fetch(archiveInput ? '/api/try/archive' : wantsZip ? '/api/try/package' : '/api/try/process', {
       method: 'POST',
-
+      headers: {
+        'Content-Type': contentType,
+        'X-Stigma-Profile': profile,
+        ...(archiveInput && structural ? { 'X-Archive-Analysis': 'structural' } : {})
+      },
+      body: file
     });
 
     if (wantsZip && response.ok) {
