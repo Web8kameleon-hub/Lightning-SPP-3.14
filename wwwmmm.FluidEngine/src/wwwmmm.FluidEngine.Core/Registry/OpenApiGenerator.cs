@@ -10,7 +10,7 @@ public static class OpenApiGenerator
         var paths = new JsonObject();
         var schemas = new JsonObject();
 
-        foreach (var p in PipelineRegistry.All)
+        foreach (var p in PipelineRegistry.All.Where(p => p.Name is "BitPipeline" or "BitUnpacker"))
         {
             schemas[p.Name] = new JsonObject
             {
@@ -45,7 +45,7 @@ public static class OpenApiGenerator
             {
                 ["title"] = "wwwmmm Fluid Engine API",
                 ["version"] = "3.19.0",
-                ["description"] = $"Auto-generated from PipelineRegistry. {PipelineRegistry.All.Count} pipelines."
+                ["description"] = "HTTP operations implemented by FluidApiHandler. Other registry entries are library-only."
             },
             ["paths"] = paths,
             ["components"] = new JsonObject { ["schemas"] = schemas }
