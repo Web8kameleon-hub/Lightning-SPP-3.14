@@ -21,10 +21,7 @@ for file in files:
 
 print(f"Test evidence: {len(files)} TRX file(s), {totals}")
 
-if totals["total"] == 0 or totals["failed"] > 0 or totals["error"] > 0:
-    sys.exit(f"FAIL: No failures or errors allowed. Found: {totals['failed']} failed, {totals['error']} error.")
+if totals["total"] == 0 or totals["passed"] != totals["total"] or any(totals[k] for k in ("failed", "error", "notExecuted")):
+    sys.exit("FAIL: 100% PASS required; failed, error, skipped or ignored tests are prohibited")
 
-if totals["notExecuted"] > 0:
-    print(f"WARN: {totals['notExecuted']} tests were skipped (likely external dependencies). This is allowed in CI as long as no tests failed.")
-
-print("PASS: all reported tests executed and passed (or were skipped without failures).")
+print("PASS: all reported tests executed and passed")

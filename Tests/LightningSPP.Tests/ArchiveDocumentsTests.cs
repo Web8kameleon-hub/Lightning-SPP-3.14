@@ -20,7 +20,7 @@ public class ArchiveDocumentsTests
             foreach (var file in files) { using var entry = archive.CreateEntry(file.Name).Open(); entry.Write(file.Data); }
         return stream.ToArray();
     }
-    [ArchiveNativeFact]
+    [Fact]
     public async Task MixedArchiveProcessesPdfPreservesOriginalsAndReportsFailure()
     {
         var pdf = new PdfDocumentService().CreateFromImages(new[] { RealTestImage.Png(), RealTestImage.Png() });

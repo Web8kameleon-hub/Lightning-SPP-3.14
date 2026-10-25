@@ -68,7 +68,7 @@ public class PdfDocumentTests
         await Assert.ThrowsAsync<ArgumentException>(() => device.GetPrintQueueAsync("--help"));
     }
 
-    [NativeDocumentFact]
+    [Fact]
     public async Task RealPopplerRendersCorrectPageAndPreservesTotalCount()
     {
         var service = new PdfDocumentService();
@@ -83,7 +83,7 @@ public class PdfDocumentTests
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.RenderPageAsync(pdf, 3));
     }
 
-    [NativeDocumentFact]
+    [Fact]
     public async Task RealPopplerRejectsMalformedPdfAndRemovesTemporaryFiles()
     {
         var before = Directory.GetDirectories(Path.GetTempPath(), "spp-pdf-*").ToHashSet();
