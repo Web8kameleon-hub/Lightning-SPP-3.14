@@ -295,6 +295,11 @@ internal static class LicenseApiServer
                 await FluidApiHandler.HandleAsync(context, path);
                 return;
             }
+            if (path == "/demo" || path == "/demo.html")
+            {
+                await DemoPageHandler.HandleAsync(context);
+                return;
+            }
             if (path == "/api/metrics")
             {
                 await TextAsync(context, HttpStatusCode.OK, LightningMetrics.ToText());
