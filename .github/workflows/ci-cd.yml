@@ -89,7 +89,10 @@ jobs:
 
     - name: Run unit tests
       env:
+        # Aktivizon Poppler për testet PDF (sepse CI e instalon)
         SPP_TEST_NATIVE_DOCUMENTS: '1'
+        # Shërbimet e jashtme (Excel/NodeDB) mbeten të anashkaluara në CI
+        SPP_BRIDGE_TEST_ALLOW_WRITES: ''
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
