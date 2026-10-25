@@ -4,51 +4,63 @@ using wwwmmm.FluidEngine.Core.Context;
 
 namespace wwwmmm.FluidEngine.Core.Orchestration;
 
-public sealed class FluidPipeline<TStart>
+// Entry point: each execution receives a fresh context.
+public static class FluidPipeline<TStart>
 {
-    private readonly PipelineContext _context;
-    private readonly Func<TStart, PipelineContext, CancellationToken, Task<TStart>> _executionFlow;
+    public static FluidPipeline<TStart, TStart> Create() =>
+        new((input, _, _) => Task.FromResult(input));
+}
 
-    internal FluidPipeline(PipelineContext context, Func<TStart, PipelineContext, CancellationToken, Task<TStart>> executionFlow)
+// The current output type changes as steps are appended. No runtime type casts.
+public sealed class FluidPipeline<TStart, TCurrent>
+{
+    private readonly Func<TStart, PipelineContext, CancellationToken, Task<TCurrent>> _executionFlow;
+
+    internal FluidPipeline(Func<TStart, PipelineContext, CancellationToken, Task<TCurrent>> executionFlow)
+        => _executionFlow = executionFlow;
+
+    public FluidPipeline<TStart, TNext> AddStep<TNext>(IFluidStep<TCurrent, TNext> step)
     {
-        _context = context;
-        _executionFlow = executionFlow;
-    }
-
-    public static FluidPipeline<TStart> Create() => new(new PipelineContext(), (input, _, _) => Task.FromResult(input));
-
-    public FluidPipeline<TStart> AddStep<TNext>(IFluidStep<TStart, TNext> step)
-    {
-        var previousFlow = _executionFlow;
-        var newFlow = async (TStart input, PipelineContext ctx, CancellationToken ct) =>
+        ArgumentNullException.ThrowIfNull(step);
+        var previous = _executionFlow;
+        return new FluidPipeline<TStart, TNext>(async (input, context, ct) =>
         {
-            var intermediate = await previousFlow(input, ctx, ct);
-            var sw = Stopwatch.StartNew();
+            ct.ThrowIfCancellationRequested();
+            var intermediate = await previous(input, context, ct);
+            ct.ThrowIfCancellationRequested();
+            var timer = Stopwatch.StartNew();
             try
             {
-                var output = await step.ExecuteAsync(intermediate, ctx, ct);
-                sw.Stop();
-                ctx.RecordStep(step.Name, "RealEngine", sw.Elapsed.TotalMilliseconds, true);
-                
-                // Për të mbajtur tipizimin e thjeshtë, kthejmë output si TStart (kjo kërkon casting në runtime)
-                return (TStart)(object)output!; 
+                var output = await step.ExecuteAsync(intermediate, context, ct);
+                context.RecordStep(step.Name, "FluidPipeline", timer.Elapsed.TotalMilliseconds, true);
+                return output;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                context.RecordStep(step.Name, "FluidPipeline", timer.Elapsed.TotalMilliseconds, false);
+                throw;
             }
             catch (Exception ex)
             {
-                sw.Stop();
-                ctx.RecordStep(step.Name, "RealEngine", sw.Elapsed.TotalMilliseconds, false);
+                context.RecordStep(step.Name, "FluidPipeline", timer.Elapsed.TotalMilliseconds, false);
                 throw new InvalidOperationException($"Pipeline step '{step.Name}' failed.", ex);
             }
-        };
-
-        return new FluidPipeline<TStart>(_context, newFlow);
+        });
     }
 
-    public async Task<(TStart Result, PipelineContext Context)> ExecuteAsync(TStart input, CancellationToken ct = default)
+    public async Task<(TCurrent Result, PipelineContext Context)> ExecuteAsync(
+        TStart input, CancellationToken ct = default)
     {
-        var result = await _executionFlow(input, _context, ct);
-        _context.GlobalTimer.Stop();
-        return (result, _context);
+        var context = new PipelineContext();
+        try
+        {
+            ct.ThrowIfCancellationRequested();
+            var result = await _executionFlow(input, context, ct);
+            return (result, context);
+        }
+        finally
+        {
+            context.GlobalTimer.Stop();
+        }
     }
 }
-
