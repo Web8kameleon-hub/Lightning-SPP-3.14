@@ -21,7 +21,6 @@ for file in files:
 
 print(f"Test evidence: {len(files)} TRX file(s), {totals}")
 
-# Rregulli: Dështimet dhe gabimet janë të ndaluara.
 if totals["total"] == 0 or totals["failed"] > 0 or totals["error"] > 0:
     sys.exit(f"FAIL: No failures or errors allowed. Found: {totals['failed']} failed, {totals['error']} error.")
 
