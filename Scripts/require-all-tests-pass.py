@@ -21,12 +21,11 @@ for file in files:
 
 print(f"Test evidence: {len(files)} TRX file(s), {totals}")
 
-# Rregulli i ri: Dështimet dhe gabimet janë të ndaluara.
-# Testet e anashkaluara (notExecuted) lejohen vetëm nëse nuk ka dështime.
+# Rregulli: Dështimet dhe gabimet janë të ndaluara.
 if totals["total"] == 0 or totals["failed"] > 0 or totals["error"] > 0:
     sys.exit(f"FAIL: No failures or errors allowed. Found: {totals['failed']} failed, {totals['error']} error.")
-    
+
 if totals["notExecuted"] > 0:
-    print(f"WARN: {totals['notExecuted']} tests were skipped (likely due to external dependencies). This is allowed for CI as long as no tests failed.")
+    print(f"WARN: {totals['notExecuted']} tests were skipped (likely external dependencies). This is allowed in CI as long as no tests failed.")
 
 print("PASS: all reported tests executed and passed (or were skipped without failures).")
