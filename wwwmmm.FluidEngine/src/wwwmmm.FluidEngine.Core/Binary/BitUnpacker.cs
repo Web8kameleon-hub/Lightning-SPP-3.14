@@ -25,7 +25,15 @@ public sealed class BitUnpacker : IFluidStep<byte[], byte[]>
             using var inputStream = new MemoryStream(input, 7, input.Length - 7);
             using var brotli = new BrotliStream(inputStream, CompressionMode.Decompress);
             using var output = new MemoryStream(originalLength);
-            brotli.CopyTo(output);
+            var buffer = new byte[81920];
+            int read;
+            while ((read = brotli.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (output.Length + read > originalLength)
+                    throw new InvalidOperationException("BitPipeline: Decompressed payload exceeds declared length.");
+                output.Write(buffer, 0, read);
+            }
             var result = output.ToArray();
 
             if (result.Length != originalLength)
