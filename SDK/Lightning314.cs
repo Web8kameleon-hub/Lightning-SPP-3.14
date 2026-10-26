@@ -104,22 +104,46 @@ public static class MobileAPI
 
 public static class IoTAPI
 {
+    /// <summary>
+    /// Legacy contract: returns raw Brotli bytes.
+    /// </summary>
     public static async Task<byte[]> ProcessConstrained(byte[] data, int maxMemoryKB = 64)
     {
         ArgumentNullException.ThrowIfNull(data);
         if (maxMemoryKB is < 1 or > int.MaxValue / 1024)
             throw new ArgumentOutOfRangeException(nameof(maxMemoryKB));
-        
+        return await Lightning314.Instant(data);
+    }
+
+    /// <summary>
+    /// New framed contract: returns a 7-byte header (CL + version + length) followed by Brotli bytes.
+    /// </summary>
+    public static async Task<byte[]> ProcessConstrainedWithHeader(byte[] data, int maxMemoryKB = 64)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        if (maxMemoryKB is < 1 or > int.MaxValue / 1024)
+            throw new ArgumentOutOfRangeException(nameof(maxMemoryKB));
         var context = new PipelineContext();
         var pipeline = new BitPipeline();
         return await pipeline.ExecuteAsync(data, context, default);
     }
 
+    /// <summary>
+    /// Unpacks either a raw Brotli stream or a framed BitPipeline stream.
+    /// </summary>
     public static async Task<byte[]> ProcessConstrainedUnpack(byte[] compressedData)
     {
-        var context = new PipelineContext();
-        var unpacker = new BitUnpacker();
-        return await unpacker.ExecuteAsync(compressedData, context, default);
+        if (compressedData.Length >= 7 && compressedData[0] == 0x43 && compressedData[1] == 0x4C)
+        {
+            var context = new PipelineContext();
+            var unpacker = new BitUnpacker();
+            return await unpacker.ExecuteAsync(compressedData, context, default);
+        }
+        using var input = new MemoryStream(compressedData);
+        using var brotli = new BrotliStream(input, CompressionMode.Decompress);
+        using var output = new MemoryStream();
+        await brotli.CopyToAsync(output);
+        return output.ToArray();
     }
 
     public static async IAsyncEnumerable<byte[]> ProcessStream(IAsyncEnumerable<byte[]> sensorData)

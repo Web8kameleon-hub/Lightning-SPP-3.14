@@ -13,7 +13,7 @@ public class SdkIntegrationTests
         var input = Encoding.UTF8.GetBytes("Sensor-Data: Temp=22.5, Humidity=45.0, ID=" + Guid.NewGuid());
 
         // 2. Kompreso duke përdorur SDK-në
-        var compressed = await IoTAPI.ProcessConstrained(input, maxMemoryKB: 1);
+        var compressed = await IoTAPI.ProcessConstrainedWithHeader(input, maxMemoryKB: 1);
         
         // 3. Verifiko që framing-u u aplikua (Magic 'CL' = 0x43 0x4C)
         Assert.True(compressed.Length > 7);
