@@ -1,3 +1,7 @@
 <Solution>
+  <Folder Name="/wwwmmm.FluidEngine/" />
+  <Folder Name="/wwwmmm.FluidEngine/src/">
+    <Project Path="wwwmmm.FluidEngine/src/wwwmmm.FluidEngine.Core/wwwmmm.FluidEngine.Core.csproj" />
+  </Folder>
   <Project Path="wwwmmm.csproj" />
 </Solution>
