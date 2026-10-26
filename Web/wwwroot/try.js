@@ -27,7 +27,21 @@ byId('tryForm').addEventListener('submit', async (event) => {
     message('tryStatus', 'Choose a PDF file for PDF Processor.', 'error'); return;
   }
   const archiveInput = !pdfOnly && /\.zip$/i.test(file.name);
-  const contentType = archiveInput ? 'application/zip' : pdfOnly ? 'application/pdf' : file.type;
+  // Browsers may return an empty or generic MIME type for valid local files.
+  // Use the extension only to supply the request MIME hint; the server still
+  // validates and decodes the actual bytes before processing.
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const mimeByExtension = {
+    pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    png: 'image/png', bmp: 'image/bmp', tif: 'image/tiff',
+    tiff: 'image/tiff', gif: 'image/gif'
+  };
+  const supportedMime = mimeByExtension[extension];
+  if (!archiveInput && !supportedMime) {
+    message('tryStatus', 'Unsupported file type. Upload a PDF, JPEG, PNG, BMP, TIFF or GIF file.', 'error');
+    return;
+  }
+  const contentType = archiveInput ? 'application/zip' : supportedMime;
 
   const structural = archiveInput && Boolean(byId('archiveAnalysis')?.checked);
 
