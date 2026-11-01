@@ -156,6 +156,8 @@ internal static class LicenseApiServer
             "/" or "/index.html" or "/features" or "/technology" or "/try" or "/pdf" or
             "/pricing" or "/benchmarks" or "/swagger" or "/openapi.json" or
             "/robots.txt" or "/sitemap.xml" or "/site.css" or "/try.js" or "/assistant.js" or "/assistant.css" or "/assistant-i18n.mjs" or "/assistant-locales.json" or
+            "/theme.css" or "/reveal.js" or
+            "/assets/landing-hero.png" or "/assets/landing-tile.png" or "/assets/landing-band.png" or
             "/favicon.ico" or "/favicon-16x16.png" or "/favicon-32x32.png" or
             "/apple-touch-icon.png" or "/site.webmanifest";
 
@@ -182,7 +184,7 @@ internal static class LicenseApiServer
                 await ServeStaticAsync(context, "assistant-locales.json", "application/json; charset=utf-8");
                 return;
             }
-            if (path == "/assistant-i18n.mjs" || path == "/site.css" || path == "/dashboard.js" || path == "/try.js" || path == "/account.js" || path == "/workspace.js" || path == "/workspace.css" || path == "/screen-context.js" || path == "/assistant.js" || path == "/assistant.css")
+            if (path == "/assistant-i18n.mjs" || path == "/site.css" || path == "/theme.css" || path == "/reveal.js" || path == "/dashboard.js" || path == "/try.js" || path == "/account.js" || path == "/workspace.js" || path == "/workspace.css" || path == "/screen-context.js" || path == "/assistant.js" || path == "/assistant.css")
             {
                 var jsOrCss = path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8";
                 await ServeStaticAsync(context, path[1..], jsOrCss);
@@ -276,6 +278,12 @@ internal static class LicenseApiServer
                 or "/apple-touch-icon.png" or "/android-chrome-192x192.png" or "/android-chrome-512x512.png")
             {
                 await ServeStaticAsync(context, path[1..], "image/png");
+                return;
+            }
+
+            if (path is "/assets/landing-hero.png" or "/assets/landing-tile.png" or "/assets/landing-band.png")
+            {
+                await ServeAssetAsync(context, path["/assets/".Length..], "image/png");
                 return;
             }
 
@@ -843,6 +851,39 @@ internal static class LicenseApiServer
         if (!File.Exists(fullPath))
         {
             await TextAsync(context, HttpStatusCode.NotFound, $"ok=false\nerror=Missing static file: {safeName}");
+            return;
+        }
+
+        var bytes = await File.ReadAllBytesAsync(fullPath);
+        context.Response.StatusCode = (int)HttpStatusCode.OK;
+        context.Response.ContentType = contentType;
+        context.Response.ContentLength64 = bytes.LongLength;
+        if (context.Request.HttpMethod != "HEAD")
+        {
+            await context.Response.OutputStream.WriteAsync(bytes);
+        }
+        context.Response.Close();
+    }
+
+    /// <summary>
+    /// Serves an image from the single <c>assets</c> subdirectory. <see cref="ServeStaticAsync"/>
+    /// deliberately rejects any name with a directory component, so this variant accepts one
+    /// fixed folder and re-checks that the resolved path cannot escape it.
+    /// </summary>
+    private static async Task ServeAssetAsync(HttpListenerContext context, string fileName, string contentType)
+    {
+        var safeName = Path.GetFileName(fileName);
+        if (!string.Equals(safeName, fileName, StringComparison.Ordinal))
+        {
+            await TextAsync(context, HttpStatusCode.BadRequest, "ok=false\nerror=Invalid file name");
+            return;
+        }
+
+        var assetsRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Web", "wwwroot", "assets"));
+        var fullPath = Path.GetFullPath(Path.Combine(assetsRoot, safeName));
+        if (!fullPath.StartsWith(assetsRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+        {
+            await TextAsync(context, HttpStatusCode.NotFound, $"ok=false\nerror=Missing static file: assets/{safeName}");
             return;
         }
 
