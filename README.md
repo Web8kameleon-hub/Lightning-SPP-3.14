@@ -144,6 +144,11 @@ var printResult = await LightningAPI.StigmaPrintAsync(data);
 // Përpunim në grup
 var sources = new List<string> { "doc1.pdf", "doc2.pdf", "doc3.pdf" };
 var batchResults = await LightningAPI.BatchProcessAsync(sources);
+
+// Output real në formate të shkarkueshme
+byte[] jpeg = LightningAPI.EncodeOutput(scanResult.Data, OutputFormat.Jpeg, quality: 85);
+byte[] tiff = LightningAPI.EncodeMultiPageOutput(pages, OutputFormat.Tiff);
+byte[] pdf  = LightningAPI.EncodeMultiPageOutput(pages, OutputFormat.Pdf);
 ```
 
 ### Command Line Interface
@@ -154,10 +159,15 @@ wwwmmm process
 wwwmmm print
 wwwmmm pipeline document.pdf
 wwwmmm batch doc1.pdf doc2.pdf doc3.pdf
+wwwmmm convert document.png tiff 90
 wwwmmm demo
 wwwmmm serve 8080
 wwwmmm issue-key unlimited admin@company.com "Acme" 10 365 stripe
 ```
+
+`wwwmmm convert <input> <png|jpeg|bmp|tiff|pdf> [quality]` ekzekuton skanimin real
+dhe shkruan skedarin e konvertuar pranë input-it. TIFF dhe PDF pranojnë disa faqe
+përmes `LightningAPI.EncodeMultiPageOutput`.
 
 ## REST API dhe Dashboard
 
@@ -314,7 +324,12 @@ Duam sa më shumë kontribues aktivë 🚀
 
 ## Kufijtë e versionit 3.14
 
-- Output-i aktual është artifact Brotli `.br` lossless; integrimi me printer fizik kërkon adapter specifik për platformën.
+- Output-i i printimit është artifact Brotli `.br` lossless. Përveç tij, `OutputAdapter`
+  prodhon PNG, JPEG, BMP, TIFF dhe PDF realë si skedarë të shkarkueshëm
+  (`LightningAPI.EncodeOutput`, `LightningAPI.EncodeMultiPageOutput`).
+- Printimi fizik është vetëm në Linux (`Documents/LinuxDeviceService.cs`, përmes radhës së
+  printimit të sistemit) dhe nuk është verifikuar në hardware; platformat e tjera hedhin
+  `PlatformNotSupportedException`. Rendering i faqeve PDF kërkon Poppler.
 - Përdorimi mjekësor kërkon validim klinik dhe certifikimet ligjore për tregun ku shpërndahet.
 - ISO, CE, FDA, GDPR dhe HIPAA nuk deklarohen si certifikime të produktit pa evidencë të auditueshme.
 

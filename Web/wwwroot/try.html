@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="peach-fuzz" style="--tp-h: 45">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Online Document Processing Demo | Lightning SPP</title>
 <meta name="description" content="Try Lightning SPP document processing online. Upload a PDF, JPEG, PNG, BMP, TIFF or GIF up to 8 MB, run the real pipeline, and see the result and timing. No install or account.">
 <link rel="canonical" href="https://scanprocessprint.com/try">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap"><link rel="stylesheet" href="/site.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Figtree:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"><link rel="stylesheet" href="/theme.css"><link rel="stylesheet" href="/site.css">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -39,8 +39,8 @@
 <h2 id="try-title">Upload a document</h2>
 <form id="tryForm">
   <p>ZIP import inventories mixed folders and preserves original files. Code is not executed. Optional structural analysis validates JSON/CSV/TSV and measures UTF-8 text; other formats are preserved.</p>
-  <label><input id="archiveAnalysis" type="checkbox" style="width:auto;min-height:auto"> Analyze supported files inside ZIP (JSON, CSV/TSV, text/code)</label>
-  <label><input id="archiveDocuments" type="checkbox" style="width:auto;min-height:auto"> Process PDFs inside ZIP (up to 4 PDFs, 32 pages each, 20 seconds each). Originals preserved; processed PDFs are rasterized.</label>
+  <label><input id="archiveAnalysis" type="checkbox"> Analyze supported files inside ZIP (JSON, CSV/TSV, text/code)</label>
+  <label><input id="archiveDocuments" type="checkbox"> Process PDFs inside ZIP (up to 4 PDFs, 32 pages each, 20 seconds each). Originals preserved; processed PDFs are rasterized.</label>
   <p class="muted">CSV uses comma; TSV uses tab. Inspection is limited to 1 MiB per file. No code execution, document conversion or semantic audit.</p>
   <p class="muted">Up to 4 PDF attempts and 32 pages in total. Results may be larger and lose selectable text, vectors and forms. Check report.json for each success, failure or skipped file.</p>
   <label for="fileInput">ZIP archive, document or image file</label>
@@ -52,7 +52,15 @@
     <option value="resonance">Resonance — high precision</option>
     <option value="nanodecibel">NanoDecibel — maximum quality</option>
   </select>
-  <label><input id="zipPackage" type="checkbox" style="width:auto;min-height:auto"> Export ZIP with verification report</label>
+  <label for="formatSelect">Download format (image uploads)</label>
+  <select id="formatSelect">
+    <option value="png">PNG — lossless</option>
+    <option value="jpeg">JPEG — smaller file</option>
+    <option value="tiff">TIFF — archival</option>
+    <option value="pdf">PDF — single page</option>
+  </select>
+  <p class="muted">Applies to image uploads. PDF input always returns a processed PDF.</p>
+  <label><input id="zipPackage" type="checkbox"> Export ZIP with verification report</label>
   <p class="muted">Contains the processed file, preview and JSON report. Supplier classification and splitting are not included. ZIP input preserves mixed files and adds an inventory or optional structural analysis.</p>
   <button type="submit">Process this file</button>
   <p id="tryStatus" class="message" role="status" aria-live="polite"></p>
@@ -63,8 +71,8 @@
 <section id="results" class="section" hidden>
   <h2>Result</h2>
   <div class="grid two">
-    <article class="card"><h3>Before</h3><img id="beforeImage" alt="Original uploaded image" style="max-width:100%;border-radius:8px"><p id="beforeDocumentInfo" class="muted" hidden></p></article>
-    <article class="card"><h3>After</h3><img id="afterImage" alt="Processed image" style="max-width:100%;border-radius:8px"><p><a id="downloadLink" class="button secondary" download="processed.png">Download processed image</a></p></article>
+    <article class="card"><h3>Before</h3><img id="beforeImage" class="result-image" alt="Original uploaded image"><p id="beforeDocumentInfo" class="muted" hidden></p></article>
+    <article class="card"><h3>After</h3><img id="afterImage" class="result-image" alt="Processed image"><p><a id="downloadLink" class="button secondary" download="processed.png">Download processed image</a></p></article>
   </div>
   <article class="card section">
     <h3>Timing and size for this job</h3>
@@ -86,4 +94,4 @@
 <section class="section notice"><p><strong>Scope of this demo:</strong> accepts PDF, JPEG, PNG, BMP, TIFF and GIF files up to 8 MB. PDFs (maximum 32 pages) are validated and every page runs through the real Scan and Process pipeline. Download the complete processed PDF or processed PNG image; PDF previews show page 1. Demo requests are rate-limited per visitor.</p></section>
 </main>
 <footer><span>Lightning SPP</span><a href="/#help">Need help getting started?</a></footer>
-<script src="/assistant.js" defer></script></body></html>
+<script src="/assistant.js?v=clisonix-20261027" defer></script></body></html>

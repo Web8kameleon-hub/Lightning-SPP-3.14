@@ -45,8 +45,12 @@ byId('tryForm').addEventListener('submit', async (event) => {
 
   const structural = archiveInput && Boolean(byId('archiveAnalysis')?.checked);
 
-  const wantsZip = archiveInput || byId('zipPackage').checked;
-  const profile = byId('profileSelect').value;
+    const wantsZip = archiveInput || byId('zipPackage').checked;
+    const profile = byId('profileSelect').value;
+    const requestedFormat = (byId('formatSelect')?.value || 'png').toLowerCase();
+    const processEndpoint = requestedFormat === 'png'
+      ? '/api/try/process'
+      : '/api/try/process?format=' + encodeURIComponent(requestedFormat);
   if (pdfOnly && !pdfProfiles.includes(profile)) {
     message('tryStatus', 'This profile is not available in PDF Processor.', 'error'); return;
   }
@@ -59,7 +63,7 @@ byId('tryForm').addEventListener('submit', async (event) => {
   byId('downloadLink').removeAttribute('href');
 
   try {
-    const response = await fetch(archiveInput ? '/api/try/archive' : wantsZip ? '/api/try/package' : '/api/try/process', {
+    const response = await fetch(archiveInput ? '/api/try/archive' : wantsZip ? '/api/try/package' : processEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': contentType,
@@ -118,10 +122,16 @@ byId('tryForm').addEventListener('submit', async (event) => {
     if (isPdf && (!data.outputPdfBase64 || data.outputMimeType !== 'application/pdf')) {
       throw new Error('The processed PDF output is missing or invalid.');
     }
-    download.href = isPdf ? 'data:application/pdf;base64,' + data.outputPdfBase64 : afterSrc;
+    const converted = !isPdf && typeof data.convertedBase64 === 'string' && data.convertedBase64.length > 0;
+    download.href = converted
+      ? 'data:' + data.convertedMimeType + ';base64,' + data.convertedBase64
+      : isPdf ? 'data:application/pdf;base64,' + data.outputPdfBase64 : afterSrc;
     const stem = file.name.replace(/\.[^.]*$/, '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 100) || 'document';
-    download.download = stem + '-processed' + (isPdf ? '.pdf' : '.png');
-    download.textContent = isPdf ? 'Download processed PDF' : 'Download processed image';
+    const downloadExtension = converted ? data.convertedFileExtension : isPdf ? '.pdf' : '.png';
+    download.download = stem + '-processed' + downloadExtension;
+    download.textContent = converted
+      ? 'Download processed ' + downloadExtension.replace('.', '').toUpperCase()
+      : isPdf ? 'Download processed PDF' : 'Download processed image';
 
     byId('metaInput').textContent = isPdf ? `PDF • all ${data.totalPages} pages processed` : 'Image';
     byId('metaProfile').textContent = data.profile;

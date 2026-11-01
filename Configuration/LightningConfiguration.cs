@@ -68,6 +68,8 @@ public static class ServiceFactory
     public static IPrintService CreatePrintService() =>
         new RealPrintService(_config.PrintOutputDirectory);
 
+    public static IOutputAdapter CreateOutputAdapter() => new OutputAdapter();
+
     public static LightningPipeline CreatePipeline() =>
         new(
             CreateScanService(),

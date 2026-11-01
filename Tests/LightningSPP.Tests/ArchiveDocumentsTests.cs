@@ -20,7 +20,7 @@ public class ArchiveDocumentsTests
             foreach (var file in files) { using var entry = archive.CreateEntry(file.Name).Open(); entry.Write(file.Data); }
         return stream.ToArray();
     }
-    [Fact]
+    [ArchiveNativeFact]
     public async Task MixedArchiveProcessesPdfPreservesOriginalsAndReportsFailure()
     {
         var pdf = new PdfDocumentService().CreateFromImages(new[] { RealTestImage.Png(), RealTestImage.Png() });
@@ -41,4 +41,56 @@ public class ArchiveDocumentsTests
     }
     [Fact]
     public async Task UnsafeArchiveIsRejectedBeforeDocumentWork() => await Assert.ThrowsAsync<InvalidDataException>(() => ArchiveDocuments.ProcessAsync(Zip(("../input.pdf", "bad"u8.ToArray())), false));
+
+    /// <summary>
+    /// Runs with or without native PDF tools. Whatever the environment allows, the archive
+    /// must preserve every original byte, emit a real report, and never fabricate a
+    /// processed document it did not produce.
+    /// </summary>
+    [Fact]
+    public async Task ArchiveAlwaysPreservesOriginalsAndNeverFabricatesProcessedOutput()
+    {
+        var pdf = new PdfDocumentService().CreateFromImages([RealTestImage.Png()]);
+        var code = "raise Exception('never execute')"u8.ToArray();
+        var input = Zip(("docs/input.pdf", pdf), ("src/main.py", code), ("data/table.csv", "a,b\n1,2"u8.ToArray()));
+
+        using var zip = new ZipArchive(new MemoryStream(await ArchiveDocuments.ProcessAsync(input, true)));
+
+        static byte[] Read(ZipArchive archive, string name)
+        {
+            var entry = archive.GetEntry(name);
+            Assert.NotNull(entry);
+            using var output = new MemoryStream();
+            using var read = entry.Open();
+            read.CopyTo(output);
+            return output.ToArray();
+        }
+
+        Assert.Equal(pdf, Read(zip, "originals/docs/input.pdf"));
+        Assert.Equal(code, Read(zip, "originals/src/main.py"));
+
+        using var report = JsonDocument.Parse(Read(zip, "report.json"));
+        var root = report.RootElement;
+        Assert.False(root.GetProperty("codeExecuted").GetBoolean());
+        Assert.False(root.GetProperty("nestedArchivesExpanded").GetBoolean());
+
+        var row = root.GetProperty("files").EnumerateArray()
+            .Single(file => file.GetProperty("path").GetString() == "docs/input.pdf");
+        var status = row.GetProperty("processing").GetString();
+
+        if (status == "PROCESSED")
+        {
+            var outputPath = row.GetProperty("processedOutput").GetProperty("path").GetString();
+            var processed = Read(zip, outputPath!);
+            Assert.Equal(
+                row.GetProperty("processedOutput").GetProperty("sha256").GetString(),
+                Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(processed)));
+        }
+        else
+        {
+            Assert.Equal("FAILED", status);
+            Assert.Null(zip.GetEntry("processed/docs/input.pdf"));
+            Assert.False(row.TryGetProperty("processedOutput", out _));
+        }
+    }
 }

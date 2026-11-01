@@ -14,6 +14,7 @@ public static class LightningAPI
     private static IScanService _scanService = ServiceFactory.CreateScanService();
     private static IProcessingService _processingService = ServiceFactory.CreateProcessingService();
     private static IPrintService _printService = ServiceFactory.CreatePrintService();
+    private static IOutputAdapter _outputAdapter = ServiceFactory.CreateOutputAdapter();
     private static LightningPipeline _pipeline = ServiceFactory.CreatePipeline();
 
     /// <summary>
@@ -27,6 +28,7 @@ public static class LightningAPI
         _scanService = ServiceFactory.CreateScanService();
         _processingService = ServiceFactory.CreateProcessingService();
         _printService = ServiceFactory.CreatePrintService();
+        _outputAdapter = ServiceFactory.CreateOutputAdapter();
         _pipeline = ServiceFactory.CreatePipeline();
     }
 
@@ -155,5 +157,24 @@ public static class LightningAPI
         var tasks = sources.Select(source => ExecuteLightningPipelineAsync(source, cancellationToken));
         var results = await Task.WhenAll(tasks);
         return results.ToList();
+    }
+
+    /// <summary>
+    /// Encode one processed raster image into a downloadable format (PNG, JPEG, BMP, TIFF or PDF).
+    /// </summary>
+    public static byte[] EncodeOutput(byte[] rasterImage, OutputFormat format, int quality = 90)
+    {
+        return _outputAdapter.Encode(rasterImage, format, quality);
+    }
+
+    /// <summary>
+    /// Encode several processed raster pages into a multi-page PDF or TIFF.
+    /// </summary>
+    public static byte[] EncodeMultiPageOutput(
+        IReadOnlyList<byte[]> rasterPages,
+        OutputFormat format,
+        int quality = 90)
+    {
+        return _outputAdapter.EncodeMultiPage(rasterPages, format, quality);
     }
 }
