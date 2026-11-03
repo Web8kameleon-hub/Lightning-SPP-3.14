@@ -44,6 +44,8 @@ public static class Lightning314
 
     public static async Task<byte[][]> Parallel(byte[][] inputs, int maxConcurrency = 100)
     {
+        ArgumentNullException.ThrowIfNull(inputs);
+        if (maxConcurrency < 1) throw new ArgumentOutOfRangeException(nameof(maxConcurrency));
         using var semaphore = new SemaphoreSlim(maxConcurrency);
         var tasks = inputs.Select(async input =>
         {

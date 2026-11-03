@@ -59,7 +59,28 @@ public sealed class SdkCompressionTests
     {
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => MobileAPI.ProcessMobile([1], -1));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => MobileAPI.ProcessMobile([1], 101));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Lightning314.Parallel([[1]], 0));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Lightning314.Parallel([[1]], 0).WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task NonpositiveConcurrencyIsRejectedForEmptyBatchesAndCloud(int concurrency)
+    {
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Lightning314.Parallel([], concurrency).WaitAsync(TimeSpan.FromSeconds(5)));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => CloudAPI.ProcessMassive([[1]], concurrency).WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    [Fact]
+    public async Task ParallelCompressionPreservesInputOrderAndAcceptsEmptyBatch()
+    {
+        byte[][] inputs = [[1, 2, 3], [4, 5], [6]];
+        var results = await Lightning314.Parallel(inputs, 2).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(inputs.Length, results.Length);
+        for (var index = 0; index < inputs.Length; index++)
+            Assert.Equal(inputs[index], await Restore(results[index]));
+        Assert.Empty(await Lightning314.Parallel([], 1));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Lightning314.Parallel(null!, 1));
     }
 
     [Fact]

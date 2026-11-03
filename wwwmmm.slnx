@@ -1,4 +1,10 @@
 <Solution>
+  <Folder Name="/Desktop/">
+    <Project Path="Desktop/LightningSPP.Desktop/LightningSPP.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/LightningSPP.Tests/LightningSPP.Tests.csproj" />
+  </Folder>
   <Folder Name="/wwwmmm.FluidEngine/" />
   <Folder Name="/wwwmmm.FluidEngine/src/">
     <Project Path="wwwmmm.FluidEngine/src/wwwmmm.FluidEngine.Core/wwwmmm.FluidEngine.Core.csproj" />

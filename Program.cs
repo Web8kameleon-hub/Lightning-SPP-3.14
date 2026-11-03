@@ -33,6 +33,15 @@ internal class Program
             finally { Console.CancelKeyPress -= cancel; }
             return;
         }
+        if (args.Length > 0 && args[0].Equals("flow", StringComparison.OrdinalIgnoreCase))
+        {
+            using var cancellation = new CancellationTokenSource();
+            ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
+            Console.CancelKeyPress += cancel;
+            try { Environment.ExitCode = await Flow.FlowCommands.RunAsync(args, cancellation.Token); }
+            finally { Console.CancelKeyPress -= cancel; }
+            return;
+        }
         if (args.Length > 0 && (args[0].Equals("bridge", StringComparison.OrdinalIgnoreCase) ||
             args[0] is "document" or "device"))
         {
@@ -117,6 +126,9 @@ internal class Program
             case "examples":
                 await wwwmmm.Examples.UsageExamples.RunAllExamples();
                 break;
+            case "engines":
+                await wwwmmm.Examples.RealProcessingExamples.DemonstrateImageEngines();
+                break;
             case "universal":
                 await wwwmmm.Examples.UniversalExamples.RunAllUniversalExamples();
                 break;
@@ -127,13 +139,7 @@ internal class Program
                 await ConvertFile(args);
                 break;
             case "real":
-                await wwwmmm.Examples.RealVsSimulatedExamples.RunAllComparisons();
-                break;
-            case "simulated":
-                // Simulated services have been removed. Do not re-introduce them or claim real behavior
-                // while still invoking a simulation.
-                Console.Error.WriteLine("✗ Simulated services have been removed. Use 'demo' to run the real validation.");
-                Environment.ExitCode = 2;
+                await wwwmmm.Examples.RealProcessingExamples.RunAllComparisons();
                 break;
             default:
                 ShowHelp();
@@ -400,7 +406,7 @@ internal class Program
     private static async Task RunDemo()
     {
         Console.WriteLine("Running the real image-processing validation demo. Generated fixtures are explicitly identified.");
-        await wwwmmm.Examples.RealVsSimulatedExamples.RunAllComparisons();
+        await wwwmmm.Examples.RealProcessingExamples.RunAllComparisons();
     }
 
     private static void ShowHelp()
@@ -422,12 +428,14 @@ internal class Program
         Console.WriteLine("  demo                    - Run demonstration");
         Console.WriteLine("  smoke-test / test       - Run SMOKE tests only (not the full suite; use dotnet test)");
         Console.WriteLine("  examples                - Run usage examples");
+        Console.WriteLine("  engines                 - Verify both L/R image engines (Skia, ImageSharp)");
         Console.WriteLine("  serve [port]            - Start REST API + Web Dashboard");
         Console.WriteLine("  bridge <operation>      - Excel Core / Excel service / OS-CLX NodeDB adapters (see Docs/BRIDGES.md)");
         Console.WriteLine("  audit-imagesharp [root] [report.md]");
         Console.WriteLine("                         - Scan the repo for real SixLabors.ImageSharp usage");
         Console.WriteLine("  benchmark-documents <input-directory> <new-report.json> [runs:1-10]");
         Console.WriteLine("                         - Run the real document benchmark and write a report");
+        Console.WriteLine("  flow <command>          - Reference flow: intake, rules, fields with references, review, batch, package");
         Console.WriteLine("  convert <in> <fmt> [q]  - Encode a processed image to png/jpeg/bmp/tiff/pdf");
         Console.WriteLine("  speed                   - Informational timing (median/p95 over 20 runs)");
         Console.WriteLine("\nTechnologies:");

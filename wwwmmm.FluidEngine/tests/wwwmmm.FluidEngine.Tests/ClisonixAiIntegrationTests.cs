@@ -10,8 +10,11 @@ public class ClisonixAiIntegrationTests
     [Fact]
     public async Task ModelGateway_FullPipeline_WithRealOllama()
     {
-        // 1. Krijo ModelGateway me modelin clisonix-ocean në Ollama lokal
-        var route = new ModelRoute("clisonix", "http://localhost:11434", "clisonix-ocean:v2");
+        // Use the explicitly selected installed local model.
+        var model = Environment.GetEnvironmentVariable("SPP_FLUID_TEST_MODEL");
+        Assert.False(string.IsNullOrWhiteSpace(model),
+            "Set SPP_FLUID_TEST_MODEL to an exact installed local Ollama model identity. No fallback model is selected.");
+        var route = new ModelRoute("clisonix", "http://localhost:11434", model!);
         var gateway = new ModelGateway(new[] { route });
 
         // 2. Krijo PipelineContext

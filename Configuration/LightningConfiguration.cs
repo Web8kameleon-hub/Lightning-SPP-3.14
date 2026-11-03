@@ -28,12 +28,6 @@ public class LightningConfiguration
 
     public static LightningConfiguration Default => new();
 
-    public static LightningConfiguration FastSimulated => new()
-    {
-        // Backward-compatible name. Simulated services have been removed.
-        StigmaProfile = StigmaExecutionProfile.Lightning
-    };
-
     public static LightningConfiguration RealProduction => new()
     {
         MaxConcurrency = Math.Max(1, Environment.ProcessorCount * 2),

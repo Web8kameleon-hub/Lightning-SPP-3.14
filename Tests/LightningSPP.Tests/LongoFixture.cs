@@ -41,13 +41,29 @@ public sealed class LongoFixture : IDisposable
         process = Process.Start(launch) ?? throw new IOException("Longo could not start.");
         process.BeginOutputReadLine(); process.BeginErrorReadLine();
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
-        for (var i = 0; i < 100; i++)
+        var startup = Stopwatch.StartNew();
+        try
         {
-            if (process.HasExited) throw new IOException("Longo exited during startup.");
-            try { if (client.GetAsync(Url + "/health").GetAwaiter().GetResult().IsSuccessStatusCode) return; } catch (HttpRequestException) { }
-            Thread.Sleep(50);
+            while (startup.Elapsed < TimeSpan.FromSeconds(15))
+            {
+                if (process.HasExited) throw new IOException("Longo exited during startup.");
+                try
+                {
+                    using var response = client.GetAsync(Url + "/health").GetAwaiter().GetResult();
+                    if (response.IsSuccessStatusCode) return;
+                }
+                catch (HttpRequestException) { }
+                catch (TaskCanceledException) { } // A single probe timeout does not exhaust the startup budget.
+                Thread.Sleep(50);
+            }
+            throw new IOException("Real Longo health check timed out.");
         }
-        throw new IOException("Real Longo health check timed out.");
+        catch
+        {
+            if (!process.HasExited) { process.Kill(true); process.WaitForExit(); }
+            process.Dispose();
+            throw;
+        }
     }
     public void Restart() { process.Kill(true); process.WaitForExit(); process.Dispose(); Start(); }
     public void Dispose() { if (!process.HasExited) { process.Kill(true); process.WaitForExit(); } process.Dispose(); Environment.SetEnvironmentVariable("LONGO_URL", oldUrl); }

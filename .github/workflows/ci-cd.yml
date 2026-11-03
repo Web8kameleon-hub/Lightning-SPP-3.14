@@ -73,6 +73,9 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
+    - name: Enforce repository production policy
+      run: python3 Scripts/preflight-policy.py
+
     - name: Restore dependencies
       run: dotnet restore
 

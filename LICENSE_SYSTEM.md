@@ -223,9 +223,9 @@ By activating a Lightning SPP license, you agree to:
 
 - **MIT License** for software usage
 - **Terms of Service** as published on aba-gmbh.de
-- **Privacy Policy** (GDPR compliant)
+- **Privacy Policy** (deployment-specific obligations require review)
 - **Acceptable Use Policy**
-- **Data Processing Agreement** (HIPAA compliant for healthcare)
+- **Data Processing Agreement**, where applicable; no healthcare compliance is established here
 
 See LICENSE, PRIVACY.md, COMPLIANCE.md for full details.
 

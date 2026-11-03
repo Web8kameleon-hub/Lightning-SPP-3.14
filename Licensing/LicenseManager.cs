@@ -66,7 +66,35 @@ public class LicenseManager
             {
                 var encrypted = File.ReadAllBytes(LicenseFilePath);
                 var content = DecryptLicense(encrypted);
-                _activeLicense = LicenseKey.FromStorageString(content);
+                var stored = LicenseKey.FromStorageString(content);
+
+                if (stored is null)
+                    return null;
+
+                // The local file is attacker-writable: its AES key is derived from the
+                // machine and user names, which are not secrets. When a verification key
+                // is configured, the signature is re-checked on every load and the stored
+                // Tier/Expiry/MaxDevices fields are replaced by the signed values.
+                if (LicenseSignature.IsConfigured)
+                {
+                    if (!LicenseKey.Validate(stored.Key, out var verified) || verified is null)
+                        return null;
+
+                    verified.CustomerEmail = stored.CustomerEmail;
+                    verified.CompanyName = stored.CompanyName;
+                    verified.IssueDate = stored.IssueDate;
+                    var limits = verified.GetLimits();
+                    verified.MaxDevices = limits.maxDevices;
+                    verified.MaxOperationsPerMonth = limits.maxOperations;
+                    _activeLicense = verified;
+                }
+                else
+                {
+                    // Legacy mode: no public key configured, so the stored signature cannot
+                    // be verified locally without issuer material. This path is retained for
+                    // compatibility and must not be described as verified offline activation.
+                    _activeLicense = stored;
+                }
             }
             catch
             {

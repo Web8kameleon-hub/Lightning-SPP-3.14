@@ -1,5 +1,10 @@
 # Lightning SPP 3.14
+
 Universal Scan-Process-Print Platform
+
+Programi për organizimin, sigurinë, operimin dhe bridges të ekosistemit:
+[udhërrëfyesi i ngritjes teknologjike](Docs/TECHNOLOGY_EVOLUTION.md).
+Ky plan përcakton punën dhe provat e kërkuara; nuk deklaron aftësi të papranuara si të gatshme për prodhim.
 
 Për paketat runtime Windows/Linux, varësitë native dhe përditësimin pa humbur
 të dhënat, shih [udhëzimin e instalimit](Docs/INSTALLATION.md). Arkivat ndërtohen
@@ -64,14 +69,14 @@ var result = await Lightning314.Instant(data);
 var sdk = UniversalSDK.Initialize(DeviceProfile.Medical);
 var result = await sdk.ProcessAsync(scanData);
 
-// Mobile profile
-var mobileResult = await MobileAPI.ProcessMobile(data, batteryLevel: 75);
+// Mobile profile: byte[] in, byte[] out
+byte[] mobileResult = await MobileAPI.ProcessMobile(data, batteryLevel: 75);
 
-// IoT profile
-var iotResult = await IoTAPI.ProcessConstrained(data, maxMemoryKB: 64);
+// IoT profile: byte[] in, byte[] out, bounded memory
+byte[] iotResult = await IoTAPI.ProcessConstrained(data, maxMemoryKB: 64);
 
-// Cloud profile
-var cloudResult = await CloudAPI.ProcessMassive(millionsOfItems, maxParallelism: 1000);
+// Cloud profile: batch of byte[] in, CloudBatchResult out
+CloudBatchResult cloudResult = await CloudAPI.ProcessMassive(pages, maxParallelism: 4);
 ```
 
 ## Teknologjitë kryesore
@@ -90,7 +95,7 @@ var cloudResult = await CloudAPI.ProcessMassive(millionsOfItems, maxParallelism:
 `WWWMMM_STIGMA_LEVEL` kontrollon realisht të gjithë pipeline-in:
 
 | Vlera | Profili | Sjellja |
-|---|---|---|
+| --- | --- | --- |
 | `1` | quality | NanoDecibel, Hybrid + AI, Stigma lossless |
 | `2` | balanced | TideWave, Auto + AI, output high |
 | `3` | lightning | Lightning, CLX fast path, pa faza të kushtueshme |
@@ -124,7 +129,7 @@ dotnet run
 using wwwmmm.PublicAPI;
 
 // Pipeline i plotë: Scan -> Process -> Print
-var result = await LightningAPI.ExecuteLightningPipelineAsync("document.pdf");
+var result = await LightningAPI.ExecuteLightningPipelineAsync("page.png");
 
 // Skanim i shpejtë
 var scanResult = await LightningAPI.QuickScanAsync("photo.jpg");
@@ -168,6 +173,11 @@ wwwmmm issue-key unlimited admin@company.com "Acme" 10 365 stripe
 `wwwmmm convert <input> <png|jpeg|bmp|tiff|pdf> [quality]` ekzekuton skanimin real
 dhe shkruan skedarin e konvertuar pranë input-it. TIFF dhe PDF pranojnë disa faqe
 përmes `LightningAPI.EncodeMultiPageOutput`.
+
+Kujdes: `scan`, `process`, `print`, `pipeline` dhe `batch` pranojnë **skedarë
+imazhi**. Një PDF refuzohet me mesazh të qartë; render-o më parë me
+`wwwmmm document pdf-render <input.pdf> 1 faqja1.png`. Shembujt më sipër me
+zgjatje `.pdf` janë ilustrim i formës së komandës, jo input i pranuar.
 
 ## REST API dhe Dashboard
 
@@ -277,6 +287,8 @@ Për konsistencë ndërmjet source, package dhe CLI:
 
 ## Dokumentimi
 
+- [MANUAL.md](MANUAL.md) — manuali i përdorimit, rregullat e sigurisë, operimi dhe matrica e pranimit
+- [Docs/COMPLIANCE/README.md](Docs/COMPLIANCE/README.md) — dosja e përputhshmërisë: boshllëqe, rreziqe, SOUP, kontrolle, gjurmueshmëri
 - [QUICKSTART.md](QUICKSTART.md)
 - [Docs/API_Documentation.md](Docs/API_Documentation.md)
 - [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md)
@@ -291,7 +303,7 @@ Për konsistencë ndërmjet source, package dhe CLI:
 Lightning SPP ndan licencat sipas komponentëve: **SDK/client MIT; motori dhe runtime-i komercial**, sipas [LICENSE](LICENSE).
 
 - `SDK/`, `Examples/`, `Desktop/`, `VSExtension/` dhe përmbajtja origjinale e `Web/wwwroot/` përdorin [MIT](LICENSE-MIT.txt).
-- Motori, shërbimet e përpunimit, serveri dhe Longo përdorin [licencimin komercial](LICENSE-COMMERCIAL.txt), sipas marrëveshjes përkatëse me shkrim. Kontakt: clisonix@pm.me.
+- Motori, shërbimet e përpunimit, serveri dhe Longo përdorin [licencimin komercial](LICENSE-COMMERCIAL.txt), sipas marrëveshjes përkatëse me shkrim. Kontakt: <clisonix@pm.me>.
 - Paketa aktuale `LightningSPP` përmban të dy grupet; nuk është paketë e motorit vetëm nën MIT.
 - Të drejtat MIT të dhëna më parë për kopjet/versionet e mëparshme nuk revokohen nga kjo politikë. Varësitë ruajnë licencat e tyre.
 - Planet dhe çelësat e produktit përshkruhen te [PRICING.md](PRICING.md); një çelës aktivizimi nuk jep vetvetiu të drejtën e rishpërndarjes së kodit komercial.
@@ -308,13 +320,14 @@ Për pyetje ose raportime, hap një issue në repository.
 
 Duam sa më shumë kontribues aktivë 🚀
 
-- Discussions: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions
-- Issues: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues
+- Discussions: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions>
+- Issues: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues>
 - Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Stepstones roadmap: [STEPSTONES.md](STEPSTONES.md)
 - Community wiki page: [Wiki/Community-Guide.md](Wiki/Community-Guide.md)
 
 ### Quick start për contributor të rinj
+
 1. Fork repo
 2. Zgjidh një issue me label `good-first-issue`
 3. Hap PR të vogël + test/dokumentim
@@ -341,12 +354,12 @@ This status is generated from recorded verification evidence. It does not replac
 | Check | Result |
 | --- | --- |
 | Evidence | PARTIAL |
-| Commit | `c1183ee` |
+| Commit | uncommitted working tree |
 | Build | GREEN (0 warnings, 0 errors) |
-| Tests | 126 passed, 0 failed, 13 skipped, 139 total |
-| Recorded | 2026-10-08 |
+| Tests | 328 passed, 0 failed, 15 skipped, 343 total |
+| Recorded | 2026-11-03 |
 
-The test row describes the recorded Windows run at `c1183ee`, not a combined Windows/Linux result or verification of uncommitted changes.
+The test row describes the recorded Windows run in this working tree. It is not a combined Windows/Linux result and not a committed revision. The 15 skips are the native-document and isolated upstream integration tests that were not enabled in this run.
 
 PDF Processor worktree verification (base `d390369`; source and artifact hashes recorded in `evidence/pdf-processor-verification.json`): build PASS; Windows 126/0/13, Linux 132/0/7, PDF boundary suite with Poppler enabled 24/0/0 (passed/failed/skipped). Browser workflow and downloaded PDF re-rendering: PASS. These are local results, not a production deployment.
 
