@@ -32,6 +32,26 @@ paralel pranimi. [Udhërrëfyesi](TECHNOLOGY_EVOLUTION.md) përcakton rendin e p
 | P07 — raporte dhe shpërndarje e kontrolluar | Rezultate të mjeteve me referenca dhe leje përkatëse | Eksport JSON/CSV/PDF; dërgim në CUPS dhe lexim gjendjeje kur konfigurohet | Raport i hapshëm, me burime, dhe regjistër dorëzimi kur provohet | Dorëzimi në queue nuk provon printim fizik; dokumentet e mëdha kërkojnë ndarje dhe verifikim |
 | P08 — lidhje me ekosistemin | Shërbime të identifikuara, kontrata, kredenciale dhe destinacione të miratuara | Bridges Excel/NodeDB në CLI; adapterë HTTP read-only të konfiguruar nga operatori | Operacion real i provuar me sukses, dështim dhe gjurmueshmëri | Bridges ende pa pranim të plotë prodhimi; adapteri gjenerik nuk provon lidhje me bankë, mailbox apo regjistër institucional |
 
+### Kërkesa në gjuhë natyrore për përzgjedhje dhe printim faturash
+
+Përdoruesi mund t'i kërkojë Model Gateway-ut një plan, p.sh. “nga këto fatura,
+printo vetëm ato që plotësojnë kushtin”. Plani validohet ndaj kontratave dhe
+lejeve të mjeteve të regjistruara, pastaj kthehet si `PROPOSED_REQUIRES_REVIEW`;
+ekzekutimi nuk është automatik dhe kërkon miratim të përdoruesit.
+
+Kjo nuk është ende rrjedhë e plotë nga inbox-i te printeri. Dokumentet duhet të
+jenë në workspace-in e autorizuar dhe të dhënat e faturave të jenë nxjerrë,
+normalizuar e verifikuar paraprakisht. `documents.pdf-text` lexon vetëm tekstin
+ekzistues të PDF-së me Poppler, pa OCR; `finance.reconcile` pranon regjistra
+strukturuar me alokime të shqyrtuara. `EmailService` dërgon email-e të licencimit,
+nuk lexon mailbox. Excel Core gjeneron workbook-e LAGTER dhe Excel service
+parse/validate lexon workbook-e; asnjëri nuk klasifikon fatura PDF.
+
+Përfundimisht, printimi fizik kërkon PDF të përzgjedhur, queue të emërtuar dhe
+Linux/CUPS të konfiguruar. Përgjigjja e queue-së nuk konfirmon se letra u printua.
+Rrjedha e plotë duhet ndërtuar dhe pranuar si pilot para se të deklarohet funksion
+autonom ose prodhimi.
+
 P01/P04/P05 mund të shërbejnë si bazë për shqyrtim dokumentacioni administrativ,
 dosjesh projektesh dhe kontrolle të brendshme. Këto janë zbatime të propozuara për
 pilot; nuk deklarohen sot si module të plota për prokurim, kredi, leje apo vendime

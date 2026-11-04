@@ -1,6 +1,6 @@
 # Lightning SPP — programi i ngritjes teknologjike
 
-Data e vlerësimit: 2026-11-02. Fusha: organizim, prodhim, siguri,
+Data e vlerësimit: 2026-11-04. Fusha: organizim, prodhim, siguri,
 integrime dhe demonstrim me prova. Ky është udhërrëfyes pune, jo deklaratë
 se aftësitë e propozuara janë implementuar apo pranuar në prodhim.
 
@@ -23,14 +23,16 @@ rastet e pilotit me kodin, rezultatet dhe provat e kërkuara për pranimin.
 
 ## Baza e vëzhguar dhe kufijtë
 
-Vlerësimi është lexim i repository-t; gjendja e serverëve dhe e projekteve të
-tjera nuk është verifikuar rishtas. Evidencat historike kërkojnë rikonfirmim.
+Source revisions të Clisonix, OS-CLX dhe Kloud u lexuan më 2026-11-04. Kjo
+verifikon kodin në degët e shqyrtuara, jo revision-in e instaluar tani në
+prodhim. Evidenca historike e shëndetit ose e deploy-it kërkon rikonfirmim para
+pranimit të integrimit.
 
 | Fusha | Baza konkrete | Çfarë duhet provuar më tej |
 | --- | --- | --- |
 | Përpunimi | Pipeline, dokumente/PDF, SDK dhe API ekzistuese | Cilësia dhe kapaciteti në corpus të autorizuar të klientit |
 | Orkestrimi | Regjistër, workspace, model gateway dhe plane në `Workflow/` | Rrjedhë e plotë me përdorues real të autorizuar dhe izolim ndërmjet pronarëve |
-| Bridges | Excel Core, Excel parse/validate dhe OS-CLX NodeDB në `Integrations/` | Pranim real upstream; dokumenti i bridges regjistron pengesa ende të hapura |
+| Bridges | Excel Core, Excel parse/validate dhe OS-CLX NodeDB në `Integrations/`; kodet dhe kufijtë e upstream krahasohen më poshtë | Rikonfirmim i revision-it të instaluar; provë e izoluar e NodeDB dhe pranimi i kontratës së plotë |
 | Identiteti/licencat | Llogari, Stripe dhe persistence Longo | Dërgim te recipient i jashtëm dhe zgjidhje e verifikimit offline pa sekrete të emetuesit |
 | Operimi | Procedura deploy/recovery dhe workflow release-readiness | Evidencë mbi versionin konkret të instaluar dhe rikuperimin |
 | Metrikat | `Services/LightningMetrics.cs`; kufij të dokumentuar te SLO | Histori e qëndrueshme, percentile dhe dritare matjeje përtej rinisjeve |
@@ -65,11 +67,42 @@ lista e plotë e projekteve të organizatës.
 
 | Objektivi | Pika e nisjes | Hapi i ardhshëm |
 | --- | --- | --- |
-| Clisonix Excel Core | `Integrations/ClisonixExcelCoreBridge.cs` | Rikonfirmim i export-it real dhe i autentikimit në ingress |
-| Clisonix Excel service | `Integrations/ClisonixExcelBridge.cs` | Verifikim i fix-it upstream dhe vendosjes; ruajtje vlerash, kufij upload dhe cleanup |
-| OS-CLX NodeDB | `Integrations/OsClxNodeDbBridge.cs` | Zgjidhje e pengesës së sigurisë; ingest/readback me auth/HMAC në runtime të izoluar |
+| Clisonix Excel Core | `Integrations/ClisonixExcelCoreBridge.cs` | Export LAGTER; konfirmim i revision-it të instaluar. Nuk është parser faturash |
+| Clisonix Excel service | `Integrations/ClisonixExcelBridge.cs` | Upstream release record raporton fix të deploy-uar; `main` ende nuk e përmban. Verifikim i revision-it aktiv dhe testim i izoluar |
+| OS-CLX NodeDB | `Integrations/OsClxNodeDbBridge.cs` | Runtime store i shqyrtuar është në memorie, kufi 512 node; ingest/readback me konfigurimin real të auth |
+| Kloud NodeDB control plane | Repo `Kloud`, jo adapter i SPP | Vlerësim i lease/WAL sipas nevojës; WAL nuk rikuperon state pas nisjes dhe gabimet e shkrimit nuk bllokojnë API-në |
+| Kërkesë fature → printim | Workflow dhe `DeviceTools` ekzistues | Plotësimi i inbox-it, OCR/nxjerrjes, klasifikimit dhe lidhjes me printimin kërkon prova/implementim; propozimi i modelit nuk e zëvendëson miratimin |
 | Shërbime të tjera Clisonix | Konfigurimi i adapterëve në workflow | Vetëm endpoint-e read-only të provuara; leje të veçanta për shkrime |
 | Projekte të tjera | Ende pa inventar të konfirmuar në këtë vlerësim | Regjistrim repo/service, pronari, qëllimi dhe kontrata para implementimit |
+
+### Krahasimi i moduleve në repos e organizatës
+
+- **Excel Core:** `clisonix.com`, `clisonix-evolution` dhe `LONGO-` kanë të
+  njëjtin blob për `excel-core/lagter_v1_api.py` (`90fd8523`). Konfigurimi
+  Compose i shërbimit është te `clisonix.com`; kopjet identike nuk provojnë se
+  revision-i i njëjtë është instaluar. Ky modul gjeneron workbook-e LAGTER.
+- **Excel parse/validate:** `clisonix-evolution` dhe `LONGO-` kanë të njëjtin
+  blob `services/excel/main.py` (`7de54036`); `clisonix.com@main` ka blob tjetër
+  (`e04aa2ef`). Të gjitha këto `main` të shqyrtuara mungojnë workbook-close,
+  ruajtjen e vlerave zero/false, header-at unikë dhe gabimin për sheet që mungon.
+  Upstream release record raporton deploy të correction nga
+  `f7ab88b64aecf063b6d7987432ea04dc11fc00bd`, por PR #143 u mbyll pa merge.
+  Prandaj kodi në `main` dhe kodi i raportuar si i deploy-uar nuk duhen barazuar.
+- **NodeDB:** SPP lidhet me endpoint-et e runtime-it në OS-CLX. `OS-CLX@master`
+  mban node-t në map në memorie me kufi 512. `Kloud@main` shton leases dhe
+  append-only WAL, por node/lease state mbetet në memorie, WAL nuk replay-ohet
+  pas restart-it dhe gabimet e shkrimit në WAL kapen pa u kthyer si dështim.
+  OS-CLX është kontrata e tashme e SPP-së për telemetry; Kloud ka funksione
+  control-plane shtesë, por nuk është zëvendësim durable.
+- **Autentikimi:** qasja e GitHub CLI në kod privat nuk përdor kredencialet e
+  shërbimit. Guard-at API-key/HMAC të OS-CLX aktivizohen kur konfigurohen
+  sekretet; testet e integrimit të SPP vendosin kredenciale vetëm për të provuar
+  atë regjim. Përdorimi real varet nga konfigurimi i runtime-it/ingress-it.
+- **Faturë → printim:** Model Gateway mund të propozojë plane nga kërkesa në
+  gjuhë natyrore, por i kthen si `PROPOSED_REQUIRES_REVIEW`. Nuk ka intake inbox,
+  OCR ose nxjerrje të përgjithshme të fushave të faturës; `finance.reconcile`
+  kërkon të dhëna të strukturuara me alokime të shqyrtuara. Printimi fizik i
+  workflow-it kërkon Linux/CUPS dhe gjendja e queue nuk provon dalje letre.
 
 Për çdo hyrje, review duhet të përmbajë:
 

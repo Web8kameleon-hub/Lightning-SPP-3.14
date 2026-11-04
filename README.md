@@ -1,6 +1,6 @@
 # Lightning SPP 3.14
 
-Universal Scan-Process-Print Platform
+Pipeline Scan-Process-Print për dokumente dhe imazhe
 
 Programi për organizimin, sigurinë, operimin dhe bridges të ekosistemit:
 [udhërrëfyesi i ngritjes teknologjike](Docs/TECHNOLOGY_EVOLUTION.md).
@@ -11,7 +11,7 @@ të dhënat, shih [udhëzimin e instalimit](Docs/INSTALLATION.md). Arkivat ndër
 dhe kontrollohen me `Scripts/package-release.py` dhe `Scripts/verify-package.py`;
 publikimi dhe përdorimi nga klientët janë verifikime të veçanta.
 
-Lightning SPP 3.14 është një platformë e integruar për skanim, përpunim dhe printim dokumentesh/imazhesh, e ndërtuar për përdorim në desktop, web, IoT dhe cloud. Projekti kombinon performancë të lartë, arkitekturë modulare dhe ndërfaqe të shumta përdorimi (CLI, API, GUI).
+Lightning SPP 3.14 ofron pipeline .NET për përpunimin e dokumenteve dhe imazheve, me CLI, API dhe ndërfaqe desktop. Emrat e profileve mobile/IoT/cloud në SDK nuk provojnë mbështetje native për pajisje ose validim në ato mjedise. Pipeline-i krijon artefakte; dërgimi fizik në printer bëhet vetëm nga rruga e veçantë Linux/CUPS kur ajo konfigurohet.
 
 ## Çfarë sjell versioni 3.14
 
@@ -46,13 +46,24 @@ Detaje shtesë: [REAL_PROCESSING.md](REAL_PROCESSING.md)
 
 ## Skenarë përdorimi
 
-Lightning SPP 3.14 është i përshtatshëm për:
+Kodi aktual mbulon workflows dokumentesh/imazhesh përmes ndërfaqeve të dokumentuara dhe ekzekutimit lokal ose të container-izuar. Mbështetja për një pajisje, sistem operativ ose ngarkesë të caktuar duhet provuar veçmas. Profilet me emër mjekësor nuk janë validim klinik; emrat mobile/IoT/cloud nuk janë garanci për përputhshmëri, bateri, memorie apo performancë.
 
-- Workflows dokumentesh dhe imazhesh që mund të integrohen në produkte mjekësore pas validimit dhe certifikimit përkatës
-- Aplikacione mobile (iOS/Android)
-- Pajisje IoT dhe sisteme embedded
-- Aplikacione desktop dhe web
-- Workloads cloud me paralelizëm të lartë
+### Agjenti, faturat dhe printimi
+
+Model Gateway mund të propozojë hapa për një kërkesë në gjuhë natyrore, por plani
+kthehet si `PROPOSED_REQUIRES_REVIEW` dhe ekzekutimi kërkon shqyrtim të qartë.
+`finance.reconcile` pranon regjistra të strukturuar, të normalizuar dhe alokime
+të shqyrtuara; nuk nxjerr vetë fusha nga faturat dhe nuk klasifikon PDF të skanuar.
+`documents.pdf-text` nxjerr vetëm tekstin ekzistues me Poppler, pa OCR.
+
+Prandaj kërkesa “nga këto fatura, printo vetëm …” nuk është ende rrjedhë
+autonome e plotë: faturat duhet të jenë të lexuara dhe të normalizuara, ndërsa
+veprimi duhet miratuar. Mjeti aktual i printimit dërgon PDF te një queue i emërtuar
+Linux/CUPS; statusi i queue nuk provon se letra doli fizikisht. Email-i i
+Lightning SPP dërgon licenca, jo lexime inbox-i. Excel Core gjeneron raporte
+LAGTER; shërbimi i veçantë Excel parse/validate lexon workbook-e, jo fatura PDF.
+Detajet dhe kufijtë janë te [portofoli i proceseve](Docs/PARTNER_PROCESS_PORTFOLIO.md)
+dhe [kontratat e bridges](Docs/BRIDGES.md).
 
 ## API e SDK-së
 
@@ -62,7 +73,11 @@ using wwwmmm.SDK;
 var result = await Lightning314.Instant(data);
 ```
 
-### Profile të optimizuara sipas pajisjes
+### Profile SDK-je (emra skenarësh, jo validim pajisjesh)
+
+Profilet zgjedhin variante të përpunimit/kompresimit. Nuk provojnë përputhshmëri
+native me pajisjen, kufij realë të memories, kursim baterie apo përshtatshmëri
+klinike.
 
 ```csharp
 // Medical profile
@@ -253,16 +268,26 @@ Metrikat varen nga hardware, konfigurimi dhe input-i. Objektivat e latencës jan
 
 ## NodeDB Fluid
 
-NodeDB Fluid është një nyje hibride me overhead të ulët, e përdorur si sink/bridge adaptiv për kompatibilitet ndërmjet node-ve dhe profileve të ndryshme të ekzekutimit.
+Lightning SPP ka CLI bridge për leximin dhe ingest-in e telemetry te endpoint-et
+NodeDB të OS-CLX. Store-i i shqyrtuar në OS-CLX është në memorie dhe ka kufi
+512 node; bridge-i nuk provon persistence, replikim ose ekzekutim detyrash.
+Kloud ka një implementim tjetër të control-plane me lease dhe WAL, por gjendja
+e node/lease mbahet në memorie, WAL nuk rikuperohet gjatë nisjes dhe gabimet e
+shkrimit në WAL nuk propagohen. Krahasimi dhe revision-et janë te
+[kontratat e bridges](Docs/BRIDGES.md).
 
 ## Deployment
 
-Platforma mbështet:
+Gjendja e target-eve dhe kufijtë:
 
-- .NET 10 dhe Native AOT
-- Docker containers
-- Cross-platform execution (Windows, Linux, macOS)
-- Invariant globalization
+- Target framework është .NET 10; `PublishAot` është çaktivizuar dhe Native AOT
+  nuk është validuar për varësitë aktuale.
+- Dockerfile dhe workflow CI mbulojnë ndërtim/testim container-ash Linux.
+- Ekzekutimi është provuar në Windows dhe Linux për rrugët përkatëse; macOS nuk
+  deklarohet si platformë e verifikuar.
+- Printimi fizik i workflow-it përdor Linux/CUPS; aplikacioni WinForms në
+  `Desktop/` është sipërfaqe e veçantë Windows.
+- Build-i përdor invariant globalization.
 
 ### Docker
 
