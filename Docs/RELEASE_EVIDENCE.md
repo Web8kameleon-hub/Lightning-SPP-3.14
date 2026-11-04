@@ -285,3 +285,33 @@ Initial failures remain diagnostic history: the original tamper test failed;
 a Linux attempt failed on NuGet EOF/DNS; a later Windows run failed on local
 Longo startup after an environment interruption. These are not reported as
 passes. The successful final runs above supersede them for the exercised scope.
+## Reference flow, policy gate and local commit — 4 November 2026
+
+Scope: this checkout. Local build and local suite only; nothing was deployed.
+
+New in this change:
+
+- `Docs/FLOW.md` documents the reference flow and its declared boundaries
+  (no OCR, unverified physical scanning, 30,000-document capacity not measured).
+- `Scripts/preflight-policy.py` fails closed on missing required documents,
+  banned certification claims, references to the removed simulated API, broken
+  compliance links and `git diff --check` violations.
+- `Scripts/gate-and-deploy.sh` runs policy, Release build and the full suite, and
+  only then invokes `deploy/production/deploy.sh` with the commit SHA. It refuses
+  an unclean tree and has no silent skip path.
+
+Executed checks:
+
+| Check | Actual outcome |
+| --- | --- |
+| `dotnet build -c Release` | Passed, zero warnings, zero errors |
+| Full xUnit suite | 350 passed, 0 failed, 15 skipped, 365 total |
+| Fifteen reference-flow tests | All passed, including a real Poppler text-layer read of a generated two-page PDF, batch interruption/resume, integrity mismatch detection and reproducible packaging |
+| `python Scripts/preflight-policy.py` | PASS on all five checks |
+
+An earlier run of the same suite reported one failure in 358 tests. It did not
+reproduce in the following two runs and is not claimed as fixed: the identity of
+the failing test was not captured, so it remains an unexplained transient.
+
+Boundaries unchanged: no physical scanning, no OCR, no customer corpus, no
+30,000-document capacity measurement, no live deployment, and no certification.
