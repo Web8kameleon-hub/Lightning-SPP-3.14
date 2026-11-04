@@ -82,7 +82,9 @@ def check_removed_api(root: Path) -> list[str]:
         for path in base.rglob("*.cs"):
             text = path.read_text(encoding="utf-8", errors="replace")
             if "UseSimulatedServices" in text or "FastSimulated" in text:
-                problems.append(f"removed simulated API referenced in {path.relative_to(root)}")
+                problems.append(
+                    f"removed simulated API referenced in " f"{path.relative_to(root)}"
+                )
     return problems
 
 
@@ -149,7 +151,8 @@ def main() -> int:
         print(f"GATE: BLOCKED ({failures} failing check(s))")
         return 1
 
-    print("GATE: PASS — policy checks passed; build, test and runtime acceptance are still required")
+    print("GATE: PASS — policy checks passed")
+    print("      build, test and device acceptance are still required")
     return 0
 
 

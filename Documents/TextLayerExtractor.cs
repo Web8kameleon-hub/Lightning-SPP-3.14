@@ -34,7 +34,7 @@ public static class TextLayerExtractor
         if (!string.Equals(Path.GetExtension(pdfPath), ".pdf", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Text-layer extraction requires a .pdf input. Render images first or supply a PDF.");
 
-        var binary = ResolvePdfToText();
+        var binary = PdfToTextLocator.Locate().Path;
         var sha256 = await ComputeSha256Async(pdfPath, cancellationToken);
 
         var startInfo = new ProcessStartInfo(binary)
@@ -90,19 +90,6 @@ public static class TextLayerExtractor
             pages.Add(new PageText(i + 1, raw[i]));
         }
         return pages;
-    }
-
-    private static string ResolvePdfToText()
-    {
-        var configured = Environment.GetEnvironmentVariable(PdfToTextEnv);
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
-            if (!File.Exists(configured))
-                throw new FileNotFoundException($"{PdfToTextEnv} points to a missing file: {configured}", configured);
-            return configured;
-        }
-
-        return "pdftotext";
     }
 
     private static async Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)

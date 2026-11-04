@@ -24,6 +24,7 @@ public static class FlowCommands
             return args[1].ToLowerInvariant() switch
             {
                 "sources" => Sources(),
+                "doctor" => await DoctorAsync(args, cancellationToken),
                 "extract" => await ExtractAsync(args, cancellationToken),
                 "review" => await ReviewAsync(args, cancellationToken),
                 "trail-verify" => await TrailVerifyAsync(args, cancellationToken),
@@ -57,6 +58,29 @@ public static class FlowCommands
             var state = provider.Available ? "available" : "unavailable";
             Console.WriteLine($"provider={provider.Name}|transport={provider.Transport}|{state}|{provider.Detail}");
         }
+        return 0;
+    }
+
+    private static async Task<int> DoctorAsync(string[] args, CancellationToken cancellationToken)
+    {
+        var output = args.Length > 2 && !args[2].StartsWith("--", StringComparison.Ordinal)
+            ? args[2]
+            : "doctor.json";
+
+        var report = await wwwmmm.Doctor.EnvironmentDoctor.InspectAsync(cancellationToken);
+        await wwwmmm.Doctor.EnvironmentDoctor.WriteAsync(output, cancellationToken);
+
+        Console.WriteLine($"os={report.OsDescription}");
+        Console.WriteLine($"runtime={report.RuntimeVersion}");
+        Console.WriteLine($"printers={report.Printers.Count}|{report.PrinterNote}");
+        foreach (var printer in report.Printers)
+            Console.WriteLine($"printer={printer.Name}|source={printer.Source}");
+        foreach (var provider in report.ScanProviders)
+            Console.WriteLine($"scan={provider.Name}|available={provider.Available.ToString().ToLowerInvariant()}|{provider.Detail}");
+        foreach (var tool in report.Tools)
+            Console.WriteLine($"tool={tool.Name}|found={tool.Found.ToString().ToLowerInvariant()}|{tool.Path}");
+        Console.WriteLine($"report={output}");
+        Console.WriteLine(report.Scope);
         return 0;
     }
 
@@ -154,6 +178,7 @@ public static class FlowCommands
     {
         Console.WriteLine("wwwmmm flow <command>");
         Console.WriteLine("  sources                            - list intake kinds and scanner providers");
+        Console.WriteLine("  doctor [report.json]               - record what this host really has: queues, transports, tools");
         Console.WriteLine("  extract <doc.pdf> <rules.json> [trail.jsonl]");
         Console.WriteLine("  review <trail> <docSha> <ruleId> <field> <value> <page> <offset> <reviewer> <accept|reject>");
         Console.WriteLine("  trail-verify <trail.jsonl>");
