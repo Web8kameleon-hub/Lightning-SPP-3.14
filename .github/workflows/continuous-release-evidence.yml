@@ -40,8 +40,17 @@ jobs:
         run: |
           dotnet restore
           dotnet build --configuration Release --no-restore
+      - name: Install native PDF test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
       - name: Run required tests
-        run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --logger "trx;LogFileName=release-evidence.trx"
+        env:
+          SPP_TEST_NATIVE_DOCUMENTS: '1'
+          SPP_BRIDGE_TEST_ALLOW_WRITES: ''
+        run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --logger "trx;LogFileName=release-evidence.trx" --filter "FullyQualifiedName!~BridgeUpstreamTests"
+      - name: Require 100 percent test execution and pass rate
+        run: python3 Scripts/require-all-tests-pass.py
       - name: Capture real benchmark and changelog
         shell: bash
         run: |

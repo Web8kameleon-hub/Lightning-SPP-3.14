@@ -34,8 +34,12 @@ public static class PrinterProbe
                 ? "CUPS answered but listed no queues (lpstat -p -d)."
                 : "Read from CUPS with lpstat -p -d.");
         }
-        catch (Exception ex) when (ex is PlatformNotSupportedException or System.ComponentModel.Win32Exception
-                                       or InvalidOperationException or TimeoutException or IOException)
+        catch (Exception ex) when (ex is DocumentException
+                                       or PlatformNotSupportedException
+                                       or System.ComponentModel.Win32Exception
+                                       or InvalidOperationException
+                                       or TimeoutException
+                                       or IOException)
         {
             return new PrinterProbeResult(Array.Empty<PrinterInfo>(),
                 $"CUPS probe failed: {ex.Message}");
