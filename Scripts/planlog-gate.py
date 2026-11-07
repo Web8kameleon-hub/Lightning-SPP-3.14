@@ -217,10 +217,13 @@ def validate_contract(root: Path, contract: dict[str, Any], now: datetime) -> li
         previous_due = due_utc
 
         if state == "verified":
-            for pattern in phase.get("evidence", []):
-                matches = evidence_matches(root, pattern)
-                if not matches:
-                    errors.append(f"{phase_id}: verified evidence is missing or empty: {pattern}")
+            for field in ("deliverable", "evidence"):
+                for pattern in phase.get(field, []):
+                    matches = evidence_matches(root, pattern)
+                    if not matches:
+                        errors.append(
+                            f"{phase_id}: verified {field} artifact is missing or empty: {pattern}"
+                        )
 
         if now > due_utc and state != "verified":
             errors.append(
