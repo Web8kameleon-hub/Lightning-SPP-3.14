@@ -104,7 +104,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "id": "P4",
       "target_local": "2026-11-20T17:00:00+02:00",
       "state": "planned",
-      "deliverable": [".github/workflows/publish-usage-daily.yml", "Scripts/validate-usage-json.py", "artifacts/usage/daily/"],
+      "deliverable": [".github/workflows/publish-usage-daily.yml", "Scripts/validate-usage-json.py", "artifacts/usage/daily/*.json"],
       "acceptance": ["A real daily aggregate is produced and schema-validated", "Git publication is idempotent", "Public JSON contains no customer identifiers or placeholder measurements"],
       "evidence": [".github/workflows/publish-usage-daily.yml", "Scripts/validate-usage-json.py", "artifacts/usage/daily/*.json"],
       "owner": "repository-maintainer"
@@ -151,7 +151,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 
 `measured`: `Scripts/planlog-gate.py` was added in commit `b551f101a04bd2be130a56ee40a1b72a9eb3daf5`; `.github/workflows/ci-cd.yml` invokes it in commit `a582320cf7b91e33fe8ce3ddc83d9c81a29b7139`. These are source changes only; the gate has not yet run in CI.
 
-`declared`: The workflow runs the gate before restore/build/tests and fetches full history so the checker can compare the Planlog with its base revision. It validates the contract, phase order, timezone-aware dates and evidence paths; requires a dated amendment for changes to state, scope, dates, owner or evidence requirements; and blocks once a target deadline passes without verified evidence. Existing build, test, Docker, release and production-deploy gates still apply.
+`declared`: The workflow runs the gate before restore/build/tests and fetches full history so the checker can compare the Planlog with its base revision. It validates the contract, phase order, timezone-aware dates and both deliverable and evidence files for verified phases; requires a dated amendment for changes to state, scope, dates, owner or evidence requirements; and blocks once a target deadline passes without verified evidence. Existing build, test, Docker, release and production-deploy gates still apply.
 
 ## JSON publication contract
 
@@ -170,7 +170,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 | 2026-11-07 | unavailable | Current metrics code cannot reconstruct the full live-period history. | Reconcile production logs before publishing backfill; mark gaps. |
 | 2026-11-07 | measured | Initial Planlog commit `930299cb21d072b2027a49a62a921a36935638b7`; convention-alignment commit `d67ce1cf24b9a66301c51f47fdd16588632411fc`. | Existing branch holds the planning history; no runtime implementation claimed. |
 | 2026-11-07 | declared | Owner clarified Planlog is a dynamic constitution that can set dates, conditions, deliverables and enforcement. | Add dated phases, amendment records and a CI/CD gate; schedule remains amendable with an audit trail. |
-| 2026-11-07 | declared | Added the planlog gate script and wired it into `ci-cd.yml` with full history for amendment checks in commits `b551f101a04bd2be130a56ee40a1b72a9eb3daf5`, `a582320cf7b91e33fe8ce3ddc83d9c81a29b7139`, `f7b95fd45fbbc3980b7d53586bd0be13dc7b3788`, `6d15d549ef34fd89f1bcc79709bbd6f9431cb108` and `d57755881bacc47c34c445e1dade72889741136b`. | Source gate is on the feature branch; it has not yet been run in CI or deployed. |
+| 2026-11-07 | declared | Added the planlog gate script and wired it into `ci-cd.yml` with full history for amendment checks in commits `b551f101a04bd2be130a56ee40a1b72a9eb3daf5`, `a582320cf7b91e33fe8ce3ddc83d9c81a29b7139`, `f7b95fd45fbbc3980b7d53586bd0be13dc7b3788`, `6d15d549ef34fd89f1bcc79709bbd6f9431cb108`, `d57755881bacc47c34c445e1dade72889741136b` and `70df6645d6cf16290d889a29e88263bcf3c29bae`. | Source gate is on the feature branch; it has not yet been run in CI or deployed. |
 
 `declared`: Add a log entry for each phase transition and every dynamic amendment. Record actual results and remaining unknowns; never mark a phase complete because a plan, callback, scaffold, endpoint or workflow exists.
 
