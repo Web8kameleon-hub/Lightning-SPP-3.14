@@ -1,70 +1,79 @@
-# Planlog: Persistent Production Usage and Daily Git Evidence
+# Lightning SPP — Usage Telemetry Planlog
 
-Status: approved scope; this commit records the implementation plan. No production usage figures are asserted here.
+`declared`: Version 1.0, 2026-11-07. This is the approved development plan and decision log for persistent customer usage evidence and daily public aggregates. Planned behavior does not establish runtime capability. The repository's security, privacy and release rules remain authoritative.
 
-## Verified baseline
+## Approved direction
 
-- Customer identity, account state, entitlements, billing receipts and related records are persisted through `CustomerStore` in Longo.
-- `Services/LightningMetrics.cs` currently keeps global pipeline request/success/failure counters and scan/process/print call and duration totals in static process memory.
-- Those counters restart at zero when the process restarts. They are global, not customer-scoped, and do not provide a durable daily history.
-- The current metrics surface is therefore not a source for reconstructing the full two-month live history.
-- Lightning SPP has been live for about two months according to the owner. Historical totals must be recovered from real retained production sources before publication.
+`declared`: Lightning SPP has been live for about two months, as stated by the owner. Workstation benchmark runs are real measurements and remain distinct from production usage history.
 
-## Required outcome
+`declared`: Preserve usage continuously across process restarts and deployments. Persist detailed usage privately; publish a daily, anonymized aggregate JSON file to Git. Never create placeholder production values or reconstruct unavailable history from unrelated evidence.
 
-1. **Durable detailed usage ledger**
-   - Persist each usage event to the private Longo data store.
-   - Associate authenticated calls with the verified internal customer/account identity; preserve anonymous traffic as anonymous.
-   - Capture UTC timestamp, unique event ID, operation/route, HTTP status, outcome, elapsed time, input/output byte counts, billable-unit basis, plan or license tier where resolved, release/commit identity, and a sanitized failure category.
-   - Enforce idempotency so a retried event cannot be counted twice.
-   - Do not store request or response bodies, document contents/names, passwords, cookies, authorization headers, Stripe secrets, or license keys.
-   - Do not silently discard events. Track persistence failures/backlog and surface them operationally without turning an unrecorded event into a successful usage record.
+`computed`: The account/entitlement aggregate is stored through `CustomerStore` in Longo. This does not establish that API usage events are currently stored.
 
-2. **No-reset totals and daily rollups**
-   - Lifetime totals are derived from durable events or durable aggregates; process memory is only a cache.
-   - Store daily rollups by UTC date, with endpoint-level totals and success/failure counts.
-   - Record bytes in/out and latency distributions (at least count, p50, p95, max) only where actual observations exist.
-   - Preserve historical days. Corrections must be traceable and must not overwrite evidence without a revision/audit trail.
+`computed`: `Services/LightningMetrics.cs` holds global pipeline and stage counters in static process memory. The values reset when the process restarts; they are not customer-scoped and do not form a durable daily history.
 
-3. **Customer and operator views**
-   - Provide an authenticated customer usage view limited to that customer's own records.
-   - Provide an admin/operator aggregate view with date range, route, outcome, and plan filters.
-   - Keep detailed customer usage private in Longo. Never put customer identifiers or per-customer rows in this public repository.
+`unavailable`: Complete two-month request totals, customer-level usage history and daily success rates are unavailable from the inspected in-memory metrics. Search retained production logs and edge/proxy analytics before making historical claims.
 
-4. **Daily public JSON in Git**
-   - Publish one machine-readable JSON aggregate per UTC day under a documented path such as `artifacts/usage/daily/YYYY-MM-DD.json`.
-   - The public file may contain overall counts, endpoint-level counts, outcomes, byte totals, latency summaries, service version/commit and source-window metadata. It must not contain names, emails, stable customer IDs, IP addresses, payload details, or secrets.
-   - Make publication idempotent for each date and commit only validated production measurements. Use a scheduled GitHub Actions workflow with least-privilege `contents: write`; production must not hold a Git write credential.
-   - Mark incomplete or unavailable periods explicitly. Never generate placeholder zeros or backfill estimates as observed facts.
+## Architecture decisions
 
-5. **Historical backfill**
-   - Inventory retained origin/proxy/edge logs and any existing production telemetry for the live period.
-   - Reconcile sources, document coverage and timezone, and publish only verified days.
-   - Missing days remain marked as gaps; do not infer them from uptime, benchmark runs, billing receipts, or current counters.
-   - Keep workstation benchmark runs separate from production usage evidence.
+| ID | State | Decision |
+|---|---|---|
+| D01 | declared | Private Longo usage ledger is the detailed source of truth. Process memory is only a cache. |
+| D02 | declared | Events are idempotent and append-only; lifetime and UTC-day totals survive restarts and releases. Corrections retain an audit trail. |
+| D03 | declared | Authenticated events use verified internal customer/account identity. Anonymous calls remain anonymous; do not infer an owner from IP or request content. |
+| D04 | declared | Event fields are limited to event ID, UTC time, route/operation, outcome/status, elapsed time, byte counts, resolved plan/license tier, release/commit identity and sanitized failure category. |
+| D05 | declared | Never store request/response bodies, document names or contents, passwords, cookies, authorization headers, Stripe secrets, license keys or raw IP addresses in the usage ledger. |
+| D06 | declared | Customer usage is accessible only to that customer and authorized operators. Public Git contains aggregate metrics only, never customer rows or stable customer identifiers. |
+| D07 | declared | Daily Git publication is generated by a scheduled GitHub Actions workflow with least-privilege write access. Production holds no Git write credential. Publication is idempotent per UTC date. |
+| D08 | declared | Missing historical windows remain explicit gaps. Do not infer call counts from uptime, Stripe receipts, workstation benchmarks or current process counters. |
+| D09 | declared | Usage is observational until billing semantics are separately reconciled. Do not treat telemetry as a billing authority before deduplication, unit definitions and reconciliation are verified. |
 
-## Implementation sequence
+## Evidence and lifecycle
 
-- [ ] Confirm all production request paths and where authenticated customer/license identity is available.
-- [ ] Define the versioned private usage-event and daily-rollup schemas.
-- [ ] Implement durable, idempotent persistence in Longo and restart-safe cumulative aggregation.
-- [ ] Instrument success and failure outcomes across customer-facing API operations, including bytes and elapsed time.
-- [ ] Add customer-scoped usage API and operator-only aggregate access.
-- [ ] Add a daily exporter and public, redacted JSON artifact format.
-- [ ] Add a scheduled GitHub Actions publisher with minimal permissions and duplicate-date protection.
-- [ ] Recover and reconcile the available live-period history; publish gaps honestly.
-- [ ] Validate concurrency, restart recovery, duplicate delivery, authorization boundaries, redaction, export integrity, and failure visibility.
-- [ ] Update the benchmark and product pages to distinguish workstation benchmarks, live production usage, customer workload results, and cross-vendor comparisons.
-- [ ] Deploy only through the existing reviewed CI/CD and production gates.
+`declared`: Use evidence states `measured`, `computed`, `declared`, `unavailable` and `not_implemented`. Distinguish static source review from executed checks. A source declaration or design document does not prove runtime behavior.
 
-## Acceptance conditions
+| Label | Required evidence |
+|---|---|
+| DISCOVERED | Exact repository path and revision found. |
+| VERIFIED | Implementation and relevant tests inspected; execution status stated accurately. |
+| INTEGRATED | Real service communication or execution demonstrated with traces and failure cases. |
+| MISSING | Object not found in a documented search scope; do not generalize beyond that scope. |
 
-- Restarting or replacing the application process does not reset lifetime or daily totals.
-- Replaying the same event does not increment totals twice.
-- Customer A cannot read Customer B's usage.
-- Public Git JSON contains only anonymized aggregates and can be reproduced from the private durable source.
-- Every published observation has a time window, source, release identity and completeness status.
-- No production metric, historical total, benchmark result, SLA, or comparative claim is published without its corresponding evidence.
+`declared`: Follow Discover → Verify → Reuse → Integrate → Validate. Preserve the no-fake rule: no simulated customer records, invented production metrics, random output, silent persistence success or inferred historical values.
+
+## Ordered work and exit criteria
+
+| Phase | State | Work | Exit evidence |
+|---|---|---|---|
+| P0 — source and identity map | not_implemented | Map every customer-facing route, authenticated session/license identity, anonymous path, event outcome and production log source. | Route-to-identity matrix with exact files and documented unmapped paths. |
+| P1 — durable event contract | declared | Define versioned private event, deduplication key, UTC rollup and public aggregate JSON schemas. | Schemas reviewed for privacy, idempotency, source provenance and compatibility. |
+| P2 — persistent ledger | not_implemented | Persist events and cumulative/day aggregates in Longo; handle concurrent writes, retries, restarts and persistence failure visibility. | Restart and concurrency evidence; duplicate replay counts once; no quiet event loss. |
+| P3 — instrumentation and access | not_implemented | Capture successful and failed API calls, elapsed time and bytes; add owner-scoped customer usage and operator-only aggregate views. | Authorization evidence proves Customer A cannot read Customer B; redaction and failure cases recorded. |
+| P4 — daily public JSON | not_implemented | Add a public-safe aggregate export and scheduled GitHub Actions publisher with duplicate-date protection and least privilege. | Reproducible JSON matches private rollup; no PII or secret fields; commit per UTC day is idempotent. |
+| P5 — historical reconciliation | not_implemented | Inventory retained origin/proxy/edge logs and reconcile coverage for the live period. | Source, timezone, coverage and gaps documented; only supported days published. |
+| P6 — reporting and claims | not_implemented | Update benchmark/product pages to distinguish PC measurements, live production usage, customer workloads and cross-vendor comparison. | Every public number links to a dated source and completeness status. |
+| P7 — production promotion | not_implemented | Run applicable CI/release gates, review retention/access behavior and deploy through the existing production controls. | Successful controlled deployment and post-deploy evidence; no skipped-gate claims. |
+
+`declared`: No phase is complete merely because a class, endpoint, workflow, planlog or JSON file exists. Completion requires the phase's exit evidence.
+
+## JSON publication contract
+
+`declared`: Suggested path: `artifacts/usage/daily/YYYY-MM-DD.json`. The public aggregate may include UTC date/window, schema version, source completeness, service version/commit, route-level call/success/failure counts, byte totals and observed latency summaries. Omit fields without actual measurements; do not substitute zero.
+
+`declared`: Public JSON must not contain customer names, emails, stable customer IDs, IPs, request payloads, document metadata, secrets or per-customer rows. Private per-customer detail remains in Longo and in the authenticated product view.
+
+`declared`: Daily files are append-only evidence. A correction must be a traceable revision with its reason and source; do not silently rewrite a published result.
+
+## Planlog
+
+| Date | State | Recorded event | Consequence |
+|---|---|---|---|
+| 2026-11-07 | declared | Owner approved persistent usage capture, no resets and daily JSON publication to Git. | Implement detailed private ledger plus public anonymized aggregate. |
+| 2026-11-07 | computed | Source review found account/entitlement persistence in Longo and process-memory-only global metrics. | Treat usage persistence and customer-level metering as missing implementation. |
+| 2026-11-07 | unavailable | Current metrics code cannot reconstruct the full live-period history. | Reconcile production logs before publishing backfill; mark gaps. |
+| 2026-11-07 | measured | Commit `930299cb21d072b2027a49a62a921a36935638b7` added the initial planlog on branch `codex/usage-telemetry-planlog-20261107`. | This records the plan only; no telemetry implementation or production change is asserted. |
+
+`declared`: Update this table when implementation or evidence changes a decision. Each entry records the source revision or measured artifact, affected phase, actual result and remaining unknowns.
 
 ## Evidence locations reviewed
 
@@ -75,3 +84,7 @@ Status: approved scope; this commit records the implementation plan. No producti
 - `Web/CustomerAccounts.cs`
 - `Web/LicenseApiServer.cs`
 - `deploy/production/README.md`
+
+## Reference convention
+
+The PLANLOG format follows the repository-wide convention described in [NeuCLX Planlog Reference](https://github.com/Web8kameleon-hub/neuclx/blob/main/docs/PLANLOG_REFERENCE.md). In this file, lifecycle/evidence labels retain their explicit state; checklist TODO syntax is not used as the plan's status model.
