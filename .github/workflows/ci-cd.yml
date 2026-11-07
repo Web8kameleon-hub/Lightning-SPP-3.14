@@ -76,6 +76,9 @@ jobs:
     - name: Enforce repository production policy
       run: python3 Scripts/preflight-policy.py
 
+    - name: Enforce dynamic usage Planlog schedule and evidence
+      run: python3 Scripts/planlog-gate.py
+
     - name: Restore dependencies
       run: dotnet restore
 
