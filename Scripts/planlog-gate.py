@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import fnmatch
 import json
 import os
 import subprocess
@@ -130,6 +129,9 @@ def validate_amendments(
                             raise ValueError("timezone offset required")
                     except (TypeError, ValueError):
                         errors.append(f"{phase_id}: amendment date_time must be ISO-8601 with timezone")
+                    for evidence_path in item.get("evidence", []):
+                        if not isinstance(evidence_path, str) or not evidence_matches(root, evidence_path):
+                            errors.append(f"{phase_id}: amendment evidence is missing or empty: {evidence_path}")
     return errors
 
 
@@ -239,9 +241,13 @@ def main() -> int:
 
     root = Path(args.root).resolve()
     try:
-        now = datetime.fromisoformat(args.now).astimezone(timezone.utc) if args.now else datetime.now(timezone.utc)
-        if now.tzinfo is None:
-            raise ValueError("timezone offset required")
+        if args.now:
+            parsed_now = datetime.fromisoformat(args.now)
+            if parsed_now.tzinfo is None or parsed_now.utcoffset() is None:
+                raise ValueError("timezone offset required")
+            now = parsed_now.astimezone(timezone.utc)
+        else:
+            now = datetime.now(timezone.utc)
     except ValueError as exc:
         print(f"PLANLOG GATE: BLOCKED\n- invalid evaluation time: {exc}")
         return 1
