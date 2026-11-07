@@ -27,7 +27,7 @@ public class ArchiveDocumentsTests
         var code = "raise Exception('never execute')"u8.ToArray();
         var input = Zip(("docs/input.pdf", pdf), ("src/main.py", code), ("data/table.csv", "a,b\n1,2"u8.ToArray()), ("docs/bad.pdf", "invalid PDF"u8.ToArray()));
         using var zip = new ZipArchive(new MemoryStream(await ArchiveDocuments.ProcessAsync(input, true)));
-        static byte[] Read(ZipArchive z, string name) { using var output = new MemoryStream(); using var read = z.GetEntry(name)!.Open(); read.CopyTo(output); return output.ToArray(); }
+        static byte[] Read(ZipArchive z, string name) { var entry = z.GetEntry(name) ?? throw new InvalidOperationException($"Entry '{name}' not found. Available: {string.Join(", ", z.Entries.Select(e => e.FullName))}"); using var output = new MemoryStream(); using var read = entry.Open(); read.CopyTo(output); return output.ToArray(); }
         Assert.Equal(pdf, Read(zip, "originals/docs/input.pdf")); Assert.Equal(code, Read(zip, "originals/src/main.py"));
         var processed = Read(zip, "processed/docs/input.pdf");
         Assert.Equal(2, (await new PdfDocumentService().RenderPageAsync(processed, 2)).TotalPages);
