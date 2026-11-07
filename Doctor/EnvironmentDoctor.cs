@@ -29,6 +29,7 @@ public sealed record DoctorReport(
     [property: JsonPropertyName("printerNote")] string PrinterNote,
     [property: JsonPropertyName("scanProviders")] IReadOnlyList<DoctorScanProvider> ScanProviders,
     [property: JsonPropertyName("tools")] IReadOnlyList<DoctorTool> Tools,
+    [property: JsonPropertyName("ocrEnabled")] bool OcrEnabled,
     [property: JsonPropertyName("scope")] string Scope);
 
 /// <summary>
@@ -58,8 +59,10 @@ public static class EnvironmentDoctor
             Tools: new[]
             {
                 LocatePdfToText(),
+                LocateTesseract(),
                 ResolveTool("java", null)
             },
+            OcrEnabled: Documents.OcrTextReader.IsEnabled,
             Scope: ScopeNote);
     }
 
@@ -83,6 +86,18 @@ public static class EnvironmentDoctor
         return location is null
             ? new DoctorTool("pdftotext", false, null)
             : new DoctorTool("pdftotext", true, $"{location.Path} ({location.Source})");
+    }
+
+    /// <summary>
+    /// Reports where Tesseract was found and by which rule. A missing engine is reported as
+    /// absent, not as an error: OCR is opt-in and everything else works without it.
+    /// </summary>
+    private static DoctorTool LocateTesseract()
+    {
+        var location = Documents.OcrLocator.TryLocate();
+        return location is null
+            ? new DoctorTool("tesseract", false, null)
+            : new DoctorTool("tesseract", true, $"{location.Path} ({location.Source})");
     }
 
     private static DoctorTool ResolveTool(string name, string? environmentVariable)

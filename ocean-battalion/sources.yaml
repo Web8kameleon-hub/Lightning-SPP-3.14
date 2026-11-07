@@ -1,0 +1,72 @@
+# The battalion's source registry.
+#
+# Rules this file follows:
+#   * every source declares a licence; "unknown" means check before relying on it
+#   * every source is rate limited; there is no "unlimited" value
+#   * an endpoint marked (confirm) is a placeholder: open it in a browser first
+#
+# A wrong endpoint must fail loudly at run time, never softly.
+
+defaults:
+  respect_robots: true
+  rate_limit: "0.5/s"
+  refresh: "7d"
+  license: "unknown"
+  user_agent: "OceanBattalion/0.1 (+https://example.invalid/contact)"
+
+sources:
+  # ------------------------------------------------------------------ feeds
+  # RSS is the safest entry point: published for machines, no scraping.
+  - id: alb-news-rss
+    type: rss
+    feeds:
+      - "https://example.invalid/feed.xml"      # (confirm) a real feed URL
+    refresh: "6h"
+    license: "rss"
+
+  # ------------------------------------------------------- government (web)
+  # Old Albanian public documents are mostly scanned PDFs, hence ocr: true.
+  - id: alb-official-gazette
+    type: web
+    seeds:
+      - "https://example.invalid/gazeta"        # (confirm) publisher site
+    follow_links: true
+    allow_pdf: true
+    max_pages: 10
+    max_ocr_pages: 16
+    ocr: true
+    rate_limit: "0.3/s"
+    refresh: "7d"
+    license: "unknown"
+
+  # --------------------------------------------------------- open data (CKAN)
+  # Read the catalogue first: /api/3/action/package_search?rows=2
+  - id: alb-opendata
+    type: opendata
+    endpoint: "https://example.invalid"         # (confirm) CKAN portal root
+    max_datasets: 20
+    ocr: true
+    refresh: "7d"
+    license: "open"
+
+  # ------------------------------------------------------ official APIs only
+  # Google Custom Search: at most 10 results per query, snippets only.
+  - id: google-cse
+    type: api_google
+    api_key_env: GOOGLE_CSE_KEY
+    cx_env: GOOGLE_CSE_CX
+    queries:
+      - "site:gov.al dokument"
+      - "site:edu.al hulumtim"
+    refresh: "24h"
+    license: "unknown"
+
+  # Microsoft Graph: needs an app registration and admin consent.
+  - id: ms-graph
+    type: api_graph
+    token_env: MS_GRAPH_TOKEN
+    site: "contoso.sharepoint.com:/sites/Dokumente"   # (confirm) your tenant
+    folder: "root/children"
+    ocr: true
+    refresh: "12h"
+    license: "unknown"

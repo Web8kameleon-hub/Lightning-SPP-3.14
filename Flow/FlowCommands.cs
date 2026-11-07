@@ -79,6 +79,7 @@ public static class FlowCommands
             Console.WriteLine($"scan={provider.Name}|available={provider.Available.ToString().ToLowerInvariant()}|{provider.Detail}");
         foreach (var tool in report.Tools)
             Console.WriteLine($"tool={tool.Name}|found={tool.Found.ToString().ToLowerInvariant()}|{tool.Path}");
+        Console.WriteLine($"ocrEnabled={report.OcrEnabled.ToString().ToLowerInvariant()}");
         Console.WriteLine($"report={output}");
         Console.WriteLine(report.Scope);
         return 0;
@@ -93,10 +94,11 @@ public static class FlowCommands
         }
 
         var rules = RuleSet.LoadFromFile(args[3]);
-        var document = await TextLayerExtractor.ExtractAsync(args[2], cancellationToken);
+        var document = await OcrTextReader.ReadAsync(args[2], cancellationToken);
         var result = FieldExtractor.Apply(document, rules);
 
         Console.WriteLine($"document={result.Source}");
+        Console.WriteLine($"textSource={document.TextSource}");
         Console.WriteLine($"documentSha256={result.DocumentSha256}");
         Console.WriteLine($"ruleSetSha256={result.RuleSetSha256}");
         Console.WriteLine($"pages={result.PageCount}");

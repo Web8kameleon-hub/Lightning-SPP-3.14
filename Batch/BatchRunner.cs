@@ -3,13 +3,18 @@ using System.Security.Cryptography;
 namespace wwwmmm.Batch;
 
 /// <summary>Outcome of processing one document. <see cref="Error"/> set means failure.</summary>
-public sealed record BatchDocumentResult(int Pages, int Fields, IReadOnlyList<string> MissingRequired, string? Error)
+public sealed record BatchDocumentResult(
+    int Pages,
+    int Fields,
+    IReadOnlyList<string> MissingRequired,
+    string? Error,
+    string TextSource)
 {
-    public static BatchDocumentResult Ok(int pages, int fields, IReadOnlyList<string> missing) =>
-        new(pages, fields, missing, null);
+    public static BatchDocumentResult Ok(int pages, int fields, IReadOnlyList<string> missing, string textSource) =>
+        new(pages, fields, missing, null, textSource);
 
     public static BatchDocumentResult Failed(string error) =>
-        new(0, 0, Array.Empty<string>(), error);
+        new(0, 0, Array.Empty<string>(), error, BatchTextSource.None);
 }
 
 public delegate Task<BatchDocumentResult> DocumentProcessor(string path, CancellationToken cancellationToken);
@@ -107,6 +112,7 @@ public sealed class BatchRunner
                 index, path, relative, size, sha256,
                 result.Error is null ? BatchStatus.Completed : BatchStatus.Failed,
                 result.Pages, result.Fields, result.MissingRequired,
+                result.TextSource,
                 result.Error);
         }
         catch (OperationCanceledException)
@@ -117,7 +123,7 @@ public sealed class BatchRunner
         {
             return new BatchEntry(
                 index, path, relative, size, sha256, BatchStatus.Failed,
-                0, 0, Array.Empty<string>(), $"{ex.GetType().Name}: {ex.Message}");
+                0, 0, Array.Empty<string>(), BatchTextSource.None, $"{ex.GetType().Name}: {ex.Message}");
         }
     }
 

@@ -9,8 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Real, opt-in OCR for the document flow. `wwwmmm flow extract` and `wwwmmm flow run|resume` now read a scanned PDF through Tesseract when `LSPP_OCR_ENABLED=true` and the PDF's own text layer is empty. Resolution order for the binary is `SPP_TESSERACT_PATH`, then `PATH`, then the standard Windows install, then `artifacts/tooling`: a configured path that does not exist is an error, never a silent fallback. Pages are capped at 32 per document and 120 s per page.
+- `Documents/OcrEngineContract.cs` (`IOcrEngine`), `Documents/OcrLocator.cs`, `Documents/TesseractOcrEngine.cs` and `Documents/OcrTextReader.cs`; language defaults to `eng` and is configurable with `SPP_OCR_LANGUAGES`.
+- Batch manifests record `textSource` (`text-layer` / `ocr` / `none`) per document, and `flow report` shows it, so a report never implies OCR quality it does not have.
+- `flow doctor` reports `tool=tesseract` and `ocrEnabled`, so availability is evidence rather than assumption.
+- `Tests/LightningSPP.Tests/OcrTests.cs`: text drawn by the test is recognised from a real image, a PDF with its own text layer is never sent to OCR, and a missing configured Tesseract path fails loudly.
+
 ### Changed
 
+- A digital PDF is never degraded: OCR runs only when the text layer came back empty, so extraction from a PDF that already has text is byte-identical to before.
+- `Web/ArchiveDocumentPackage.cs` and `Web/ArchiveDocuments.cs` state explicitly that the archive path never runs OCR.
+- OCR accuracy is not measured: the only proof is a self-drawn test image. That limit is written in `Docs/FLOW.md`, `Docs/MANUAL/10-KUFIJTE-DHE-PRETENDIMET.md` and `REAL_PROCESSING.md` instead of the previous "OCR does not exist" claim.
 - Improve public-page SEO metadata, structured data, internal links and product descriptions; correct pricing metadata and refresh the sitemap.
 - Keep public GET/HEAD requests outside the API rate-limit budget, redirect `/index.html` to `/`, and mark dashboard/API responses `noindex`.
 - Require the NO FAKE, PRODUCTION GRADE acceptance gate for a service in production since 2 October 2026.

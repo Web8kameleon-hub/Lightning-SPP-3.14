@@ -13,7 +13,17 @@ public sealed record PageText(int PageNumber, string Text);
 /// </summary>
 public sealed record DocumentText(string Source, string Sha256, IReadOnlyList<PageText> Pages)
 {
+    public const string TextLayerSource = "text-layer";
+    public const string OcrSource = "ocr";
+
     public int PageCount => Pages.Count;
+
+    /// <summary>
+    /// Which reader produced this text: <see cref="TextLayerSource"/> for the PDF's own
+    /// embedded layer, <see cref="OcrSource"/> when pages were rendered and recognised.
+    /// Reports must state this, because the two are not equally reliable.
+    /// </summary>
+    public string TextSource { get; init; } = TextLayerSource;
 }
 
 /// <summary>
