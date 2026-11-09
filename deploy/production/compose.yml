@@ -11,6 +11,10 @@ services:
       LONGO_URL: http://longo:8030
       LSPP_CUSTOMER_ACCOUNTS_ENABLED: 'true'
       LSPP_NOTIFY_WORKER_ENABLED: 'true'
+      # The browser sends the public https origin, but this process only ever sees the
+      # plain-http request nginx forwards to the container port. Pinning the origin here
+      # is what lets the same-origin check accept a real browser submission.
+      LSPP_PUBLIC_ORIGIN: https://scanprocessprint.com
       LSPP_TRUSTED_PROXY_IPS: ${LSPP_TRUSTED_PROXY_IPS:?Set the current edge container IP}
     read_only: true
     tmpfs:
