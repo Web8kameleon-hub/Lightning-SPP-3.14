@@ -15,6 +15,11 @@ services:
       # plain-http request nginx forwards to the container port. Pinning the origin here
       # is what lets the same-origin check accept a real browser submission.
       LSPP_PUBLIC_ORIGIN: https://scanprocessprint.com
+      # Both settings are required before X-Forwarded-For is believed: the flag alone, or the
+      # address alone, leaves the client address resolved to the edge container, which puts
+      # every visitor in one rate-limit bucket.
+      LSPP_TRUST_PROXY_HEADERS: 'true'
+      LSPP_ALLOWED_ORIGINS: https://scanprocessprint.com,https://www.scanprocessprint.com
       LSPP_TRUSTED_PROXY_IPS: ${LSPP_TRUSTED_PROXY_IPS:?Set the current edge container IP}
     read_only: true
     tmpfs:
