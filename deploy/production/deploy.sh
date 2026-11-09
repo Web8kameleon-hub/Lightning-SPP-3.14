@@ -197,14 +197,23 @@ cmd_deploy() {
   LONGO_RELEASE_ID="$release" docker compose -p scanprocessprint-state \
     -f "$REPO_DIR/deploy/production/persistence.yml" up -d --wait
 
+  # The compose file requires LSPP_TRUSTED_PROXY_IPS to hold the edge container's current
+  # address. A placeholder or a stale value from the last deploy silently stops any proxy
+  # header from being trusted, so the client address degrades to the edge container and
+  # every caller ends up sharing one rate-limit bucket. Resolve it from the live edge here.
+  local edge_ip
+  edge_ip="$(docker inspect "$EDGE_CONTAINER" -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' | awk '{print $1}')"
+  [ -n "$edge_ip" ] || die "cannot resolve the address of edge container $EDGE_CONTAINER"
+  log "edge container $EDGE_CONTAINER is $edge_ip"
+
   log "starting release $release alongside the active release ($ACTIVE_RELEASE_ID)"
-  RELEASE_ID="$release" LICENSE_HOSTNAME="$LICENSE_HOSTNAME" \
+  RELEASE_ID="$release" LICENSE_HOSTNAME="$LICENSE_HOSTNAME" LSPP_TRUSTED_PROXY_IPS="$edge_ip" \
     docker compose -p "$(compose_project "$release")" -f "$COMPOSE_FILE" \
     --env-file "$ENV_FILE" up -d
 
   if ! verify_release "$release"; then
     log "release $release failed verification - tearing it down, active release is untouched"
-    RELEASE_ID="$release" LICENSE_HOSTNAME="$LICENSE_HOSTNAME" \
+    RELEASE_ID="$release" LICENSE_HOSTNAME="$LICENSE_HOSTNAME" LSPP_TRUSTED_PROXY_IPS="$edge_ip" \
       docker compose -p "$(compose_project "$release")" -f "$COMPOSE_FILE" \
       --env-file "$ENV_FILE" down
     die "deploy aborted for release $release"
