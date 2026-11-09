@@ -72,6 +72,16 @@ EOF
 
 compose_project() { echo "scanprocessprint-$1"; }
 
+# compose.yml requires LSPP_TRUSTED_PROXY_IPS to hold the edge container's current address.
+# A placeholder or a stale value silently stops any proxy header from being trusted, so the
+# client address degrades to the edge container and every caller shares one rate-limit
+# bucket. Exporting it here covers every compose call in this script.
+resolve_edge_ip() {
+  LSPP_TRUSTED_PROXY_IPS="$(docker inspect "$EDGE_CONTAINER" -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' | awk '{print $1}')"
+  [ -n "$LSPP_TRUSTED_PROXY_IPS" ] || die "cannot resolve the address of edge container $EDGE_CONTAINER"
+  export LSPP_TRUSTED_PROXY_IPS
+}
+
 # Internal health/sanity checks against one release's own containers,
 # bypassing the shared edge entirely (talks straight to the app over the
 # edge docker network alias scanprocessprint-<release>:8080).
@@ -201,19 +211,19 @@ cmd_deploy() {
   # address. A placeholder or a stale value from the last deploy silently stops any proxy
   # header from being trusted, so the client address degrades to the edge container and
   # every caller ends up sharing one rate-limit bucket. Resolve it from the live edge here.
-  local edge_ip
-  edge_ip="$(docker inspect "$EDGE_CONTAINER" -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' | awk '{print $1}')"
-  [ -n "$edge_ip" ] || die "cannot resolve the address of edge container $EDGE_CONTAINER"
-  log "edge container $EDGE_CONTAINER is $edge_ip"
+  # Exported rather than prefixed onto a single call: every compose invocation below
+  # interpolates the same variable, including the stop of the previous release.
+  resolve_edge_ip
+  log "edge container $EDGE_CONTAINER is $LSPP_TRUSTED_PROXY_IPS"
 
   log "starting release $release alongside the active release ($ACTIVE_RELEASE_ID)"
-  RELEASE_ID="$release" LICENSE_HOSTNAME="$LICENSE_HOSTNAME" LSPP_TRUSTED_PROXY_IPS="$edge_ip" \
+  RELEASE_ID="$release" LICENSE_HOSTNAME="$LICENSE_HOSTNAME" \
     docker compose -p "$(compose_project "$release")" -f "$COMPOSE_FILE" \
     --env-file "$ENV_FILE" up -d
 
   if ! verify_release "$release"; then
     log "release $release failed verification - tearing it down, active release is untouched"
-    RELEASE_ID="$release" LICENSE_HOSTNAME="$LICENSE_HOSTNAME" LSPP_TRUSTED_PROXY_IPS="$edge_ip" \
+    RELEASE_ID="$release" LICENSE_HOSTNAME="$LICENSE_HOSTNAME" \
       docker compose -p "$(compose_project "$release")" -f "$COMPOSE_FILE" \
       --env-file "$ENV_FILE" down
     die "deploy aborted for release $release"
@@ -249,6 +259,7 @@ cmd_deploy() {
 
 cmd_rollback() {
   require_state_file
+  resolve_edge_ip
   [ -n "${PREVIOUS_RELEASE_ID:-}" ] || die "no PREVIOUS_RELEASE_ID recorded - nothing to roll back to"
   local target="$PREVIOUS_RELEASE_ID"
   local target_port="$PREVIOUS_BACKEND_PORT"
