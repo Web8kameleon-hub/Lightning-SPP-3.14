@@ -1,445 +1,145 @@
-# Lightning SPP 3.14 - REAL Processing
+# Lightning SPP 3.14 — përpunimi real
 
-Ky dokument përshkruan ndryshimin nga processing i simuluar në processing real dhe ndikimin në performancë, cilësi dhe observability.
+Ky dokument përshkruan çka pipeline-i ekzekuton **vërtet**, cilat motorë marrin
+pjesë dhe si matet. Nuk përmban krahasime me një "mod të simuluar", sepse ai mod
+nuk ekziston më në kod.
 
-## Përmbledhje
+## Çka ekzekutohet realisht
 
-Versioni 3.14 përdor komponentë realë të ekzekutimit:
+| Fazë | Implementimi | Çka prodhon |
+| --- | --- | --- |
+| Skanim | `RealImageProcessor` (SkiaSharp) ose `FastScanService` (ImageSharp) | Bajt imazhi PNG të përpunuar |
+| Përpunim | `RealAIProcessor` | Bajt të kompresuar (Brotli) |
+| Artefakt | `RealPrintService` | Skedar `.br` lossless në disk |
+| Kodim | `OutputAdapter` | PNG / JPEG / BMP / TIFF / PDF |
 
-- SixLabors.ImageSharp për transformime imazhi
-- Microsoft.ML për skenarë AI/ML
-- Brotli për kompresim të të dhënave
-- File I/O për output real në disk
+Asnjë nga këto nuk përdor `Task.Delay`, të dhëna të rastësishme si rezultat ose
+përgjigje suksesi të rreme. Input i pavlefshëm dështon me gabim.
 
-Këto ndryshime rrisin realizmin e pipeline-it dhe e bëjnë sjelljen më të afërt me workload-et e prodhimit.
+## Dy motorët e imazhit (L/R)
 
-## Çfarë ndryshon praktikisht
+`ImageEngineAdapter` zgjedh **eksplicit** njërin prej dy implementimeve:
 
-Më parë:
+| Shkronja | `ImageEngine` | Klasa | Teknologjia |
+| --- | --- | --- | --- |
+| L | `Skia` (default) | `RealImageProcessor` | SkiaSharp |
+| R | `ImageSharp` | `FastScanService` | SixLabors.ImageSharp |
 
-- Simulim me vonesa artificiale
-- Output jo-determinist për skenarë demo
-- Pa shkrim real në disk
+Zgjedhja bëhet me `WWWMMM_IMAGE_ENGINE`. **Nuk ka fallback automatik**: nëse një
+motor dështon, kthen gabim; nuk e zëvendëson tjetri. Kjo është me qellim — një
+fallback i heshtur e bën sjelljen e prodhimit të paparashikueshme.
 
-Tani:
+Të dy motorët prodhojnë bajt të ndryshëm për të njëjtin input; kjo është e
+pritshme dhe e matshme.
 
-- Transformime reale të të dhënave
-- Kompresim real me Brotli
-- Integrim real i kontekstit ML
-- Output fizik i artefakteve
+### Verifikim i të dy motorëve
 
-## Shembuj teknikë
-
-### 1. Image processing
-
-```csharp
-using SixLabors.ImageSharp;
-
-image.Mutate(x => x
-    .DetectEdges()
-    .GaussianSharpen(3.0f)
-    .Contrast(1.5f));
+```bash
+dotnet run --project wwwmmm.csproj -- engines
 ```
 
-### 2. Compression dhe ML context
+Komanda ekzekuton të katër modelet e skanimit në të dy motorët dhe shtyp
+madhësinë dhe SHA-256 të shkurtër për çdo rezultat. Nëse një motor nuk jep
+bajt, komanda dështon.
 
-```csharp
-using Microsoft.ML;
-using System.IO.Compression;
+Shembull i një ekzekutimi real (128×128 PNG fixture, Windows 11, .NET 10,
+Release build):
 
-using var compressor = new BrotliStream(output, CompressionLevel.SmallestSize);
-await compressor.WriteAsync(data);
+```text
+Engine selection: Skia
+  Lightning        3,170 bytes     90 ms  sha256:ed717acb1735bdaa
+  TideWave         7,145 bytes      5 ms  sha256:27c491769c14c49a
+  Resonance          771 bytes    199 ms  sha256:7df9bd1c699cca0c
+  NanoDecibel      1,147 bytes    415 ms  sha256:4d7d3fe2d19f430a
 
-var mlContext = new MLContext();
+Engine selection: ImageSharp
+  Lightning        6,340 bytes    114 ms  sha256:ad3d72d2a95f188b
+  TideWave         7,376 bytes     61 ms  sha256:88768663b6f0cae5
+  Resonance       15,952 bytes     16 ms  sha256:9b6e8b513c687616
+  NanoDecibel     15,387 bytes     27 ms  sha256:0927e9ed4ca8bc6d
 ```
 
-### 3. File output
+Këto kohë janë matje të një ekzekutimi në një makinë; nuk janë garanci dhe nuk
+duhen citosh si përformancë e produktit. E vetmja gjë që provojnë është se të dy
+motorët punuan dhe dhanë rezultate të ndryshme.
 
-```csharp
-var filePath = Path.Combine(outputDir, "stigma_output.dat");
-await File.WriteAllBytesAsync(filePath, processedData);
-```
+## Modelet e skanimit
+
+| Model | Skia | ImageSharp |
+| --- | --- | --- |
+| `Lightning` | grayscale + contrast 1.05 | profil i lehtë |
+| `TideWave` | grayscale + contrast 1.12 + saturation | profil i balancuar |
+| `Resonance` | edge-enhance (Sobel) + contrast 1.25 | profil i precizionit |
+| `NanoDecibel` | edge-enhance + contrast 1.35 + saturation | profil maksimal |
+
+Rezolucioni kufizohet nga `8 000 000` pikselë dhe 8192 px për anë, pavarësisht
+DPI-së së kërkuar.
+
+## Përpunimi
+
+Motorët (`ProcessingEngine`) ndryshojnë nivelin e kompresimit lossless, jo
+saktësinë e ndonjë modeli:
+
+| Motor | Sjellja |
+| --- | --- |
+| `CLX` | Brotli, nivel i shpejtë |
+| `CLX_I` | Brotli, nivel i balancuar |
+| `XCL` | Brotli, nivel maksimal |
+| `Clisonix` | i njëjti trajtim bajtash me opsione shtesë |
+| `Hybrid` | sekuencë e motorëve me nivelin më të lartë |
+
+**Inferenca e modelit është operacion i veçantë.** Ajo ekzekutohet vetëm kur
+`LSPP_ONNX_MODEL_PATH` tregon një model real dhe input-i është tensor `float32`
+me formën e deklaruar në `LSPP_ONNX_INPUT_SHAPE`. Pa to, nuk ndodh inferencë; nuk
+ka zëvendësim të heshtur.
+
+## Artefakti i output-it
+
+`print` nuk printon. Ai shkruan një skedar Brotli lossless (`.br`) në disk dhe
+kthen rrugën. Printimi fizik është i mundur vetëm në Linux, përmes radhës së
+sistemit (`Documents/LinuxDeviceService.cs`), dhe nuk është verifikuar në
+harduer në këtë repository.
 
 ## Konfigurimi
 
-### Default
-
-```csharp
-using wwwmmm.PublicAPI;
-
-var result = await LightningAPI.ExecuteLightningPipelineAsync("document.pdf");
-```
-
-### Konfigurim eksplicit
-
 ```csharp
 using wwwmmm.Configuration;
-
-LightningAPI.UseRealServices();
-// LightningAPI.UseSimulatedServices(); // përdore vetëm për testime të shpejta
-```
-
-### Konfigurim i personalizuar
-
-```csharp
-var config = new LightningConfiguration
-{
-    UseRealServices = true,
-    UseRealImageProcessing = true,
-    UseRealAIProcessing = true,
-    UseRealPrinting = true,
-    PrintOutputDirectory = @"C:\Output",
-    MaxConcurrency = 10000
-};
-
-LightningAPI.Configure(config);
-```
-
-## Krahasim i performancës
-
-Koha totale mund të rritet krahasuar me simulimin, sepse puna që kryhet është reale (transformim + kompresim + I/O). Ky kompromis është i pritshëm dhe i nevojshëm për validim teknik para prodhimit.
-
-## Komanda reference
-
-```bash
-dotnet run real
-```
-
-```bash
-dotnet run speed
-```
-
-```bash
-dotnet run test
-```
-
-## Varësitë
-
-```xml
-<PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
-<PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.4" />
-<PackageReference Include="Microsoft.ML" Version="3.0.1" />
-<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.19.2" />
-```
-
-## Status
-
-- Mode: Production-capable real processing
-- Version: 3.14.0
-- Output: Real data path enabled
-# ⚡ Lightning SPP 3.14 - REAL Processing Update
-
-## 🚀 MAJOR UPDATE: NO MORE FAKE DATA
-
-Lightning SPP 3.14 tani përdor **REAL services** - jo më të dhëna false!
-
-### ✅ Çfarë Ndryshoi?
-
-#### Më Parë (Fake)
-
-- ❌ Task.Delay() - simulim
-- ❌ Të dhëna të gjeneruara rastësisht
-- ❌ Asnjë përpunim real
-
-#### Tani (REAL)
-
-- ✅ **SixLabors.ImageSharp** - përpunim real i imazheve
-- ✅ **Microsoft.ML** - AI/ML i vërtetë
-- ✅ **Brotli Compression** - kompresim real
-- ✅ **File I/O** - output real në disk
-
-## 🔧 Real Technologies Integrated
-
-### 1. Real Image Processing
-
-```csharp
-using SixLabors.ImageSharp;
-
-// REAL image manipulation
-image.Mutate(x => x
-    .DetectEdges()           // Real edge detection
-    .GaussianSharpen(3.0f)   // Real sharpening
-    .Contrast(1.5f)          // Real contrast adjustment
-);
-```
-
-**Features:**
-
-- Edge detection (Resonance)
-- Gaussian sharpening
-- Contrast/Brightness/Saturation
-- Auto-orientation
-- Multiple quality levels
-
-### 2. Real AI/ML Processing
-
-```csharp
-using Microsoft.ML;
-using System.IO.Compression;
-
-// REAL compression with Brotli
-using var compressor = new BrotliStream(output, CompressionLevel.SmallestSize);
-await compressor.WriteAsync(data);
-
-// REAL ML context
-var mlContext = new MLContext();
-```
-
-**Features:**
-
-- Brotli compression (Fastest, Optimal, SmallestSize)
-- ML-based optimization
-- Memory pooling
-- Channel-based async processing
-
-### 3. Real File Output
-
-```csharp
-// REAL print to file
-var filePath = Path.Combine(outputDir, "stigma_output.dat");
-await File.WriteAllBytesAsync(filePath, processedData);
-```
-
-**Features:**
-
-- Actual file creation
-- Multiple quality levels
-- Copy support
-- Compression before writing
-- Resonance enhancement
-
-## 📊 Performance: Real vs Simulated
-
-```
-Test: 100KB data processing
-
-SIMULATED:
-  Total Time: 177ms
-  Processing: Fake (Task.Delay)
-  Output: None
-
-REAL:
-  Total Time: 230ms
-  Processing: ImageSharp + ML + Brotli
-  Output: Real files on disk
-  Overhead: Only 1.30x!
-```
-
-## 🎯 How to Use
-
-### Default (REAL mode)
-
-```csharp
 using wwwmmm.PublicAPI;
 
-// Automatically uses REAL services
-var result = await LightningAPI.ExecuteLightningPipelineAsync("document.pdf");
-```
-
-### Explicit Configuration
-
-```csharp
-using wwwmmm.Configuration;
-
-// Use REAL production services
-LightningAPI.UseRealServices();
-
-// Or use SIMULATED for fast testing
-LightningAPI.UseSimulatedServices();
-```
-
-### Custom Configuration
-
-```csharp
-var config = new LightningConfiguration
+LightningAPI.Configure(new LightningConfiguration
 {
-    UseRealServices = true,
-    UseRealImageProcessing = true,
-    UseRealAIProcessing = true,
-    UseRealPrinting = true,
     PrintOutputDirectory = @"C:\Output",
-    MaxConcurrency = 10000
-};
-
-LightningAPI.Configure(config);
+    MaxConcurrency = 4,          // < 1 refuzohet
+    ImageEngine = ImageEngine.Skia
+});
 ```
-
-## 🧪 Testing Real vs Simulated
 
 ```bash
-# Run comparison demo
-dotnet run real
-
-# Output:
-# - Performance comparison
-# - Real ImageSharp processing
-# - Real AI/ML with Brotli
-# - Real file output
-# - Complete workflow demo
+WWWMMM_IMAGE_ENGINE=ImageSharp   # zgjedh motorin R
+WWWMMM_STIGMA_LEVEL=1            # 1=quality, 2=balanced, 3=lightning
 ```
 
-## 📦 Real Dependencies
-
-```xml
-<!-- Real Image Processing -->
-<PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
-<PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.4" />
-
-<!-- Real AI/ML -->
-<PackageReference Include="Microsoft.ML" Version="3.0.1" />
-<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.19.2" />
-
-<!-- Built-in .NET (no packages needed) -->
-<!-- System.IO.Compression - Brotli -->
-<!-- System.Buffers - Memory pooling -->
-<!-- System.Threading.Channels - Async processing -->
-```
-
-## 🎨 Real Processing Examples
-
-### Lightning Mode (Fast)
-
-```csharp
-// REAL but minimal processing
-var result = await scanService.ScanAsync(new ScanRequest(
-    "photo.jpg",
-    ScanMode.Lightning,
-    Quality: 300
-));
-// Time: ~3ms
-// Processing: Image encoding only
-```
-
-### Resonance Mode (Precision)
-
-```csharp
-// REAL with edge detection
-var result = await scanService.ScanAsync(new ScanRequest(
-    "document.pdf",
-    ScanMode.Resonance,
-    Quality: 600
-));
-// Time: ~43ms
-// Processing: Edge detection + sharpening + contrast
-```
-
-### NanoDecibel Mode (Maximum)
-
-```csharp
-// REAL full pipeline
-var result = await scanService.ScanAsync(new ScanRequest(
-    "artwork.jpg",
-    ScanMode.NanoDecibel,
-    Quality: 1200
-));
-// Time: ~50ms
-// Processing: Full image enhancement pipeline
-```
-
-## 🔬 Real AI Processing
-
-### CLX - Fast Compression
-
-```csharp
-var result = await processingService.ClxProcessAsync(data);
-// Uses: Brotli CompressionLevel.Fastest
-// Compression: ~1.5x
-// Time: <1ms
-```
-
-### Hybrid - Full Pipeline
-
-```csharp
-var result = await processingService.ProcessAsync(data, new ProcessingOptions(
-    Engine: ProcessingEngine.Hybrid,
-    UseAI: true,
-    UseClisonix: true,
-    UseStigmaMemory: true
-));
-// Uses: Multi-stage Brotli + ML optimization + Memory pooling
-// Compression: ~3x
-// Time: ~50ms
-```
-
-## 📁 Real File Output
-
-### Stigma Premium Print
-
-```csharp
-var result = await printService.StigmaPrintAsync(data);
-
-// Creates REAL file:
-// Path: C:\Users\...\AppData\Local\Temp\LightningSPP\stigma_output_20240101_123456.dat
-// Size: Compressed with Brotli SmallestSize
-// Quality: Maximum with Resonance enhancement
-```
-
-### List Printed Files
-
-```csharp
-var printService = ServiceFactory.CreatePrintService() as RealPrintService;
-var files = printService.GetPrintedFiles();
-
-foreach (var file in files)
-{
-    Console.WriteLine($"File: {Path.GetFileName(file)}");
-    Console.WriteLine($"Size: {new FileInfo(file).Length:N0} bytes");
-}
-```
-
-## 🌟 Key Benefits
-
-### REAL Processing
-
-✅ Actual image manipulation
-✅ True AI/ML optimization
-✅ Real compression algorithms
-✅ Physical file output
-✅ Production-ready quality
-
-### Still Lightning Fast
-
-⚡ Only 1.30x overhead vs simulated
-⚡ Sub-second for most operations
-⚡ <50ms for full quality pipeline
-⚡ Async/await throughout
-⚡ Memory-efficient with pooling
-
-## 🚀 Commands
+## Komandat e verifikimit
 
 ```bash
-# Test with REAL services (default)
-dotnet run test
-
-# Compare REAL vs SIMULATED
-dotnet run real
-
-# Use SIMULATED for fast demo
-dotnet run simulated
-
-# Speed test (uses REAL)
-dotnet run speed
-
-# Universal examples (uses REAL)
-dotnet run universal
+dotnet run --project wwwmmm.csproj -- engines      # L/R motorët
+dotnet run --project wwwmmm.csproj -- real         # rrjedha e plotë
+dotnet run --project wwwmmm.csproj -- speed        # kohë informuese
+dotnet run --project wwwmmm.csproj -- demo         # validim me fixture
 ```
 
-## 📖 Documentation
+`speed` mat median dhe p95 mbi 20 ekzekutime pas 5 ngrohjeve me input 64 KiB të
+përzier. Rezultatet varen nga mjedisi; pragjet e regresionit mbahen nga suite-i
+i testeve, jo nga ky dokument.
 
-- **README.md** - Main documentation
-- **REAL_PROCESSING.md** - This file
-- **API_Documentation.md** - Complete API
-- **ARCHITECTURE.md** - System design
+## Kufijtë
 
-## ✅ Production Ready
+- Skanimi fizik (`device scan`) nuk është verifikuar në harduer.
+- Printimi fizik nuk është verifikuar në harduer.
+- OCR nuk ekziston në këtë kod.
+- Inferenca ONNX kërkon model real të konfiguruar.
+- Numrat e performancës janë matje mjedisi, jo garanci.
 
-**Status:** ✅ REAL Processing Enabled
-**Version:** 3.14.0 - Real Update
-**Mode:** Production
-**Fake Data:** ELIMINATED
-
----
-
-**Lightning SPP 3.14 - Now with 100% REAL processing!** ⚡
-
-*No more simulations. No more fake data. Only real technology.*
+Për gjendjen e plotë të aftësive shih
+[Docs/MANUAL/10-KUFIJTE-DHE-PRETENDIMET.md](Docs/MANUAL/10-KUFIJTE-DHE-PRETENDIMET.md)
+dhe [Docs/MANUAL/11-MATRICA-E-PRANIMIT.md](Docs/MANUAL/11-MATRICA-E-PRANIMIT.md).

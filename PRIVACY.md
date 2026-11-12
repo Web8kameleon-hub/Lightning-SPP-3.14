@@ -226,11 +226,10 @@ For medical device deployments:
 
 ### 7.3 Medical Data Security
 
-- HIPAA Security Rule compliance
-- ISO 27001 certified processes
-- Segregated medical data storage
-- Enhanced audit logging
-- Encrypted backups
+No independent healthcare compliance or ISO 27001 certification is established
+by this repository. Deployment-specific access isolation, audit retention,
+backup encryption and recovery must be configured and verified by the operator
+before sensitive data is accepted. See [COMPLIANCE.md](COMPLIANCE.md).
 
 ---
 

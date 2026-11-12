@@ -95,7 +95,9 @@ public class LicenseKey
             return null;
 
         var parts = key.Split('-', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 6 && string.Equals(parts[0], SignedPrefix, StringComparison.Ordinal))
+        if (parts.Length == 6 &&
+            (string.Equals(parts[0], SignedPrefix, StringComparison.Ordinal) ||
+             string.Equals(parts[0], LicenseSignature.Prefix, StringComparison.Ordinal)))
             return parts[1];
         return null;
     }
@@ -121,13 +123,6 @@ public class LicenseKey
         }
 
         var kid = ResolveActiveKid();
-        var key = ResolveSigningKeys();
-        if (!key.TryGetValue(kid, out var signingSecret))
-        {
-            throw new InvalidOperationException(
-                $"Active signing KID '{kid}' is not configured in {SigningKeysEnv}. Configure the active KID and signing key explicitly.");
-        }
-
         if (IsKidExpired(kid, DateTime.UtcNow, out var expiresOn))
         {
             throw new InvalidOperationException($"Signing key '{kid}' expired on {expiresOn:yyyy-MM-dd}. Rotate active KID.");
@@ -140,9 +135,27 @@ public class LicenseKey
         }
 
         var payload = $"{tierCode}|{expiration}|{segment}";
+
+        // Prefer asymmetric signing when the issuer private key for this KID exists.
+        // The resulting LSP3 key is verifiable with a public key alone, so a customer
+        // device never needs the issuer secret.
+        if (LicenseSignature.ResolvePrivateKeys().ContainsKey(kid))
+        {
+            var asymmetric = LicenseSignature.Sign(payload, kid);
+            return $"{LicenseSignature.Prefix}-{kid}-{tierCode}-{expiration}-{segment}-{asymmetric}";
+        }
+
+        var key = ResolveSigningKeys();
+        if (!key.TryGetValue(kid, out var signingSecret))
+        {
+            throw new InvalidOperationException(
+                $"Active signing KID '{kid}' is not configured in {SigningKeysEnv} or {LicenseSignature.PrivateKeysEnv}. Configure the active KID explicitly.");
+        }
+
         var signature = ComputeSignature(payload, signingSecret);
 
-        // Signed format with KID: LSP2-{KID}-{TIER}-{EXP}-{SEG}-{SIGNATURE}
+        // HMAC format with KID, retained for issuers that have not migrated yet:
+        // LSP2-{KID}-{TIER}-{EXP}-{SEG}-{SIGNATURE}
         return $"{SignedPrefix}-{kid}-{tierCode}-{expiration}-{segment}-{signature}";
     }
 
@@ -390,6 +403,46 @@ public class LicenseKey
             return false;
 
         var parts = key.Split('-', StringSplitOptions.RemoveEmptyEntries);
+
+        // Asymmetric format: verifiable with the public key only.
+        if (parts.Length == 6 && string.Equals(parts[0], LicenseSignature.Prefix, StringComparison.Ordinal))
+        {
+            var asymmetricTier = parts[2] switch
+            {
+                "FREE" => LicenseTier.Free,
+                "PAYGO" => LicenseTier.PayAsYouGo,
+                "UNLTD" => LicenseTier.Unlimited,
+                "ENTER" => LicenseTier.Enterprise,
+                _ => (LicenseTier?)null
+            };
+
+            if (asymmetricTier == null)
+                return false;
+
+            if (!DateTime.TryParseExact(parts[3], "yyyyMMdd", null,
+                    System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                    out var asymmetricExpiry))
+                return false;
+
+            var asymmetricPayload = $"{parts[2]}|{parts[3]}|{parts[4]}";
+            if (!LicenseSignature.Verify(asymmetricPayload, parts[5], parts[1]))
+                return false;
+
+            if (!IsKidUsableForValidation(parts[1], DateTime.UtcNow))
+                return false;
+
+            license = new LicenseKey
+            {
+                Key = key,
+                Tier = asymmetricTier.Value,
+                IssueDate = DateTime.UtcNow,
+                ExpirationDate = asymmetricExpiry,
+                IsActive = true,
+                Features = GetFeaturesForTier(asymmetricTier.Value)
+            };
+
+            return true;
+        }
 
         if (parts.Length == 6 && string.Equals(parts[0], SignedPrefix, StringComparison.Ordinal))
         {

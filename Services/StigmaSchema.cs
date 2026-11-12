@@ -17,8 +17,8 @@ internal static class StigmaSchema
                         "name": "{{active.ToString().ToLowerInvariant()}}"
                     },
                     "profiles": [
-                        {"level":1,"name":"quality","scan":"NanoDecibel","processing":"Hybrid+AI","output":"Stigma lossless"},
-                        {"level":2,"name":"balanced","scan":"TideWave","processing":"Auto+AI","output":"High lossless"},
+                        {"level":1,"name":"quality","scan":"NanoDecibel","processing":"Hybrid Brotli","output":"Stigma lossless"},
+                        {"level":2,"name":"balanced","scan":"TideWave","processing":"Auto Brotli","output":"High lossless"},
                         {"level":3,"name":"lightning","scan":"Lightning","processing":"CLX fast path","output":"Normal lossless"}
                     ],
                     "phases": ["scan", "process", "output"]

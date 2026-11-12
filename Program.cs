@@ -33,6 +33,15 @@ internal class Program
             finally { Console.CancelKeyPress -= cancel; }
             return;
         }
+        if (args.Length > 0 && args[0].Equals("flow", StringComparison.OrdinalIgnoreCase))
+        {
+            using var cancellation = new CancellationTokenSource();
+            ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
+            Console.CancelKeyPress += cancel;
+            try { Environment.ExitCode = await Flow.FlowCommands.RunAsync(args, cancellation.Token); }
+            finally { Console.CancelKeyPress -= cancel; }
+            return;
+        }
         if (args.Length > 0 && (args[0].Equals("bridge", StringComparison.OrdinalIgnoreCase) ||
             args[0] is "document" or "device"))
         {
@@ -108,11 +117,17 @@ internal class Program
             case "demo":
                 await RunDemo();
                 break;
+            case "smoke-test":
             case "test":
+                Console.WriteLine("⚠ 'test' runs the smoke test suite only — this is NOT the full suite.");
+                Console.WriteLine("  For the full test suite, run: dotnet test");
                 await wwwmmm.Tests.SimpleTests.RunAllTests();
                 break;
             case "examples":
                 await wwwmmm.Examples.UsageExamples.RunAllExamples();
+                break;
+            case "engines":
+                await wwwmmm.Examples.RealProcessingExamples.DemonstrateImageEngines();
                 break;
             case "universal":
                 await wwwmmm.Examples.UniversalExamples.RunAllUniversalExamples();
@@ -120,13 +135,11 @@ internal class Program
             case "speed":
                 await SpeedTest();
                 break;
-            case "real":
-                await wwwmmm.Examples.RealVsSimulatedExamples.RunAllComparisons();
+            case "convert":
+                await ConvertFile(args);
                 break;
-            case "simulated":
-                LightningAPI.UseSimulatedServices();
-                Console.WriteLine("✓ Compatibility mode requested. Simulated services are removed; running REAL services.");
-                await RunDemo();
+            case "real":
+                await wwwmmm.Examples.RealProcessingExamples.RunAllComparisons();
                 break;
             default:
                 ShowHelp();
@@ -218,7 +231,9 @@ internal class Program
         {
             Console.WriteLine($"✓ Print artifact completed in {result.Metadata.ProcessingTimeMs}ms");
             Console.WriteLine($"  Technology: {result.Metadata.Technology}");
-            Console.WriteLine($"  Artifacts: {result.Metadata.PagesPrinted}");
+            // NOTE: this command produces a .br artifact, not physical pages.
+            // The metadata field name is historical; display it as the metadata it is.
+            Console.WriteLine($"  Artifact metadata (PagesPrinted): {result.Metadata.PagesPrinted}");
             Console.WriteLine($"  Output: {result.Metadata.Destination}");
         }
         else
@@ -279,37 +294,119 @@ internal class Program
     {
         Console.WriteLine("⚡ Lightning 3.14 - Speed Test\n");
 
-        var testData = new byte[1024];
+        // Realistic, non-degenerate input. Zero-filled buffers compress trivially and do not
+        // represent production behavior; 64 KiB mixed pattern + entropy is more representative.
+        const int inputSize = 64 * 1024;
+        var testData = new byte[inputSize];
+        Random.Shared.NextBytes(testData);
+        for (var i = 0; i < inputSize; i += 64) testData[i] = (byte)(i & 0xFF);
 
-        Console.WriteLine("Testing speed modes...\n");
+        const int warmupRuns = 5;
+        const int measuredRuns = 20;
 
-        // Instant
-        var start = DateTime.UtcNow;
-        await Lightning314.Instant(testData);
-        var instantMs = (DateTime.UtcNow - start).TotalMilliseconds;
-        Console.WriteLine($"Instant:    {instantMs:F3}ms (target: <1ms) {(instantMs < 1 ? "✓" : "⚠")}");
+        var (instantMedian, instantP95) = await MeasureAsync(
+            async () => { await Lightning314.Instant(testData); }, warmupRuns, measuredRuns);
+        var (ultraMedian, ultraP95) = await MeasureAsync(
+            async () => { await Lightning314.UltraFast(testData); }, warmupRuns, measuredRuns);
+        var (lightningMedian, lightningP95) = await MeasureAsync(
+            async () => { await Lightning314.Lightning(testData); }, warmupRuns, measuredRuns);
 
-        // Ultra Fast
-        start = DateTime.UtcNow;
-        await Lightning314.UltraFast(testData);
-        var ultraMs = (DateTime.UtcNow - start).TotalMilliseconds;
-        Console.WriteLine($"UltraFast:  {ultraMs:F3}ms (target: <5ms) {(ultraMs < 5 ? "✓" : "⚠")}");
+        Console.WriteLine($"Input: {inputSize} bytes (mixed entropy), {measuredRuns} runs after {warmupRuns} warmup");
+        Console.WriteLine($"Instant:    median {instantMedian:F3} ms, p95 {instantP95:F3} ms");
+        Console.WriteLine($"UltraFast:  median {ultraMedian:F3} ms, p95 {ultraP95:F3} ms");
+        Console.WriteLine($"Lightning:  median {lightningMedian:F3} ms, p95 {lightningP95:F3} ms");
+        Console.WriteLine("\nThese are informational measurements and are environment-dependent.");
+        Console.WriteLine("They are not acceptance criteria on their own; regression gates are enforced by PerformanceGateTests in CI.");
+    }
 
-        // Lightning
-        start = DateTime.UtcNow;
-        await Lightning314.Lightning(testData);
-        var lightningMs = (DateTime.UtcNow - start).TotalMilliseconds;
-        Console.WriteLine($"Lightning:  {lightningMs:F3}ms (target: <10ms) {(lightningMs < 10 ? "✓" : "⚠")}");
+    private static async Task ConvertFile(string[] args)
+    {
+        if (args.Length < 3)
+        {
+            Console.WriteLine("Usage: wwwmmm convert <input-image> <png|jpeg|bmp|tiff|pdf> [quality 1-100]");
+            return;
+        }
 
-        Console.WriteLine(instantMs < 1 && ultraMs < 5 && lightningMs < 10
-            ? "\nAll speed targets met in this run."
-            : "\nSome speed targets were not met in this run. CI regression gates are defined in PerformanceGateTests.");
+        if (!TryParseOutputFormat(args[2], out var format))
+        {
+            Console.Error.WriteLine($"✗ Unknown format '{args[2]}'. Use png, jpeg, bmp, tiff or pdf.");
+            Environment.ExitCode = 2;
+            return;
+        }
+
+        if (!int.TryParse(args.Length > 3 ? args[3] : "90", out var quality) || quality is < 1 or > 100)
+        {
+            Console.Error.WriteLine("✗ Quality must be an integer between 1 and 100.");
+            Environment.ExitCode = 2;
+            return;
+        }
+
+        var input = args[1];
+        if (!File.Exists(input))
+        {
+            Console.Error.WriteLine($"✗ Source file not found: {input}");
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        var scan = await LightningAPI.QuickScanAsync(input);
+        if (!scan.Success)
+        {
+            Console.Error.WriteLine($"✗ Convert failed: {scan.Error}");
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        var extension = format switch
+        {
+            OutputFormat.Jpeg => ".jpg",
+            OutputFormat.Tiff => ".tiff",
+            _ => "." + format.ToString().ToLowerInvariant()
+        };
+        var output = LightningAPI.EncodeOutput(scan.Data, format, quality);
+        var outputPath = Path.ChangeExtension(input, extension);
+        await File.WriteAllBytesAsync(outputPath, output);
+
+        Console.WriteLine($"✓ Converted {input} → {outputPath}");
+        Console.WriteLine($"  Format: {format} (quality {quality})");
+        Console.WriteLine($"  Output size: {output.Length} bytes");
+    }
+
+    private static bool TryParseOutputFormat(string value, out OutputFormat format)
+    {
+        switch (value.Trim().ToLowerInvariant())
+        {
+            case "png": format = OutputFormat.Png; return true;
+            case "jpg":
+            case "jpeg": format = OutputFormat.Jpeg; return true;
+            case "bmp": format = OutputFormat.Bmp; return true;
+            case "tif":
+            case "tiff": format = OutputFormat.Tiff; return true;
+            case "pdf": format = OutputFormat.Pdf; return true;
+            default: format = default; return false;
+        }
+    }
+
+    private static async Task<(double median, double p95)> MeasureAsync(Func<Task> action, int warmupRuns, int measuredRuns)
+    {
+        for (var i = 0; i < warmupRuns; i++) await action();
+
+        var times = new double[measuredRuns];
+        for (var i = 0; i < measuredRuns; i++)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            await action();
+            sw.Stop();
+            times[i] = sw.Elapsed.TotalMilliseconds;
+        }
+        Array.Sort(times);
+        return (times[measuredRuns / 2], times[(int)(measuredRuns * 0.95)]);
     }
 
     private static async Task RunDemo()
     {
         Console.WriteLine("Running the real image-processing validation demo. Generated fixtures are explicitly identified.");
-        await wwwmmm.Examples.RealVsSimulatedExamples.RunAllComparisons();
+        await wwwmmm.Examples.RealProcessingExamples.RunAllComparisons();
     }
 
     private static void ShowHelp()
@@ -325,17 +422,22 @@ internal class Program
         Console.WriteLine("\nProcessing Commands:");
         Console.WriteLine("  scan <source>           - Quick scan using TideWave + Resonance");
         Console.WriteLine("  process <source>        - Process a source file using Hybrid Multi-Engine");
-        Console.WriteLine("  print <source>          - Create a Stigma lossless print artifact");
+        Console.WriteLine("  print <source>          - Create a Stigma lossless print artifact (.br)");
         Console.WriteLine("  pipeline <source>       - Run complete Lightning Pipeline");
         Console.WriteLine("  batch <sources...>      - Batch process multiple items");
         Console.WriteLine("  demo                    - Run demonstration");
-        Console.WriteLine("  test                    - Run system tests");
+        Console.WriteLine("  smoke-test / test       - Run SMOKE tests only (not the full suite; use dotnet test)");
         Console.WriteLine("  examples                - Run usage examples");
+        Console.WriteLine("  engines                 - Verify both L/R image engines (Skia, ImageSharp)");
         Console.WriteLine("  serve [port]            - Start REST API + Web Dashboard");
         Console.WriteLine("  bridge <operation>      - Excel Core / Excel service / OS-CLX NodeDB adapters (see Docs/BRIDGES.md)");
         Console.WriteLine("  audit-imagesharp [root] [report.md]");
-        Console.WriteLine("  benchmark-documents <input-directory> <new-report.json> [runs:1-10]");
         Console.WriteLine("                         - Scan the repo for real SixLabors.ImageSharp usage");
+        Console.WriteLine("  benchmark-documents <input-directory> <new-report.json> [runs:1-10]");
+        Console.WriteLine("                         - Run the real document benchmark and write a report");
+        Console.WriteLine("  flow <command>          - Reference flow: intake, rules, fields with references, review, batch, package");
+        Console.WriteLine("  convert <in> <fmt> [q]  - Encode a processed image to png/jpeg/bmp/tiff/pdf");
+        Console.WriteLine("  speed                   - Informational timing (median/p95 over 20 runs)");
         Console.WriteLine("\nTechnologies:");
         Console.WriteLine("  • TideWave - Balanced scanning");
         Console.WriteLine("  • CLX - Core processing");
