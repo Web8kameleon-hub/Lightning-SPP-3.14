@@ -27,12 +27,30 @@ byId('tryForm').addEventListener('submit', async (event) => {
     message('tryStatus', 'Choose a PDF file for PDF Processor.', 'error'); return;
   }
   const archiveInput = !pdfOnly && /\.zip$/i.test(file.name);
-  const contentType = archiveInput ? 'application/zip' : pdfOnly ? 'application/pdf' : file.type;
+  // Browsers may return an empty or generic MIME type for valid local files.
+  // Use the extension only to supply the request MIME hint; the server still
+  // validates and decodes the actual bytes before processing.
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const mimeByExtension = {
+    pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    png: 'image/png', bmp: 'image/bmp', tif: 'image/tiff',
+    tiff: 'image/tiff', gif: 'image/gif'
+  };
+  const supportedMime = mimeByExtension[extension];
+  if (!archiveInput && !supportedMime) {
+    message('tryStatus', 'Unsupported file type. Upload a PDF, JPEG, PNG, BMP, TIFF or GIF file.', 'error');
+    return;
+  }
+  const contentType = archiveInput ? 'application/zip' : supportedMime;
 
   const structural = archiveInput && Boolean(byId('archiveAnalysis')?.checked);
 
-  const wantsZip = archiveInput || byId('zipPackage').checked;
-  const profile = byId('profileSelect').value;
+    const wantsZip = archiveInput || byId('zipPackage').checked;
+    const profile = byId('profileSelect').value;
+    const requestedFormat = (byId('formatSelect')?.value || 'png').toLowerCase();
+    const processEndpoint = requestedFormat === 'png'
+      ? '/api/try/process'
+      : '/api/try/process?format=' + encodeURIComponent(requestedFormat);
   if (pdfOnly && !pdfProfiles.includes(profile)) {
     message('tryStatus', 'This profile is not available in PDF Processor.', 'error'); return;
   }
@@ -45,9 +63,14 @@ byId('tryForm').addEventListener('submit', async (event) => {
   byId('downloadLink').removeAttribute('href');
 
   try {
-    const response = await fetch(archiveInput ? '/api/try/archive' : wantsZip ? '/api/try/package' : '/api/try/process', {
+    const response = await fetch(archiveInput ? '/api/try/archive' : wantsZip ? '/api/try/package' : processEndpoint, {
       method: 'POST',
-
+      headers: {
+        'Content-Type': contentType,
+        'X-Stigma-Profile': profile,
+        ...(archiveInput && structural ? { 'X-Archive-Analysis': 'structural' } : {})
+      },
+      body: file
     });
 
     if (wantsZip && response.ok) {
@@ -99,10 +122,16 @@ byId('tryForm').addEventListener('submit', async (event) => {
     if (isPdf && (!data.outputPdfBase64 || data.outputMimeType !== 'application/pdf')) {
       throw new Error('The processed PDF output is missing or invalid.');
     }
-    download.href = isPdf ? 'data:application/pdf;base64,' + data.outputPdfBase64 : afterSrc;
+    const converted = !isPdf && typeof data.convertedBase64 === 'string' && data.convertedBase64.length > 0;
+    download.href = converted
+      ? 'data:' + data.convertedMimeType + ';base64,' + data.convertedBase64
+      : isPdf ? 'data:application/pdf;base64,' + data.outputPdfBase64 : afterSrc;
     const stem = file.name.replace(/\.[^.]*$/, '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 100) || 'document';
-    download.download = stem + '-processed' + (isPdf ? '.pdf' : '.png');
-    download.textContent = isPdf ? 'Download processed PDF' : 'Download processed image';
+    const downloadExtension = converted ? data.convertedFileExtension : isPdf ? '.pdf' : '.png';
+    download.download = stem + '-processed' + downloadExtension;
+    download.textContent = converted
+      ? 'Download processed ' + downloadExtension.replace('.', '').toUpperCase()
+      : isPdf ? 'Download processed PDF' : 'Download processed image';
 
     byId('metaInput').textContent = isPdf ? `PDF • all ${data.totalPages} pages processed` : 'Image';
     byId('metaProfile').textContent = data.profile;

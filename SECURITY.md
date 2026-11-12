@@ -64,36 +64,47 @@ Please include the following information:
 
 ### Data Protection
 
-Lightning SPP 3.14 implements the following security measures:
+What the code actually implements (each item is verified elsewhere in this
+repository; nothing below is aspirational):
 
-- **Encryption at Rest** - Data encrypted using AES-256
-- **Encryption in Transit** - TLS 1.3 for all network communication
-- **Authentication** - Multi-factor authentication support
-- **Authorization** - Role-based access control (RBAC)
-- **Audit Logging** - Comprehensive security event logging
+- **Encryption at rest** — license state is stored with AES-256-GCM
+  (`Licensing/LicenseManager.cs`). The key is derived from machine and user
+  names, so this is confidentiality, not integrity: the signature is what
+  proves authenticity.
+- **Encryption in transit** — **not terminated by the application.** The HTTP
+  listener speaks plain HTTP and TLS must be provided by the reverse proxy.
+- **Authentication** — password (PBKDF2, Identity V3, 600,000 iterations) plus
+  cookie sessions. **No multi-factor authentication is implemented.**
+- **Authorization** — owner isolation, admin bearer token, workspace email
+  allowlist. **There is no general RBAC role system.**
+- **Audit logging** — issuance and signing events (`SigningAuditTrail`,
+  `InternalAuditLogger`); not a centralised SIEM feed.
+- **License signatures** — ECDSA P-256, verifiable with a public key alone
+  (`Licensing/LicenseSignature.cs`).
 
-### Medical Device Compliance
+### Medical device and regulatory status
 
-For medical device deployments:
+No medical-device compliance is claimed. FDA 21 CFR Part 11, ISO 13485 and
+IEC 62304 conformance are **not established** by this repository; HIPAA requires
+agreements and audit that only an operator can provide. See
+[Docs/COMPLIANCE/README.md](Docs/COMPLIANCE/README.md).
 
-- **FDA 21 CFR Part 11** - Electronic records compliance
-- **HIPAA** - Health Insurance Portability and Accountability Act
-- **ISO 13485** - Medical devices quality management
-- **IEC 62304** - Medical device software lifecycle
+### Data privacy
 
-### Data Privacy
+- GDPR is **not certified**. The processing pipeline runs locally and does not
+  send documents to external services.
+- Deletion of intermediate artifacts is an operator responsibility; the product
+  does not automate retention policy.
+- Account data lives in `LSPP_DATA_DIR` and Longo with restricted permissions.
 
-- **GDPR Compliant** - General Data Protection Regulation
-- **Data Minimization** - Only essential data collected
-- **Right to Erasure** - User data deletion on request
-- **Data Portability** - Export user data in standard format
+### Secure development
 
-### Secure Development
-
-- **Code Review** - All code reviewed before merge
-- **Static Analysis** - Automated security scanning
-- **Dependency Scanning** - Regular vulnerability checks
-- **Penetration Testing** - Annual third-party security audits
+- **Code review** — required before merge (`AGENTS.md`).
+- **Static analysis / dependency scanning** — **no automated process exists**
+  for CVE monitoring; this is an open item in
+  [Docs/COMPLIANCE/SOUP_INVENTORY.md](Docs/COMPLIANCE/SOUP_INVENTORY.md).
+- **Penetration testing** — **none has been performed.** No external audit is
+  recorded in this repository.
 
 ## Security Best Practices
 
@@ -115,11 +126,18 @@ For medical device deployments:
 
 ### For Medical Devices
 
-1. **Validate environments** - Certified hardware only
-2. **Network isolation** - Separate medical network
-3. **Access control** - Strict authentication requirements
-4. **Audit trails** - Complete activity logging
-5. **Incident response** - Documented procedures
+Only applicable after clinical validation and regulatory clearance, neither of
+which exists today:
+
+1. **Validate environments** — hardware and OS configuration must be frozen and
+   recorded per deployment.
+2. **Network isolation** — do not place a processing node on a shared network.
+3. **Access control** — verified accounts only; workspace access is an explicit
+   allowlist.
+4. **Audit trails** — retain signing and admin logs; they are not shipped
+   off-host by the product.
+5. **Incident response** — follow
+   [Docs/MANUAL/06-RREGULLAT-E-SIGURISE.md](Docs/MANUAL/06-RREGULLAT-E-SIGURISE.md) §6.12.
 
 ## Known Security Considerations
 
@@ -137,25 +155,34 @@ For medical device deployments:
 
 ### File Operations
 
-- **Path traversal prevention** - Validated file paths only
-- **File size limits** - Protection against disk exhaustion
-- **Virus scanning** - Integration with antivirus solutions
+- **Path traversal prevention** — static file paths are resolved and verified to
+  stay inside `Web/wwwroot`.
+- **File size limits** — 1 MiB request bodies, 8 MiB for `/api/try/*`, bounded
+  bridge payloads.
+- **Virus scanning** — **not implemented.** No antivirus integration exists in
+  this codebase; operators must provide it at the perimeter.
 
-## Compliance Certifications
+## Compliance status
 
-### Current Certifications
+No certification is claimed. This repository contains **no auditable evidence**
+of ISO 9001, ISO 27001, ISO 13485, SOC 2, MDR/CE marking, FDA 510(k) clearance
+or HIPAA attestation. `README.md` states the same; earlier drafts of this file
+claimed otherwise and were incorrect.
 
-- ✅ **ISO 27001** - Information Security Management
-- ✅ **ISO 9001** - Quality Management
-- ✅ **ISO 13485** - Medical Device Quality (in progress)
-- ✅ **SOC 2 Type II** - Service Organization Controls
-- ✅ **GDPR Compliant** - EU Data Protection
+What does exist is a readiness dossier with an explicit gap analysis:
 
-### Regulatory Approvals
+| Document | Content |
+| --- | --- |
+| [Docs/COMPLIANCE/README.md](Docs/COMPLIANCE/README.md) | Status statement and certification roadmap |
+| [Docs/COMPLIANCE/GAP_ANALYSIS.md](Docs/COMPLIANCE/GAP_ANALYSIS.md) | Gap analysis against IEC 62304, ISO 14971, IEC 62366-1, ISO 13485, MDR, FDA, HIPAA, GDPR, ISO 27001 |
+| [Docs/COMPLIANCE/RISK_REGISTER.md](Docs/COMPLIANCE/RISK_REGISTER.md) | Risk register with owners and residual risk |
+| [Docs/COMPLIANCE/SOUP_INVENTORY.md](Docs/COMPLIANCE/SOUP_INVENTORY.md) | Third-party component inventory |
+| [Docs/COMPLIANCE/SECURITY_CONTROLS.md](Docs/COMPLIANCE/SECURITY_CONTROLS.md) | Security controls mapped to their evidence |
+| [Docs/COMPLIANCE/TRACEABILITY.md](Docs/COMPLIANCE/TRACEABILITY.md) | Requirement to control to test matrix |
 
-- 🔄 **FDA 510(k)** - Medical device approval (in progress)
-- 🔄 **CE Mark** - European Conformity (in progress)
-- ✅ **HIPAA Compliant** - Healthcare data protection
+Regulatory approval requires an external notified body or regulator, a quality
+management system, clinical evaluation and post-market surveillance. None of
+those can be produced by this repository alone.
 
 ## Security Contact
 
@@ -177,5 +204,5 @@ Address: Wattenscheider Hellweg 199, 44869 Bochum, Germany
 
 ---
 
-**Lightning SPP 3.14 - Secure by Design**  
+**Lightning SPP 3.14 — security posture documented, certification not claimed**
 **© 2024 ABA GmbH. All rights reserved.**

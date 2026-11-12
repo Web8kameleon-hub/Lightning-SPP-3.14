@@ -19,14 +19,14 @@ internal static class LicenseApiServer
     // Rate limiting: max requests per window per IP
     private const int RateLimitMaxRequests = 30;
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
-    private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _rateLimits = new();
+    private static readonly RequestRateLimiter _rateLimits = new(RateLimitMaxRequests, RateLimitWindow);
 
     // A tighter, dedicated limit for /api/try/process: it runs real CPU-bound image
     // processing for anonymous, unauthenticated visitors, so it must not share the
     // general 30/min budget that covers lightweight endpoints like /api/health.
     private const int TryRateLimitMaxRequests = 10;
     private static readonly TimeSpan TryRateLimitWindow = TimeSpan.FromMinutes(5);
-    private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _tryRateLimits = new();
+    private static readonly RequestRateLimiter _tryRateLimits = new(TryRateLimitMaxRequests, TryRateLimitWindow);
     private const long TryMaxUploadBytes = 8 * 1024 * 1024; // 8 MB
     private static readonly SemaphoreSlim TryProcessingSlots = new(1, 1);
 
@@ -36,33 +36,16 @@ internal static class LicenseApiServer
         "application/pdf"
     };
 
-    private static bool IsRateLimited(string ip)
-    {
-        var now = DateTime.UtcNow;
-        var entry = _rateLimits.GetOrAdd(ip, _ => (0, now));
-        if (now - entry.WindowStart > RateLimitWindow)
-            entry = (0, now);
-        entry = (entry.Count + 1, entry.WindowStart);
-        _rateLimits[ip] = entry;
-        return entry.Count > RateLimitMaxRequests;
-    }
+    internal static bool IsRateLimited(string ip) => _rateLimits.IsLimited(ip, DateTimeOffset.UtcNow);
 
-    private static bool IsTryRateLimited(string ip)
-    {
-        var now = DateTime.UtcNow;
-        var entry = _tryRateLimits.GetOrAdd(ip, _ => (0, now));
-        if (now - entry.WindowStart > TryRateLimitWindow)
-            entry = (0, now);
-        entry = (entry.Count + 1, entry.WindowStart);
-        _tryRateLimits[ip] = entry;
-        return entry.Count > TryRateLimitMaxRequests;
-    }
+    internal static bool IsTryRateLimited(string ip) => _tryRateLimits.IsLimited(ip, DateTimeOffset.UtcNow);
 
     public static async Task RunAsync(int port, CancellationToken cancellationToken = default)
     {
         RuntimeSecurity.ValidateProduction();
         if (RuntimeSecurity.IsProduction && CustomerAccounts.Enabled) _ = CustomerAccounts.Store.ReadState();
         using var workerStop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var guestCleanupWorker = GuestActivity.CleanupAsync(workerStop.Token);
         var notificationWorker = Environment.GetEnvironmentVariable("LSPP_NOTIFY_WORKER_ENABLED") == "true"
             ? RunNotificationWorkerAsync(workerStop.Token) : Task.CompletedTask;
         using var listener = new HttpListener();
@@ -107,7 +90,15 @@ internal static class LicenseApiServer
 
         workerStop.Cancel();
         await notificationWorker;
+        await guestCleanupWorker;
         InternalAuditLogger.Info("Server stopped");
+    }
+
+    private static void RecordGuestActivity((GuestActivityStore Store, string Id) guest, string operation, int status)
+    {
+        try { guest.Store.Record(guest.Id, operation, status); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        { InternalAuditLogger.Error("Guest history write unavailable: " + ex.GetType().Name); }
     }
 
     private static async Task RunNotificationWorkerAsync(CancellationToken cancellationToken)
@@ -165,6 +156,8 @@ internal static class LicenseApiServer
             "/" or "/index.html" or "/features" or "/technology" or "/try" or "/pdf" or
             "/pricing" or "/benchmarks" or "/swagger" or "/openapi.json" or
             "/robots.txt" or "/sitemap.xml" or "/site.css" or "/try.js" or "/assistant.js" or "/assistant.css" or "/assistant-i18n.mjs" or "/assistant-locales.json" or
+            "/theme.css" or "/reveal.js" or
+            "/assets/landing-hero.png" or "/assets/landing-tile.png" or "/assets/landing-band.png" or
             "/favicon.ico" or "/favicon-16x16.png" or "/favicon-32x32.png" or
             "/apple-touch-icon.png" or "/site.webmanifest";
 
@@ -191,13 +184,18 @@ internal static class LicenseApiServer
                 await ServeStaticAsync(context, "assistant-locales.json", "application/json; charset=utf-8");
                 return;
             }
-            if (path == "/assistant-i18n.mjs" || path == "/site.css" || path == "/dashboard.js" || path == "/try.js" || path == "/account.js" || path == "/workspace.js" || path == "/workspace.css" || path == "/screen-context.js" || path == "/assistant.js" || path == "/assistant.css")
+            if (path == "/assistant-i18n.mjs" || path == "/site.css" || path == "/theme.css" || path == "/reveal.js" || path == "/dashboard.js" || path == "/try.js" || path == "/account.js" || path == "/workspace.js" || path == "/workspace.css" || path == "/screen-context.js" || path == "/assistant.js" || path == "/assistant.css")
             {
                 var jsOrCss = path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8";
                 await ServeStaticAsync(context, path[1..], jsOrCss);
                 return;
             }
 
+            if (path == "/api/assistant" || path.StartsWith("/api/assistant/", StringComparison.Ordinal))
+            {
+                await GuestAssistantApi.HandleAsync(context);
+                return;
+            }
             if (path == "/api/workflow" || path.StartsWith("/api/workflow/", StringComparison.Ordinal))
             {
                 await WorkflowApi.HandleAsync(context);
@@ -283,6 +281,12 @@ internal static class LicenseApiServer
                 return;
             }
 
+            if (path is "/assets/landing-hero.png" or "/assets/landing-tile.png" or "/assets/landing-band.png")
+            {
+                await ServeAssetAsync(context, path["/assets/".Length..], "image/png");
+                return;
+            }
+
             if (path == "/site.webmanifest")
             {
                 await ServeStaticAsync(context, "site.webmanifest", "application/manifest+json; charset=utf-8");
@@ -305,6 +309,12 @@ internal static class LicenseApiServer
             {
                 if (RuntimeSecurity.IsProduction && CustomerAccounts.Enabled) _ = CustomerAccounts.Store.ReadState();
                 await TextAsync(context, HttpStatusCode.OK, $"ok=true\nservice=LightningSPP\ntimestamp={DateTime.UtcNow:O}");
+                return;
+            }
+
+            if (path.StartsWith("/api/fluid/", StringComparison.OrdinalIgnoreCase))
+            {
+                await FluidApiHandler.HandleAsync(context, path);
                 return;
             }
 
@@ -381,8 +391,17 @@ internal static class LicenseApiServer
                     await JsonAsync(context, HttpStatusCode.ServiceUnavailable, "{\"ok\":false,\"error\":\"Archive processing is busy.\"}");
                     return;
                 }
-                try { await HandleArchiveAsync(context, clientIp); }
-                finally { TryProcessingSlots.Release(); }
+                (GuestActivityStore Store, string Id)? archiveGuest = null;
+                try
+                {
+                    archiveGuest = GuestActivity.Begin(context);
+                    await HandleArchiveAsync(context, clientIp);
+                }
+                finally
+                {
+                    TryProcessingSlots.Release();
+                    if (archiveGuest is { } guest) RecordGuestActivity(guest, "archive.process", context.Response.StatusCode);
+                }
                 return;
             }
             if (path is "/api/try/process" or "/api/try/package" && context.Request.HttpMethod == "POST")
@@ -394,8 +413,17 @@ internal static class LicenseApiServer
                         "{\"ok\":false,\"error\":\"Document processing is busy. Please retry shortly.\"}");
                     return;
                 }
-                try { await HandleTryProcessAsync(context, clientIp, path == "/api/try/package"); }
-                finally { TryProcessingSlots.Release(); }
+                (GuestActivityStore Store, string Id)? documentGuest = null;
+                try
+                {
+                    documentGuest = GuestActivity.Begin(context);
+                    await HandleTryProcessAsync(context, clientIp, path == "/api/try/package");
+                }
+                finally
+                {
+                    TryProcessingSlots.Release();
+                    if (documentGuest is { } guest) RecordGuestActivity(guest, path == "/api/try/package" ? "document.package" : "document.process", context.Response.StatusCode);
+                }
                 return;
             }
 
@@ -601,6 +629,19 @@ internal static class LicenseApiServer
             return;
         }
 
+        // Optional download format for image uploads. Validated before any processing so an
+        // unknown value cannot consume the CPU budget; PDF input always returns a PDF.
+        var requestedFormat = context.Request.QueryString["format"];
+        var hasRequestedFormat = !string.IsNullOrWhiteSpace(requestedFormat);
+        if (hasRequestedFormat &&
+            !contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) &&
+            !TryParseOutputFormat(requestedFormat!, out _))
+        {
+            await JsonAsync(context, HttpStatusCode.BadRequest,
+                "{\"ok\":false,\"error\":\"Unknown output format. Use png, jpeg, bmp, tiff or pdf.\"}");
+            return;
+        }
+
         byte[] originalBytes;
         await using (var buffer = new MemoryStream())
         {
@@ -665,28 +706,39 @@ internal static class LicenseApiServer
                 response["outputArtifactBase64"] = Convert.ToBase64String(result.ImageArtifact!);
                 response["outputArtifactMimeType"] = "application/octet-stream";
                 response["outputArtifactFileExtension"] = ".br";
+
+                // Optional customer-facing download format. The PNG preview above is unchanged
+                // for on-page display; this only adds extra output fields the page may use.
+                if (hasRequestedFormat && TryParseOutputFormat(requestedFormat!, out var outputFormat))
+                {
+                    var converted = ServiceFactory.CreateOutputAdapter().Encode(result.Output, outputFormat);
+                    response["convertedBase64"] = Convert.ToBase64String(converted);
+                    response["convertedMimeType"] = MimeTypeFor(outputFormat);
+                    response["convertedFileExtension"] = FileExtensionFor(outputFormat);
+                    response["convertedBytes"] = converted.Length;
+                }
             }
             var json = System.Text.Json.JsonSerializer.Serialize(response,
                 new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             InternalAuditLogger.Info(
-                $"Try-it demo processed: ip={clientIp}, profile={profileName}, originalBytes={originalBytes.Length}, totalTimeMs={result.TotalTimeMs}");
+                $"Document processed: profile={profileName}");
             await JsonAsync(context, HttpStatusCode.OK, json);
         }
         catch (ArgumentException ex)
         {
-            InternalAuditLogger.Error($"Try-it document validation failed: ip={clientIp}, error={ex.Message}");
+            InternalAuditLogger.Error($"Document validation failed: {ex.GetType().Name}");
             await JsonAsync(context, HttpStatusCode.BadRequest,
                 "{\"ok\":false,\"error\":\"Invalid document. PDFs must contain no more than 32 pages.\"}");
         }
         catch (DocumentException ex)
         {
-            InternalAuditLogger.Error($"Try-it document processing failed: ip={clientIp}, error={ex.Message}");
+            InternalAuditLogger.Error($"Document processing failed: {ex.GetType().Name}");
             await JsonAsync(context, HttpStatusCode.UnprocessableEntity,
                 "{\"ok\":false,\"error\":\"The document could not be validated, rendered or processed.\"}");
         }
         catch (Exception ex)
         {
-            InternalAuditLogger.Error($"Try-it demo failed: ip={clientIp}, error={ex.Message}");
+            InternalAuditLogger.Error($"Document processing failed: {ex.GetType().Name}");
             await JsonAsync(context, HttpStatusCode.InternalServerError,
                 "{\"ok\":false,\"error\":\"Processing failed unexpectedly. Please try a different file.\"}");
         }
@@ -719,6 +771,39 @@ internal static class LicenseApiServer
                 return false;
         }
     }
+
+    private static bool TryParseOutputFormat(string value, out OutputFormat format)
+    {
+        switch (value.Trim().ToLowerInvariant())
+        {
+            case "png": format = OutputFormat.Png; return true;
+            case "jpg":
+            case "jpeg": format = OutputFormat.Jpeg; return true;
+            case "bmp": format = OutputFormat.Bmp; return true;
+            case "tif":
+            case "tiff": format = OutputFormat.Tiff; return true;
+            case "pdf": format = OutputFormat.Pdf; return true;
+            default: format = default; return false;
+        }
+    }
+
+    private static string MimeTypeFor(OutputFormat format) => format switch
+    {
+        OutputFormat.Jpeg => "image/jpeg",
+        OutputFormat.Bmp => "image/bmp",
+        OutputFormat.Tiff => "image/tiff",
+        OutputFormat.Pdf => "application/pdf",
+        _ => "image/png"
+    };
+
+    private static string FileExtensionFor(OutputFormat format) => format switch
+    {
+        OutputFormat.Jpeg => ".jpg",
+        OutputFormat.Bmp => ".bmp",
+        OutputFormat.Tiff => ".tiff",
+        OutputFormat.Pdf => ".pdf",
+        _ => ".png"
+    };
 
     private static string JsonEscape(string value) =>
         "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", string.Empty) + "\"";
@@ -766,6 +851,39 @@ internal static class LicenseApiServer
         if (!File.Exists(fullPath))
         {
             await TextAsync(context, HttpStatusCode.NotFound, $"ok=false\nerror=Missing static file: {safeName}");
+            return;
+        }
+
+        var bytes = await File.ReadAllBytesAsync(fullPath);
+        context.Response.StatusCode = (int)HttpStatusCode.OK;
+        context.Response.ContentType = contentType;
+        context.Response.ContentLength64 = bytes.LongLength;
+        if (context.Request.HttpMethod != "HEAD")
+        {
+            await context.Response.OutputStream.WriteAsync(bytes);
+        }
+        context.Response.Close();
+    }
+
+    /// <summary>
+    /// Serves an image from the single <c>assets</c> subdirectory. <see cref="ServeStaticAsync"/>
+    /// deliberately rejects any name with a directory component, so this variant accepts one
+    /// fixed folder and re-checks that the resolved path cannot escape it.
+    /// </summary>
+    private static async Task ServeAssetAsync(HttpListenerContext context, string fileName, string contentType)
+    {
+        var safeName = Path.GetFileName(fileName);
+        if (!string.Equals(safeName, fileName, StringComparison.Ordinal))
+        {
+            await TextAsync(context, HttpStatusCode.BadRequest, "ok=false\nerror=Invalid file name");
+            return;
+        }
+
+        var assetsRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Web", "wwwroot", "assets"));
+        var fullPath = Path.GetFullPath(Path.Combine(assetsRoot, safeName));
+        if (!fullPath.StartsWith(assetsRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+        {
+            await TextAsync(context, HttpStatusCode.NotFound, $"ok=false\nerror=Missing static file: assets/{safeName}");
             return;
         }
 

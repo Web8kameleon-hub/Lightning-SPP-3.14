@@ -73,7 +73,13 @@ internal sealed class BridgeTransport : IDisposable
             {
                 var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
                 // Matches OS-CLX HMACGuard: method + path + UNIX timestamp, separated by newlines.
-                var message = $"{request.Method.Method}\n{request.RequestUri.AbsolutePath}\n{timestamp}";
+                var body = request.Content is null
+                    ? Array.Empty<byte>()
+                    : await request.Content.ReadAsByteArrayAsync(cancellationToken);
+                if (body.Length > 8 * 1024 * 1024)
+                    throw new BridgeException("Signed request body exceeds the OS-CLX limit.");
+                var bodyHash = Convert.ToHexStringLower(SHA256.HashData(body));
+                var message = $"{request.Method.Method}\n{request.RequestUri.AbsolutePath}\n{timestamp}\n{bodyHash}";
                 var signature = HMACSHA256.HashData(Encoding.UTF8.GetBytes(_connection.HmacSecret), Encoding.UTF8.GetBytes(message));
                 request.Headers.Add("X-CLX-Timestamp", timestamp);
                 request.Headers.Add("X-CLX-Signature", Convert.ToHexStringLower(signature));

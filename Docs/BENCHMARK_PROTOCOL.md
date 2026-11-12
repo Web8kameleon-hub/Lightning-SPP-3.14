@@ -16,7 +16,7 @@ dotnet run -c Release --no-build -- speed
 ## Release gates
 
 | Workload | Input | Statistic | CI gate |
-|---|---:|---:|---:|
+| --- | ---: | ---: | ---: |
 | Instant | deterministic 4 KiB | median of 5 | <= 50 ms |
 | UltraFast | deterministic 4 KiB | median of 5 | <= 100 ms |
 | Lightning | deterministic 4 KiB | median of 5 | <= 150 ms |

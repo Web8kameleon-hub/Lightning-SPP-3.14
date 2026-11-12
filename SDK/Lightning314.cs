@@ -1,270 +1,170 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using wwwmmm.FluidEngine.Core.Binary;
+using wwwmmm.FluidEngine.Core.Context;
+
 namespace wwwmmm.SDK;
 
-/// <summary>
-/// Lightning SPP 3.14 - Ultra-Fast API
-/// Absolute Speed Edition - Optimized for ZERO latency
-/// </summary>
 public static class Lightning314
 {
-    /// <summary>
-    /// Process in <1ms - ABSOLUTE SPEED
-    /// Perfect for: Real-time medical devices, IoT, embedded
-    /// CLX engine: Brotli Fastest compression pipeline
-    /// </summary>
     public static async Task<byte[]> Instant(byte[] data)
     {
-        // CLX: Brotli Fastest — minimal overhead, sub-ms on small payloads
-        using var output = new System.IO.MemoryStream();
-        using (var brotli = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.Fastest))
-        {
+        using var output = new MemoryStream();
+        using (var brotli = new BrotliStream(output, CompressionLevel.Fastest))
             await brotli.WriteAsync(data);
-        }
         return output.ToArray();
     }
 
-    /// <summary>
-    /// Process in <5ms - ULTRA FAST
-    /// Perfect for: Mobile, web, general purpose
-    /// CLX.i engine: Brotli Optimal compression
-    /// </summary>
     public static async Task<byte[]> UltraFast(byte[] data)
     {
-        // CLX.i: Brotli Optimal — balance speed/quality
-        using var output = new System.IO.MemoryStream();
-        using (var brotli = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.Optimal))
-        {
+        using var output = new MemoryStream();
+        using (var brotli = new BrotliStream(output, CompressionLevel.Optimal))
             await brotli.WriteAsync(data);
-        }
         return output.ToArray();
     }
 
-    /// <summary>
-    /// Process in <10ms - LIGHTNING FAST
-    /// Perfect for: Desktop, complex operations
-    /// XCL engine: Brotli SmallestSize + MemoryPool
-    /// </summary>
     public static async Task<byte[]> Lightning(byte[] data)
     {
-        // XCL: Brotli SmallestSize + MemoryPool for large payloads
-        using var _ = System.Buffers.MemoryPool<byte>.Shared.Rent(data.Length);
-        using var output = new System.IO.MemoryStream();
-        using (var brotli = new System.IO.Compression.BrotliStream(output, System.IO.Compression.CompressionLevel.SmallestSize))
-        {
+        using var output = new MemoryStream();
+        using (var brotli = new BrotliStream(output, CompressionLevel.SmallestSize))
             await brotli.WriteAsync(data);
-        }
         return output.ToArray();
     }
 
-    /// <summary>
-    /// Batch process with streaming - for massive data
-    /// </summary>
     public static async IAsyncEnumerable<byte[]> Stream(IAsyncEnumerable<byte[]> input)
     {
         await foreach (var item in input)
-        {
             yield return await Instant(item);
-        }
     }
 
-    /// <summary>
-    /// Parallel batch - maximum throughput
-    /// </summary>
     public static async Task<byte[][]> Parallel(byte[][] inputs, int maxConcurrency = 100)
     {
-        var semaphore = new SemaphoreSlim(maxConcurrency);
+        ArgumentNullException.ThrowIfNull(inputs);
+        if (maxConcurrency < 1) throw new ArgumentOutOfRangeException(nameof(maxConcurrency));
+        using var semaphore = new SemaphoreSlim(maxConcurrency);
         var tasks = inputs.Select(async input =>
         {
             await semaphore.WaitAsync();
-            try
-            {
-                return await Instant(input);
-            }
-            finally
-            {
-                semaphore.Release();
-            }
+            try { return await Instant(input); }
+            finally { semaphore.Release(); }
         });
-
         return await Task.WhenAll(tasks);
     }
 }
 
-/// <summary>
-/// Medical Device Optimized API
-/// Compliant with medical standards
-/// </summary>
 public static class MedicalAPI
 {
-    /// <summary>
-    /// High-precision medical scan processing
-    /// Target: <3ms with validation
-    /// </summary>
-    public static async Task<MedicalResult> ProcessMedicalScan(
-        byte[] scanData,
-        MedicalDeviceType deviceType)
+    public static async Task<MedicalResult> ProcessMedicalScan(byte[] scanData, MedicalDeviceType deviceType)
     {
-        var startTime = DateTime.UtcNow;
-
-        // Process with medical-grade precision
+        ArgumentNullException.ThrowIfNull(scanData);
+        if (scanData.Length == 0) throw new ArgumentException("Scan data must not be empty.", nameof(scanData));
+        if (!Enum.IsDefined(deviceType)) throw new ArgumentOutOfRangeException(nameof(deviceType));
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         var processed = await Lightning314.UltraFast(scanData);
-
-        // Validate output
-        var isValid = ValidateMedicalData(processed);
-
-        var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
-
-        return new MedicalResult(
-            processed,
-            isValid,
-            elapsed,
-            deviceType.ToString()
-        );
-    }
-
-    private static bool ValidateMedicalData(byte[] data)
-    {
-        return data?.Length > 0;
+        using var encoded = new MemoryStream(processed, writable: false);
+        using var decoder = new BrotliStream(encoded, CompressionMode.Decompress);
+        var buffer = new byte[8192];
+        var offset = 0;
+        int read;
+        var isValid = true;
+        while ((read = await decoder.ReadAsync(buffer)) > 0)
+        {
+            if (read > scanData.Length - offset || !buffer.AsSpan(0, read).SequenceEqual(scanData.AsSpan(offset, read)))
+            { isValid = false; break; }
+            offset += read;
+        }
+        isValid &= offset == scanData.Length;
+        var elapsed = clock.Elapsed.TotalMilliseconds;
+        return new MedicalResult(processed, isValid, elapsed, deviceType.ToString());
     }
 }
 
-public record MedicalResult(
-    byte[] Data,
-    bool IsValid,
-    double ProcessingTimeMs,
-    string DeviceType
-);
+public record MedicalResult(byte[] Data, bool IsValid, double ProcessingTimeMs, string DeviceType);
 
-public enum MedicalDeviceType
-{
-    Scanner,
-    Monitor,
-    DiagnosticDevice,
-    ImagingDevice,
-    LabEquipment
-}
+public enum MedicalDeviceType { Scanner, Monitor, DiagnosticDevice, ImagingDevice, LabEquipment }
 
-/// <summary>
-/// Mobile Device Optimized API
-/// Battery-efficient processing
-/// </summary>
 public static class MobileAPI
 {
-    /// <summary>
-    /// Battery-optimized processing
-    /// Automatically throttles based on battery level
-    /// </summary>
-    public static async Task<byte[]> ProcessMobile(
-        byte[] data,
-        int batteryLevel)
+    public static async Task<byte[]> ProcessMobile(byte[] data, int batteryLevel)
     {
-        // Adjust speed based on battery
-        if (batteryLevel < 20)
-        {
-            // Conservative mode
-            await Task.Delay(2);
-        }
-        else if (batteryLevel < 50)
-        {
-            // Balanced mode
-            await Task.Delay(1);
-        }
-        // else: Full speed
-
-        return data;
+        ArgumentNullException.ThrowIfNull(data);
+        if (batteryLevel is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(batteryLevel));
+        return batteryLevel < 50 ? await Lightning314.Instant(data) : await Lightning314.UltraFast(data);
     }
 
-    /// <summary>
-    /// Background processing for mobile
-    /// Lower priority, battery-friendly
-    /// </summary>
     public static async Task<byte[]> ProcessBackground(byte[] data)
     {
-        await Task.Delay(5); // Lower priority
-        return data;
+        ArgumentNullException.ThrowIfNull(data);
+        return await Lightning314.Instant(data);
     }
 }
 
-/// <summary>
-/// IoT Device Optimized API
-/// Minimal memory footprint
-/// </summary>
 public static class IoTAPI
 {
     /// <summary>
-    /// Process with minimal memory
-    /// Perfect for constrained devices
+    /// Legacy contract: returns raw Brotli bytes.
     /// </summary>
-    public static async Task<byte[]> ProcessConstrained(
-        byte[] data,
-        int maxMemoryKB = 64)
+    public static async Task<byte[]> ProcessConstrained(byte[] data, int maxMemoryKB = 64)
     {
-        // Check if data fits in memory constraint
-        if (data.Length > maxMemoryKB * 1024)
-        {
-            // Process in chunks
-            return await ProcessChunked(data, maxMemoryKB * 1024);
-        }
-
+        ArgumentNullException.ThrowIfNull(data);
+        if (maxMemoryKB is < 1 or > int.MaxValue / 1024)
+            throw new ArgumentOutOfRangeException(nameof(maxMemoryKB));
         return await Lightning314.Instant(data);
     }
 
-    private static async Task<byte[]> ProcessChunked(byte[] data, int chunkSize)
+    /// <summary>
+    /// New framed contract: returns a 7-byte header (CL + version + length) followed by Brotli bytes.
+    /// </summary>
+    public static async Task<byte[]> ProcessConstrainedWithHeader(byte[] data, int maxMemoryKB = 64)
     {
-        var result = new byte[data.Length];
-        for (int i = 0; i < data.Length; i += chunkSize)
-        {
-            var chunk = data.Skip(i).Take(chunkSize).ToArray();
-            var processed = await Lightning314.Instant(chunk);
-            Array.Copy(processed, 0, result, i, processed.Length);
-        }
-        return result;
+        ArgumentNullException.ThrowIfNull(data);
+        if (maxMemoryKB is < 1 or > int.MaxValue / 1024)
+            throw new ArgumentOutOfRangeException(nameof(maxMemoryKB));
+        var context = new PipelineContext();
+        var pipeline = new BitPipeline();
+        return await pipeline.ExecuteAsync(data, context, default);
     }
 
     /// <summary>
-    /// Streaming for continuous IoT data
+    /// Unpacks either a raw Brotli stream or a framed BitPipeline stream.
     /// </summary>
-    public static async IAsyncEnumerable<byte[]> ProcessStream(
-        IAsyncEnumerable<byte[]> sensorData)
+    public static async Task<byte[]> ProcessConstrainedUnpack(byte[] compressedData)
+    {
+        if (compressedData.Length >= 7 && compressedData[0] == 0x43 && compressedData[1] == 0x4C)
+        {
+            var context = new PipelineContext();
+            var unpacker = new BitUnpacker();
+            return await unpacker.ExecuteAsync(compressedData, context, default);
+        }
+        using var input = new MemoryStream(compressedData);
+        using var brotli = new BrotliStream(input, CompressionMode.Decompress);
+        using var output = new MemoryStream();
+        await brotli.CopyToAsync(output);
+        return output.ToArray();
+    }
+
+    public static async IAsyncEnumerable<byte[]> ProcessStream(IAsyncEnumerable<byte[]> sensorData)
     {
         await foreach (var data in sensorData)
-        {
             yield return await Lightning314.Instant(data);
-        }
     }
 }
 
-/// <summary>
-/// Cloud-Scale API
-/// Optimized for massive parallel processing
-/// </summary>
 public static class CloudAPI
 {
-    /// <summary>
-    /// Process millions of items in parallel
-    /// </summary>
-    public static async Task<CloudBatchResult> ProcessMassive(
-        byte[][] data,
-        int maxParallelism = 1000)
+    public static async Task<CloudBatchResult> ProcessMassive(byte[][] data, int maxParallelism = 1000)
     {
         var startTime = DateTime.UtcNow;
-
         var results = await Lightning314.Parallel(data, maxParallelism);
-
         var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
         var throughput = data.Length / (elapsed / 1000.0);
-
-        return new CloudBatchResult(
-            results,
-            data.Length,
-            elapsed,
-            throughput
-        );
+        return new CloudBatchResult(results, data.Length, elapsed, throughput);
     }
 }
 
-public record CloudBatchResult(
-    byte[][] Results,
-    int ItemsProcessed,
-    double TotalTimeMs,
-    double ItemsPerSecond
-);
+public record CloudBatchResult(byte[][] Results, int ItemsProcessed, double TotalTimeMs, double ItemsPerSecond);

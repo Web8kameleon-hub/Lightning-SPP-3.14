@@ -45,10 +45,14 @@ jobs:
         run: |
           dotnet restore
           dotnet build --configuration Release --no-restore
+      - name: Install native PDF test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
       - name: Run required tests
         env:
           SPP_TEST_NATIVE_DOCUMENTS: '1'
-        run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --logger "trx;LogFileName=release-evidence.trx"
+
       - name: Capture real benchmark and changelog
         shell: bash
         run: |
