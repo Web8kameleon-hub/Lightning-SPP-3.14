@@ -154,15 +154,6 @@ jobs:
           printf 'commit=%s\n' "$GITHUB_SHA"
           printf 'job_status=%s\n' "${{ job.status }}"
           printf 'test_reports_found='
-          if [[ -d Tests/LightningSPP.Tests/TestResults ]]; then
-            find Tests/LightningSPP.Tests/TestResults -type f -name '*.trx' -print | wc -l
-          else
-            printf '0\n'
-          fi
-          for file in artifacts/benchmark-environment.txt artifacts/speed-benchmark.txt; do
-            if test -s "$file"; then printf '%s=PRESENT\n' "$file"; else printf '%s=NOT_PRODUCED\n' "$file"; fi
-          done
-        } > artifacts/ci-evidence-status.txt
 
     - name: Preserve test and benchmark evidence
       if: always()
