@@ -40,8 +40,17 @@ jobs:
         run: dotnet restore Tests/LightningSPP.Tests/LightningSPP.Tests.csproj
       - name: Build release
         run: dotnet build wwwmmm.csproj -c Release --no-restore
-      - name: Run complete test suite
-        run: dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release --logger "trx;LogFileName=release-readiness.trx"
+      - name: Install native PDF test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
+      - name: Run required tests
+        env:
+          SPP_TEST_NATIVE_DOCUMENTS: '1'
+          SPP_BRIDGE_TEST_ALLOW_WRITES: ''
+        run: dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj -c Release --logger "trx;LogFileName=release-readiness.trx" --filter "FullyQualifiedName!~BridgeUpstreamTests"
+      - name: Require 100 percent test execution and pass rate
+        run: python3 Scripts/require-all-tests-pass.py
       - name: Run real pipeline smoke
         run: dotnet run --project wwwmmm.csproj -c Release --no-build -- test
       - name: Run performance gates

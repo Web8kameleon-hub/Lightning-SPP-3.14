@@ -22,6 +22,14 @@ internal static class CustomerAccounts
     private static ServiceProvider Provider => Providers.GetOrAdd(Path.GetFullPath(RuntimeSecurity.DataDirectory), path => new(() => CreateServices(path))).Value;
     internal static CustomerStore Store => Provider.GetRequiredService<CustomerStore>();
     internal static string PublicOrigin => (Environment.GetEnvironmentVariable("LSPP_PUBLIC_ORIGIN") ?? "https://scanprocessprint.com").TrimEnd('/');
+    // Behind the nginx edge the request reaches this process over plain http on the container
+    // port, so deriving the expected origin from the request itself rejects the https origin a
+    // browser actually sends. An explicitly configured public origin is therefore authoritative
+    // in every environment; it only ever pins the value more tightly than the request would.
+    private static string? ConfiguredOrigin => Environment.GetEnvironmentVariable("LSPP_PUBLIC_ORIGIN") is { Length: > 0 } configured
+        ? configured.TrimEnd('/') : null;
+    internal static string ExpectedOrigin(HttpListenerRequest request) => ConfiguredOrigin
+        ?? (RuntimeSecurity.IsProduction ? PublicOrigin : request.Url!.GetLeftPart(UriPartial.Authority));
     private static ServiceProvider CreateServices(string path)
     {
         var services = new ServiceCollection(); services.AddLogging(); services.AddWebEncoders();
@@ -67,7 +75,7 @@ internal static class CustomerAccounts
         var antiforgery = scope.ServiceProvider.GetRequiredService<IAntiforgery>();
         if (mutation)
         {
-            var expected = RuntimeSecurity.IsProduction ? PublicOrigin : transport.Request.Url.GetLeftPart(UriPartial.Authority);
+            var expected = ExpectedOrigin(transport.Request);
             if (!string.Equals(transport.Request.Headers["Origin"], expected, StringComparison.OrdinalIgnoreCase) ||
                 !string.Equals(transport.Request.ContentType?.Split(';')[0], "application/json", StringComparison.OrdinalIgnoreCase))
                 throw new AntiforgeryValidationException("Same-origin JSON required.");
@@ -114,7 +122,7 @@ internal static class CustomerAccounts
                     canPurchase = store.CanPurchase(userId), pdfDemoRoute = "/pdf" }); return;
             }
             if (transport.Request.HttpMethod != "POST") { await Reply(transport, context, 405, new { error = "Unsupported account method." }); return; }
-            var expectedOrigin = RuntimeSecurity.IsProduction ? PublicOrigin : transport.Request.Url.GetLeftPart(UriPartial.Authority);
+            var expectedOrigin = ExpectedOrigin(transport.Request);
             if (!Uri.TryCreate(expectedOrigin, UriKind.Absolute, out var origin) || (RuntimeSecurity.IsProduction && origin.Scheme != "https") ||
                 !string.Equals(transport.Request.Headers["Origin"], expectedOrigin, StringComparison.OrdinalIgnoreCase) ||
                 !string.Equals(transport.Request.ContentType?.Split(';')[0], "application/json", StringComparison.OrdinalIgnoreCase))

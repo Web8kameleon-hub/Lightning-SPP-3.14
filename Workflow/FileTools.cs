@@ -131,6 +131,10 @@ internal static class FileTools
         "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
         "/usr/share/fonts/dejavu/DejaVuSansMono.ttf",
         "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
+        // Fedora, RHEL and Rocky package the family under its own directory, which is
+        // the layout of the production host; without it a release built there reports
+        // "no report font" even though the package is installed.
+        "/usr/share/fonts/dejavu-sans-mono-fonts/DejaVuSansMono.ttf",
         "/System/Library/Fonts/Menlo.ttc",
         @"C:\Windows\Fonts\consola.ttf",
     ];
@@ -147,7 +151,7 @@ internal static class FileTools
         var family = SkiaSharp.SKTypeface.FromFamilyName("monospace");
         if (Usable(family)) return family!;
         family?.Dispose();
-        throw new IOException("No report font with the required glyphs is available. Install fonts-dejavu-core or set LSPP_REPORT_FONT_FILE.");
+        throw new IOException("No report font with the required glyphs is available. Install fonts-dejavu-core (Debian) or dejavu-sans-mono-fonts (Fedora/RHEL/Rocky), or set LSPP_REPORT_FONT_FILE.");
         static bool Usable(SkiaSharp.SKTypeface? typeface)
         {
             if (typeface is null || typeface.GlyphCount == 0) return false;

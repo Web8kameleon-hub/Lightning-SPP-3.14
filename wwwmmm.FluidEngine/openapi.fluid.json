@@ -1,0 +1,36 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "wwwmmm Fluid Engine API",
+    "version": "3.19.0",
+    "description": "API për ekzekutimin e pipeline-eve fluide (Vision, Binary, Data, Cognitive)."
+  },
+  "servers": [
+    { "url": "http://localhost:13080", "description": "Local Dev" }
+  ],
+  "paths": {
+    "/api/fluid/execute": {
+      "post": {
+        "summary": "Ekzekuton një pipeline të tipizuar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pipelineName": { "type": "string", "example": "BitPipeline" },
+                  "inputData": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Pipeline ekzekutuar me sukses" },
+          "400": { "description": "Input i pavlefshëm (Never Fake)" }
+        }
+      }
+    }
+  }
+}

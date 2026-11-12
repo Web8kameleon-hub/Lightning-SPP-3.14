@@ -26,7 +26,7 @@ public static class StigmaProfiles
             Enum.IsDefined(typeof(StigmaExecutionProfile), numeric))
             return (StigmaExecutionProfile)numeric;
 
-        if (Enum.TryParse<StigmaExecutionProfile>(value, true, out var named))
+        if (Enum.TryParse<StigmaExecutionProfile>(value, true, out var named) && Enum.IsDefined(named))
             return named;
 
         throw new InvalidOperationException(
@@ -44,10 +44,10 @@ public static class StigmaProfiles
                 UseResonance = true,
                 UseNanoDecibel = true,
                 ProcessingEngine = ProcessingEngine.Hybrid,
-                UseAI = true,
-                UseClisonix = true,
+                UseAI = false,
+                UseClisonix = false,
                 OptimizationLevel = 5,
-                UseStigmaMemory = true,
+                UseStigmaMemory = false,
                 PrintQuality = PrintQuality.Stigma,
                 UseStigma = true
             },
@@ -58,10 +58,10 @@ public static class StigmaProfiles
                 UseResonance = true,
                 UseNanoDecibel = false,
                 ProcessingEngine = ProcessingEngine.Auto,
-                UseAI = true,
-                UseClisonix = true,
+                UseAI = false,
+                UseClisonix = false,
                 OptimizationLevel = 3,
-                UseStigmaMemory = true,
+                UseStigmaMemory = false,
                 PrintQuality = PrintQuality.High,
                 UseStigma = false
             },

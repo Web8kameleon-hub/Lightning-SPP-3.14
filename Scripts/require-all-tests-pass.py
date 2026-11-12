@@ -18,7 +18,10 @@ for file in files:
             totals[key] += int(counters.get(key, "0"))
     except (ValueError, ET.ParseError) as exc:
         sys.exit(f"FAIL: invalid test report {file}: {exc}")
+
 print(f"Test evidence: {len(files)} TRX file(s), {totals}")
+
 if totals["total"] == 0 or totals["passed"] != totals["total"] or any(totals[k] for k in ("failed", "error", "notExecuted")):
     sys.exit("FAIL: 100% PASS required; failed, error, skipped or ignored tests are prohibited")
+
 print("PASS: all reported tests executed and passed")
