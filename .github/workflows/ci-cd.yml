@@ -153,7 +153,20 @@ jobs:
         {
           printf 'commit=%s\n' "$GITHUB_SHA"
           printf 'job_status=%s\n' "${{ job.status }}"
-          printf 'test_reports_found='
+          if [[ -d Tests/LightningSPP.Tests/TestResults ]]; then
+            report_count=$(find Tests/LightningSPP.Tests/TestResults -type f -name '*.trx' | wc -l)
+          else
+            report_count=0
+          fi
+          printf 'test_reports_found=%s\n' "$report_count"
+          for artifact in benchmark-environment.txt speed-benchmark.txt; do
+            if [[ -s "artifacts/$artifact" ]]; then
+              printf '%s=present\n' "$artifact"
+            else
+              printf '%s=missing\n' "$artifact"
+            fi
+          done
+        } > artifacts/ci-evidence-status.txt
 
     - name: Preserve test and benchmark evidence
       if: always()
