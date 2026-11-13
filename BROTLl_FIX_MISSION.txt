@@ -1,0 +1,41 @@
+﻿MISSION: FIX LIGHTNING SPP BROTLI / FLUIDENGINE REGRESSION
+
+Repository: Web8kameleon-hub/Lightning-SPP-3.14
+Branch: main
+Base commit: 6dfcd9b
+
+PROBLEM:
+IoTAPI.ProcessConstrained uses BitPipeline.
+BitPipeline produces a CL-framed Brotli payload:
+- Bytes 0-1: CL
+- Byte 2: version 1
+- Bytes 3-6: original length
+- Bytes 7+: Brotli data
+
+BitUnpacker correctly decodes this format.
+
+However, SdkCompressionTests attempts to decode the entire
+CL-framed payload directly with BrotliStream.
+Five tests fail with "Decoder ran into invalid data".
+
+TASK:
+1. Inspect SDK/Lightning314.cs and its Git history.
+2. Inspect BitPipeline.cs, BitUnpacker.cs and all consumers.
+3. Determine whether the public IoT API previously returned raw Brotli.
+4. Preserve backward compatibility for existing consumers.
+5. Fix the actual contract mismatch, not just the test assertion.
+6. Preserve lossless round-trip behavior for empty, small, random,
+   incompressible and large inputs.
+7. Add tests for raw Brotli compatibility and CL-framed round trips
+   wherever those formats are part of the supported contract.
+8. Do not remove FluidEngine or disable failing tests.
+9. Never introduce mocks, fake metrics, placeholders or silent fallbacks.
+10. Use .NET SDK 10.0.204 because SDK 10.0.300 is locally broken.
+11. Run build and tests, reporting exact PASS/FAIL/SKIP results.
+12. Do not commit, push, tag, deploy, or touch Hetzner.
+13. Report the precise file-level changes and any unresolved failures.
+
+IMPORTANT:
+Do not assume the CL framing must be removed.
+Do not assume the tests alone are wrong.
+Verify the historical public API contract before modifying it.

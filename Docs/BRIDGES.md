@@ -1,20 +1,22 @@
 # Lightning SPP bridges
 
-Status: implemented locally; **not accepted for production deployment**. Excel was
-verified against real local services with the upstream cleanup fix below. OS-CLX
-telemetry integration still requires real runtime verification. The other
-repositories in the account have not been integrated.
+Status: implemented in the SPP CLI; **the complete bridge set is not accepted for
+production**. Excel bridges were exercised against real local services in the
+recorded tests. OS-CLX ingest/readback and the current deployed upstream revisions
+still require isolated runtime verification. This document compares the related
+repositories inspected on 2026-11-04; it is not a full inventory of the account.
 
 These adapters are available in the `wwwmmm.Integrations` namespace and through
 the `bridge` CLI command. They do not add public HTTP endpoints or change the
-existing scan/process/output pipeline. Configuration is explicit; no service
-address, credential, telemetry signal or successful result is invented.
+existing scan/process/output pipeline, and are not registered as workflow tools.
+Configuration is explicit; no service address, credential, telemetry signal or
+successful result is invented.
 
 ## Implemented contracts
 
 | Adapter | Upstream source | Operations |
 | --- | --- | --- |
-| `ClisonixExcelCoreBridge` | `clisonix.com/excel-core/excel_reporting_api.py` | `GET /api/lagter/v1/export`, returning the upstream LAGTER `.xlsx` workbook |
+| `ClisonixExcelCoreBridge` | `clisonix.com/excel-core/lagter_v1_api.py` | `GET /api/lagter/v1/export`, returning the upstream LAGTER `.xlsx` workbook |
 | `ClisonixExcelBridge` | `clisonix.com/services/excel/main.py` | Multipart `POST /api/excel/validate` and `/api/excel/parse` for `.xlsx` files |
 | `OsClxNodeDbBridge` | `OS-CLX/runtime/internal/api/ndb_store_handlers.go` | `GET /v1/ndb/nodes/{nodeId}` and `POST /v1/ndb/nodes/{nodeId}/telemetry` |
 
@@ -23,15 +25,33 @@ adapter at the corresponding deployed service. The reviewed workbook client at
 `ocean-core/excel_core_integration.py` calls `/api/v1/workbooks/...`; these adapters
 do not assume those routes exist in either of the reviewed Excel services.
 
-Excel parsing returns the first worksheet, at most **100 data rows**, and an
-upstream `rows` count that can be larger. With the supplied upstream fix, zero and
-false cells are preserved and duplicate headers receive unique names without
-overwriting existing columns (for example, `Name, Name, Name_2` becomes
-`Name, Name_3, Name_2`). The adapter rejects duplicate headers and rows with missing
-or unexpected columns. It does not evaluate formulas, perform
-OCR, scan hardware, print to hardware or render PDF. LAGTER workbook values come
-from the upstream reporting application; downloading them does not independently
-validate their interpretation as quality, compliance or performance measurements.
+Excel parsing returns the first worksheet and at most **100 data rows**; the
+`rows` field reports the upstream count. The corrected deployment preserves
+zero/false values and disambiguates duplicate headers (for example,
+`Name, Name, Name_2` becomes `Name, Name_3, Name_2`). The SPP adapter also rejects
+duplicate headers and rows with missing or unexpected columns. These are workbook
+operations, not invoice OCR or classification. The bridge does not evaluate
+formulas, scan hardware, print to hardware or render PDF. LAGTER workbook values
+come from the upstream reporting application; downloading them does not
+independently validate their interpretation as quality, compliance or performance
+measurements.
+
+## Upstream source comparison
+
+The following describes repository source, not a claim that the current production
+container is running the same revision:
+
+| Capability | Repository evidence | Finding |
+| --- | --- | --- |
+| Excel Core reporting | `clisonix.com`, `clisonix-evolution` and `LONGO-` have the same `lagter_v1_api.py` source blob (`90fd8523`); Clisonix owns the Compose service definition | No more advanced code copy was found among these three. Excel Core generates LAGTER workbooks; it does not parse invoices or perform OCR. |
+| Excel parse/validate | `clisonix.com@main` file blob `e04aa2ef`; `clisonix-evolution@main` and `LONGO-@main` share blob `7de54036` | The inspected `main` copies still lack the workbook-close and zero/false/duplicate-header/missing-sheet corrections. |
+| Corrected Excel deployment | Upstream release evidence records a direct production deployment on 2026-10-03 from code revision `f7ab88b64aecf063b6d7987432ea04dc11fc00bd`, followed by live HTTP verification. PR #143 is now closed without merge; its head contains the fix but is not the default `main` source. | A prior release record is evidence of that deployment, not proof of the current running revision. Reconfirm the deployed revision before accepting the bridge. |
+| OS-CLX NodeDB runtime | `OS-CLX@master` revision `c54e104f`; `runtime/internal/ndb/store.go` holds nodes in a map capped at 512 entries | The SPP adapter targets the runtime node read/telemetry endpoints. The reviewed store is in-memory, not durable persistence. |
+| Kloud NodeDB control plane | `Kloud@main` revision `9e2d2356`; control-plane code appends a WAL and implements leases | It adds lease/topology operations, but node and lease state is in memory, WAL is not replayed at startup, and WAL write errors are swallowed. It is not a drop-in durable replacement. |
+
+These are different scopes, not a single maturity ranking: OS-CLX provides the
+runtime telemetry contract used by SPP; Kloud adds control-plane lease behavior
+with the durability gaps above. The SPP bridge currently targets OS-CLX only.
 
 ## Configuration and CLI
 
@@ -47,10 +67,14 @@ Set actual service base URLs through your deployment's environment/secret manage
 | `SPP_OSCLX_API_KEY` | OS-CLX `X-API-Key` credential, when required |
 | `SPP_OSCLX_HMAC_SECRET` | OS-CLX write-signing secret, when required |
 
-GitHub PATs authenticate repository access; they are **not** service credentials.
-Neither reviewed Excel application implements bearer authentication itself. The
-configured Excel credential requires an ingress that actually enforces it. Do
-not expose unauthenticated document uploads publicly as part of this integration.
+GitHub access is separate from service authentication; no GitHub token is sent by
+these adapters. The reviewed Excel applications do not implement bearer
+authentication themselves. OS-CLX `APIKeyAuth` and `HMACGuard` are conditional:
+the source bypasses each guard when its server secret is unset. Therefore the
+service credentials are optional in SPP and are required only when the actual
+runtime or ingress is configured to enforce them. The real NodeDB contract test
+sets them specifically to exercise authenticated and rejected requests. Do not
+expose unauthenticated document uploads publicly as part of this integration.
 
 HTTPS is required except for loopback HTTP used in isolated local tests. Base URLs
 cannot contain user information, query strings or fragments. Configure URL prefixes
@@ -83,8 +107,9 @@ latency must be finite and nonnegative. Optional fields are `role`, `capabilitie
 are rejected. Tag lists are bounded to 64 entries of at most 128 characters.
 
 Node IDs contain 1–128 ASCII letters, digits, hyphens or underscores. The bridge
-sends the upstream viewer role for reads and operator role for ingest; these
-headers do not replace API-key authentication. It does not promote node trust.
+sends the upstream viewer role for reads and operator role for ingest; when the
+upstream API-key guard is enabled, these headers do not replace that credential.
+It does not promote node trust.
 Ingest succeeds only after the upstream acknowledgement matches the node, fabric,
 trust domain and supplied pressure/resonance/memory/momentum. This is an ingest
 acknowledgement, not proof of distributed replication or task execution.
@@ -95,42 +120,34 @@ retries. JSON responses are bounded to 2 MiB; workbook uploads and exports to
 read the node back before retrying. Invalid Excel validation results, malformed
 responses and HTTP errors are failures even when an upstream returns HTTP 200.
 
-## Upstream Excel correction
+## Upstream Excel correction and current source state
 
-The reviewed Excel microservice leaves a read-only openpyxl workbook open and
-then unlinks its upload. On Windows this raises `PermissionError: WinError 32`
-and turns otherwise successful validation/parsing into HTTP 500. The separate
-repository correction is supplied as
-[clisonix-excel-cleanup.patch](bridges/clisonix-excel-cleanup.patch).
+The `clisonix.com@main` parse/validate source still leaves read-only workbooks
+open before upload cleanup, drops rows whose values are all zero/false, overwrites
+duplicate headers, and silently selects the active sheet when a requested sheet
+is missing. The separate source copies in `clisonix-evolution` and `LONGO-` do
+not contain the inspected correction either.
 
-Apply it in a checkout of `Web8kameleon-hub/clisonix.com`, review and test that
-checkout, and deploy the corrected Excel service before accepting the Windows
-integration. It closes the workbook in both `finally` blocks before cleanup and
-also fixes zero/false data loss, duplicate-column overwrites, row counting and
-the silently ignored request for a missing worksheet. Parse previews retain only
-the first 100 rows in memory while counting all nonempty rows. Upload reads are
-bounded to the size limit plus one byte. The patch includes eight real-workbook
-tests. The two Excel service files were committed and pushed to
-`clisonix.com` as `644e0bb250c71d43f39df02f1267c52e6a97f566`, on branch
-`fix/excel-data-preservation`, with [draft PR #143](https://github.com/Web8kameleon-hub/clisonix.com/pull/143).
-They have not been merged or deployed. The GitHub governance check rejected the
-branch: its configured primary work branch is `fix/hetzner-swarm-rollout`, and the
-repository exceeds its maximum of one open PR. These checks were not bypassed.
-The SPP bridge changes in this checkout remain uncommitted.
+The upstream release record reports that the corrected service was deployed
+directly on 2026-10-03 from `f7ab88b64aecf063b6d7987432ea04dc11fc00bd`; it records
+eight passing Python tests and live HTTP checks for health, workbook parsing,
+zero/false preservation, duplicate headers, row count/preview, and missing-sheet
+failure. That correction was not merged into the default `main` branch. PR #143
+is closed without merge. The patch at
+[clisonix-excel-cleanup.patch](bridges/clisonix-excel-cleanup.patch) is retained
+as historical review material; do not apply it blindly to a newer checkout.
+Verify the actual deployed source revision before relying on the production fix.
 
-```powershell
-git apply --check C:/path/to/wwwmmm/Docs/bridges/clisonix-excel-cleanup.patch
-git apply C:/path/to/wwwmmm/Docs/bridges/clisonix-excel-cleanup.patch
-# In services/excel, using the service environment:
-python -m unittest test_excel_cleanup -v
-```
+## Initial candidate verification recorded on 2026-10-03
 
-## Verification recorded on 2026-10-03
+This is the pre-replacement candidate snapshot. Its statements that the
+production image was unchanged and that replacement had not yet run describe
+that point in time; they are superseded by the subsequent upstream release record
+of the scoped Excel-only deployment above.
 
-Excel-only upstream changes are pushed to draft
-[PR #143](https://github.com/Web8kameleon-hub/clisonix.com/pull/143): code/tests
-commit `644e0bb250c71d43f39df02f1267c52e6a97f566`, followed by Excel release
-evidence commit `a05e243`. No merge or production deployment has occurred.
+The corrected Excel code and tests were developed in the upstream repository and
+reviewed through PR #143. The PR was later closed without merge; the release
+record separately reports a direct deployment.
 
 On the actual Hetzner host `178.63.89.121`, the candidate image was built from
 the code commit and all eight Python tests passed inside it. Real HTTP tests
@@ -151,12 +168,10 @@ output. A full configuration comparison confirmed that only the Excel image
 differs; all other service configuration, including volumes, is preserved.
 Neither replacement nor rollback was executed.
 
-Deployment remains blocked by contradictory CI policies: governance requires
-PR head `fix/hetzner-swarm-rollout`, while release evidence requires `release/*`.
-Governance also permits only one open PR, but five were open at verification.
-The release evidence document's content passed local validation; its branch
-policy still fails. Existing auto-deploy defaults affect other services and
-lack a verified Excel health gate. No CI policy was weakened.
+At this candidate snapshot, deployment through the repository's CI policies was
+blocked by contradictory branch rules. The later upstream release record reports
+a scoped direct deployment and HTTP verification; this did not merge PR #143 or
+change those CI policies.
 
 Reviewed upstream revisions:
 
@@ -192,9 +207,10 @@ Checks actually executed:
   `Trojan:Win32/Bearfoos.A!ml`. This records the Defender detection; its correctness
   has not been adjudicated. NodeDB write/read verification did not complete.
 
-The local OS-CLX kernel/Kloud backends were not running. Its initial HTTP health
-response therefore does not establish kernel, fluid-cycle, federation or
-scheduler health. No production endpoints were changed or written to.
+The local OS-CLX kernel/Kloud backends were not running during this SPP
+verification. Its initial HTTP health response therefore does not establish
+kernel, fluid-cycle, federation or scheduler health. The SPP NodeDB
+ingest/readback test did not complete against an isolated real runtime.
 
 Real upstream tests are opt-in and restricted to loopback services. With isolated
 Excel Core, corrected Excel service and a security-reviewed OS-CLX runtime,
@@ -208,8 +224,10 @@ dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --filter FullyQua
 The NodeDB test writes explicitly identified fixture signals to a new test node.
 They verify the real ingest contract, not measured production performance.
 
-Production acceptance remains pending: resolve the runtime security detection,
-complete real NodeDB ingest/readback/auth/HMAC tests, deploy the upstream Excel
-fix, provide the real protected service URLs/credentials, and verify the actual
-deployed workflows. Deployment and integration of the remaining account
-repositories are outside the completed work recorded here.
+Production acceptance remains pending: adjudicate the runtime security detection,
+complete real NodeDB ingest/readback/auth/HMAC tests, and verify that the active
+Excel service revision matches the upstream correction recorded above. Deploy the
+correction only if the active service is not already running it. Configure the
+actual service URLs and credentials only where the runtime or ingress enforces
+them, then verify the deployed workflows. Deployment and integration of the
+remaining account repositories are outside the completed work recorded here.

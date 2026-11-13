@@ -1,12 +1,17 @@
 # Lightning SPP 3.14
-Universal Scan-Process-Print Platform
+
+Pipeline Scan-Process-Print për dokumente dhe imazhe
+
+Programi për organizimin, sigurinë, operimin dhe bridges të ekosistemit:
+[udhërrëfyesi i ngritjes teknologjike](Docs/TECHNOLOGY_EVOLUTION.md).
+Ky plan përcakton punën dhe provat e kërkuara; nuk deklaron aftësi të papranuara si të gatshme për prodhim.
 
 Për paketat runtime Windows/Linux, varësitë native dhe përditësimin pa humbur
 të dhënat, shih [udhëzimin e instalimit](Docs/INSTALLATION.md). Arkivat ndërtohen
 dhe kontrollohen me `Scripts/package-release.py` dhe `Scripts/verify-package.py`;
 publikimi dhe përdorimi nga klientët janë verifikime të veçanta.
 
-Lightning SPP 3.14 është një platformë e integruar për skanim, përpunim dhe printim dokumentesh/imazhesh, e ndërtuar për përdorim në desktop, web, IoT dhe cloud. Projekti kombinon performancë të lartë, arkitekturë modulare dhe ndërfaqe të shumta përdorimi (CLI, API, GUI).
+Lightning SPP 3.14 ofron pipeline .NET për përpunimin e dokumenteve dhe imazheve, me CLI, API dhe ndërfaqe desktop. Emrat e profileve mobile/IoT/cloud në SDK nuk provojnë mbështetje native për pajisje ose validim në ato mjedise. Pipeline-i krijon artefakte; dërgimi fizik në printer bëhet vetëm nga rruga e veçantë Linux/CUPS kur ajo konfigurohet.
 
 ## Çfarë sjell versioni 3.14
 
@@ -41,13 +46,24 @@ Detaje shtesë: [REAL_PROCESSING.md](REAL_PROCESSING.md)
 
 ## Skenarë përdorimi
 
-Lightning SPP 3.14 është i përshtatshëm për:
+Kodi aktual mbulon workflows dokumentesh/imazhesh përmes ndërfaqeve të dokumentuara dhe ekzekutimit lokal ose të container-izuar. Mbështetja për një pajisje, sistem operativ ose ngarkesë të caktuar duhet provuar veçmas. Profilet me emër mjekësor nuk janë validim klinik; emrat mobile/IoT/cloud nuk janë garanci për përputhshmëri, bateri, memorie apo performancë.
 
-- Workflows dokumentesh dhe imazhesh që mund të integrohen në produkte mjekësore pas validimit dhe certifikimit përkatës
-- Aplikacione mobile (iOS/Android)
-- Pajisje IoT dhe sisteme embedded
-- Aplikacione desktop dhe web
-- Workloads cloud me paralelizëm të lartë
+### Agjenti, faturat dhe printimi
+
+Model Gateway mund të propozojë hapa për një kërkesë në gjuhë natyrore, por plani
+kthehet si `PROPOSED_REQUIRES_REVIEW` dhe ekzekutimi kërkon shqyrtim të qartë.
+`finance.reconcile` pranon regjistra të strukturuar, të normalizuar dhe alokime
+të shqyrtuara; nuk nxjerr vetë fusha nga faturat dhe nuk klasifikon PDF të skanuar.
+`documents.pdf-text` nxjerr vetëm tekstin ekzistues me Poppler, pa OCR.
+
+Prandaj kërkesa “nga këto fatura, printo vetëm …” nuk është ende rrjedhë
+autonome e plotë: faturat duhet të jenë të lexuara dhe të normalizuara, ndërsa
+veprimi duhet miratuar. Mjeti aktual i printimit dërgon PDF te një queue i emërtuar
+Linux/CUPS; statusi i queue nuk provon se letra doli fizikisht. Email-i i
+Lightning SPP dërgon licenca, jo lexime inbox-i. Excel Core gjeneron raporte
+LAGTER; shërbimi i veçantë Excel parse/validate lexon workbook-e, jo fatura PDF.
+Detajet dhe kufijtë janë te [portofoli i proceseve](Docs/PARTNER_PROCESS_PORTFOLIO.md)
+dhe [kontratat e bridges](Docs/BRIDGES.md).
 
 ## API e SDK-së
 
@@ -57,21 +73,25 @@ using wwwmmm.SDK;
 var result = await Lightning314.Instant(data);
 ```
 
-### Profile të optimizuara sipas pajisjes
+### Profile SDK-je (emra skenarësh, jo validim pajisjesh)
+
+Profilet zgjedhin variante të përpunimit/kompresimit. Nuk provojnë përputhshmëri
+native me pajisjen, kufij realë të memories, kursim baterie apo përshtatshmëri
+klinike.
 
 ```csharp
 // Medical profile
 var sdk = UniversalSDK.Initialize(DeviceProfile.Medical);
 var result = await sdk.ProcessAsync(scanData);
 
-// Mobile profile
-var mobileResult = await MobileAPI.ProcessMobile(data, batteryLevel: 75);
+// Mobile profile: byte[] in, byte[] out
+byte[] mobileResult = await MobileAPI.ProcessMobile(data, batteryLevel: 75);
 
-// IoT profile
-var iotResult = await IoTAPI.ProcessConstrained(data, maxMemoryKB: 64);
+// IoT profile: byte[] in, byte[] out, bounded memory
+byte[] iotResult = await IoTAPI.ProcessConstrained(data, maxMemoryKB: 64);
 
-// Cloud profile
-var cloudResult = await CloudAPI.ProcessMassive(millionsOfItems, maxParallelism: 1000);
+// Cloud profile: batch of byte[] in, CloudBatchResult out
+CloudBatchResult cloudResult = await CloudAPI.ProcessMassive(pages, maxParallelism: 4);
 ```
 
 ## Teknologjitë kryesore
@@ -90,7 +110,7 @@ var cloudResult = await CloudAPI.ProcessMassive(millionsOfItems, maxParallelism:
 `WWWMMM_STIGMA_LEVEL` kontrollon realisht të gjithë pipeline-in:
 
 | Vlera | Profili | Sjellja |
-|---|---|---|
+| --- | --- | --- |
 | `1` | quality | NanoDecibel, Hybrid + AI, Stigma lossless |
 | `2` | balanced | TideWave, Auto + AI, output high |
 | `3` | lightning | Lightning, CLX fast path, pa faza të kushtueshme |
@@ -124,7 +144,7 @@ dotnet run
 using wwwmmm.PublicAPI;
 
 // Pipeline i plotë: Scan -> Process -> Print
-var result = await LightningAPI.ExecuteLightningPipelineAsync("document.pdf");
+var result = await LightningAPI.ExecuteLightningPipelineAsync("page.png");
 
 // Skanim i shpejtë
 var scanResult = await LightningAPI.QuickScanAsync("photo.jpg");
@@ -144,6 +164,11 @@ var printResult = await LightningAPI.StigmaPrintAsync(data);
 // Përpunim në grup
 var sources = new List<string> { "doc1.pdf", "doc2.pdf", "doc3.pdf" };
 var batchResults = await LightningAPI.BatchProcessAsync(sources);
+
+// Output real në formate të shkarkueshme
+byte[] jpeg = LightningAPI.EncodeOutput(scanResult.Data, OutputFormat.Jpeg, quality: 85);
+byte[] tiff = LightningAPI.EncodeMultiPageOutput(pages, OutputFormat.Tiff);
+byte[] pdf  = LightningAPI.EncodeMultiPageOutput(pages, OutputFormat.Pdf);
 ```
 
 ### Command Line Interface
@@ -154,10 +179,20 @@ wwwmmm process
 wwwmmm print
 wwwmmm pipeline document.pdf
 wwwmmm batch doc1.pdf doc2.pdf doc3.pdf
+wwwmmm convert document.png tiff 90
 wwwmmm demo
 wwwmmm serve 8080
 wwwmmm issue-key unlimited admin@company.com "Acme" 10 365 stripe
 ```
+
+`wwwmmm convert <input> <png|jpeg|bmp|tiff|pdf> [quality]` ekzekuton skanimin real
+dhe shkruan skedarin e konvertuar pranë input-it. TIFF dhe PDF pranojnë disa faqe
+përmes `LightningAPI.EncodeMultiPageOutput`.
+
+Kujdes: `scan`, `process`, `print`, `pipeline` dhe `batch` pranojnë **skedarë
+imazhi**. Një PDF refuzohet me mesazh të qartë; render-o më parë me
+`wwwmmm document pdf-render <input.pdf> 1 faqja1.png`. Shembujt më sipër me
+zgjatje `.pdf` janë ilustrim i formës së komandës, jo input i pranuar.
 
 ## REST API dhe Dashboard
 
@@ -233,16 +268,26 @@ Metrikat varen nga hardware, konfigurimi dhe input-i. Objektivat e latencës jan
 
 ## NodeDB Fluid
 
-NodeDB Fluid është një nyje hibride me overhead të ulët, e përdorur si sink/bridge adaptiv për kompatibilitet ndërmjet node-ve dhe profileve të ndryshme të ekzekutimit.
+Lightning SPP ka CLI bridge për leximin dhe ingest-in e telemetry te endpoint-et
+NodeDB të OS-CLX. Store-i i shqyrtuar në OS-CLX është në memorie dhe ka kufi
+512 node; bridge-i nuk provon persistence, replikim ose ekzekutim detyrash.
+Kloud ka një implementim tjetër të control-plane me lease dhe WAL, por gjendja
+e node/lease mbahet në memorie, WAL nuk rikuperohet gjatë nisjes dhe gabimet e
+shkrimit në WAL nuk propagohen. Krahasimi dhe revision-et janë te
+[kontratat e bridges](Docs/BRIDGES.md).
 
 ## Deployment
 
-Platforma mbështet:
+Gjendja e target-eve dhe kufijtë:
 
-- .NET 10 dhe Native AOT
-- Docker containers
-- Cross-platform execution (Windows, Linux, macOS)
-- Invariant globalization
+- Target framework është .NET 10; `PublishAot` është çaktivizuar dhe Native AOT
+  nuk është validuar për varësitë aktuale.
+- Dockerfile dhe workflow CI mbulojnë ndërtim/testim container-ash Linux.
+- Ekzekutimi është provuar në Windows dhe Linux për rrugët përkatëse; macOS nuk
+  deklarohet si platformë e verifikuar.
+- Printimi fizik i workflow-it përdor Linux/CUPS; aplikacioni WinForms në
+  `Desktop/` është sipërfaqe e veçantë Windows.
+- Build-i përdor invariant globalization.
 
 ### Docker
 
@@ -267,6 +312,8 @@ Për konsistencë ndërmjet source, package dhe CLI:
 
 ## Dokumentimi
 
+- [MANUAL.md](MANUAL.md) — manuali i përdorimit, rregullat e sigurisë, operimi dhe matrica e pranimit
+- [Docs/COMPLIANCE/README.md](Docs/COMPLIANCE/README.md) — dosja e përputhshmërisë: boshllëqe, rreziqe, SOUP, kontrolle, gjurmueshmëri
 - [QUICKSTART.md](QUICKSTART.md)
 - [Docs/API_Documentation.md](Docs/API_Documentation.md)
 - [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md)
@@ -281,7 +328,7 @@ Për konsistencë ndërmjet source, package dhe CLI:
 Lightning SPP ndan licencat sipas komponentëve: **SDK/client MIT; motori dhe runtime-i komercial**, sipas [LICENSE](LICENSE).
 
 - `SDK/`, `Examples/`, `Desktop/`, `VSExtension/` dhe përmbajtja origjinale e `Web/wwwroot/` përdorin [MIT](LICENSE-MIT.txt).
-- Motori, shërbimet e përpunimit, serveri dhe Longo përdorin [licencimin komercial](LICENSE-COMMERCIAL.txt), sipas marrëveshjes përkatëse me shkrim. Kontakt: clisonix@pm.me.
+- Motori, shërbimet e përpunimit, serveri dhe Longo përdorin [licencimin komercial](LICENSE-COMMERCIAL.txt), sipas marrëveshjes përkatëse me shkrim. Kontakt: <clisonix@pm.me>.
 - Paketa aktuale `LightningSPP` përmban të dy grupet; nuk është paketë e motorit vetëm nën MIT.
 - Të drejtat MIT të dhëna më parë për kopjet/versionet e mëparshme nuk revokohen nga kjo politikë. Varësitë ruajnë licencat e tyre.
 - Planet dhe çelësat e produktit përshkruhen te [PRICING.md](PRICING.md); një çelës aktivizimi nuk jep vetvetiu të drejtën e rishpërndarjes së kodit komercial.
@@ -298,13 +345,14 @@ Për pyetje ose raportime, hap një issue në repository.
 
 Duam sa më shumë kontribues aktivë 🚀
 
-- Discussions: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions
-- Issues: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues
+- Discussions: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions>
+- Issues: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues>
 - Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Stepstones roadmap: [STEPSTONES.md](STEPSTONES.md)
 - Community wiki page: [Wiki/Community-Guide.md](Wiki/Community-Guide.md)
 
 ### Quick start për contributor të rinj
+
 1. Fork repo
 2. Zgjidh një issue me label `good-first-issue`
 3. Hap PR të vogël + test/dokumentim
@@ -314,7 +362,12 @@ Duam sa më shumë kontribues aktivë 🚀
 
 ## Kufijtë e versionit 3.14
 
-- Output-i aktual është artifact Brotli `.br` lossless; integrimi me printer fizik kërkon adapter specifik për platformën.
+- Output-i i printimit është artifact Brotli `.br` lossless. Përveç tij, `OutputAdapter`
+  prodhon PNG, JPEG, BMP, TIFF dhe PDF realë si skedarë të shkarkueshëm
+  (`LightningAPI.EncodeOutput`, `LightningAPI.EncodeMultiPageOutput`).
+- Printimi fizik është vetëm në Linux (`Documents/LinuxDeviceService.cs`, përmes radhës së
+  printimit të sistemit) dhe nuk është verifikuar në hardware; platformat e tjera hedhin
+  `PlatformNotSupportedException`. Rendering i faqeve PDF kërkon Poppler.
 - Përdorimi mjekësor kërkon validim klinik dhe certifikimet ligjore për tregun ku shpërndahet.
 - ISO, CE, FDA, GDPR dhe HIPAA nuk deklarohen si certifikime të produktit pa evidencë të auditueshme.
 
@@ -326,12 +379,12 @@ This status is generated from recorded verification evidence. It does not replac
 | Check | Result |
 | --- | --- |
 | Evidence | PARTIAL |
-| Commit | `c1183ee` |
+| Commit | uncommitted working tree |
 | Build | GREEN (0 warnings, 0 errors) |
-| Tests | 126 passed, 0 failed, 13 skipped, 139 total |
-| Recorded | 2026-10-08 |
+| Tests | 328 passed, 0 failed, 15 skipped, 343 total |
+| Recorded | 2026-11-03 |
 
-The test row describes the recorded Windows run at `c1183ee`, not a combined Windows/Linux result or verification of uncommitted changes.
+The test row describes the recorded Windows run in this working tree. It is not a combined Windows/Linux result and not a committed revision. The 15 skips are the native-document and isolated upstream integration tests that were not enabled in this run.
 
 PDF Processor worktree verification (base `d390369`; source and artifact hashes recorded in `evidence/pdf-processor-verification.json`): build PASS; Windows 126/0/13, Linux 132/0/7, PDF boundary suite with Poppler enabled 24/0/0 (passed/failed/skipped). Browser workflow and downloaded PDF re-rendering: PASS. These are local results, not a production deployment.
 

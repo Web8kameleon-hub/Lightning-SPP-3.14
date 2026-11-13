@@ -67,11 +67,19 @@ jobs:
 
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Enforce repository production policy
+      run: python3 Scripts/preflight-policy.py
+
+    - name: Enforce dynamic usage Planlog schedule and evidence
+      run: python3 Scripts/planlog-gate.py
 
     - name: Restore dependencies
       run: dotnet restore
@@ -87,13 +95,37 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
 
+    - name: Open isolated Hetzner integration tunnel
+      env:
+        SPP_TEST_SSH_HOST: ${{ secrets.SPP_TEST_SSH_HOST }}
+        SPP_TEST_SSH_USER: ${{ secrets.SPP_TEST_SSH_USER }}
+        SPP_TEST_SSH_KEY: ${{ secrets.SPP_TEST_SSH_KEY }}
+        SPP_TEST_SSH_KNOWN_HOSTS: ${{ secrets.SPP_TEST_SSH_KNOWN_HOSTS }}
+      run: bash Scripts/open-isolated-bridge-tunnel.sh
+
+    - name: Require real isolated bridge test services
+      env:
+        SPP_EXCEL_SERVICE_URL: http://127.0.0.1:18002
+        SPP_EXCEL_CORE_URL: http://127.0.0.1:18001
+        SPP_OSCLX_URL: http://127.0.0.1:19094
+        SPP_OSCLX_API_KEY: ${{ secrets.SPP_TEST_OSCLX_API_KEY }}
+        SPP_OSCLX_HMAC_SECRET: ${{ secrets.SPP_TEST_OSCLX_HMAC_SECRET }}
+      run: python3 Scripts/check-bridge-test-services.py
+
     - name: Run unit tests
       env:
+        # Aktivizon Poppler për testet PDF (sepse CI e instalon)
         SPP_TEST_NATIVE_DOCUMENTS: '1'
+
+        # Shërbimet e jashtme (Excel/NodeDB) mbeten të anashkaluara në CI
+     
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
-        dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=ci-tests.trx"
+        dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=ci-tests.trx" --filter "FullyQualifiedName!~BridgeUpstreamTests"
+
+    - name: Require 100 percent test execution and pass rate
+      run: python3 Scripts/require-all-tests-pass.py
 
     - name: Run Lightning SPP Demo
       run: dotnet run --no-build --configuration Release -- demo
@@ -122,7 +154,8 @@ jobs:
       with:
         name: validation-${{ github.sha }}
         path: |
-          Tests/LightningSPP.Tests/TestResults/*.trx
+          artifacts/ci-evidence-status.txt
+          Tests/LightningSPP.Tests/TestResults/**/*.trx
           artifacts/benchmark-environment.txt
           artifacts/speed-benchmark.txt
           artifacts/analysis-report.json

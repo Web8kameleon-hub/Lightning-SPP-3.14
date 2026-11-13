@@ -9,6 +9,7 @@ Lightning SPP (Scan-Process-Print) is a professional-grade document processing s
 ### Is Lightning SPP open source?
 
 The core library is released under the **MIT License**, which means you can:
+
 - ✅ Use it in commercial projects
 - ✅ Modify and distribute
 - ✅ Use it for free in development
@@ -18,7 +19,7 @@ However, **production use** of advanced features requires an active license key.
 ### What's the difference between FREE and PAID tiers?
 
 | Feature | FREE | PAID (Unlimited) |
-|---------|------|------------------|
+| --------- | ------ | ------------------ |
 | Operations/month | 1,000 | Unlimited |
 | Devices | 1 | 10 |
 | Basic Features (TideWave, CLX) | ✅ | ✅ |
@@ -34,15 +35,18 @@ However, **production use** of advanced features requires an active license key.
 ### How do I install Lightning SPP?
 
 **Option 1: NuGet Package**
+
 ```bash
 dotnet add package LightningSPP
 ```
 
 **Option 2: Visual Studio Extension**
+
 - Download from VS Marketplace
 - Tools → Extensions → Search "Lightning SPP"
 
 **Option 3: Docker**
+
 ```bash
 docker pull abagmbh/lightning-spp:3.14
 ```
@@ -50,16 +54,19 @@ docker pull abagmbh/lightning-spp:3.14
 ### What are the system requirements?
 
 **Minimum:**
+
 - .NET 10.0 Runtime
 - 512 MB RAM
 - 50 MB disk space
 
 **Recommended:**
+
 - .NET 10.0 SDK
 - 2 GB RAM
 - 200 MB disk space (with cache)
 
 **Supported Platforms:**
+
 - Windows 10/11 (x64, ARM64)
 - Linux (x64, ARM64)
 - macOS 12+ (x64, ARM64)
@@ -94,9 +101,9 @@ License is saved to: `%APPDATA%\LightningSPP\license.json`
 
 ### Where do I buy a license?
 
-**Official Store**: https://aba-gmbh.de/lightning-spp
+**Official Store**: <https://aba-gmbh.de/lightning-spp>
 
-**Contact**: clisonix@pm.me
+**Contact**: <clisonix@pm.me>
 
 ### Can I transfer my license to another device?
 
@@ -118,51 +125,57 @@ Then activate on the new device. Each license allows a specific number of concur
 ### Do you offer academic/non-profit discounts?
 
 **Yes!**
+
 - **Academic**: 50% discount (proof of .edu email required)
 - **Non-Profit**: 30% discount (proof of 501(c)(3) or equivalent required)
 
-Email clisonix@pm.me with documentation.
+Email <clisonix@pm.me> with documentation.
 
 ---
 
 ## Technical Questions
 
-### What is "REAL processing" vs "SIMULATED"?
+### Is there a simulated mode?
 
-**SIMULATED Mode** (default for testing):
-- Uses `Task.Delay()` to simulate processing time
-- No actual image manipulation or AI
-- Fast for unit testing
-- Returns fake data
+**No.** It was removed from the codebase. There is no `UseSimulatedServices()`
+and no `simulated` command; a simulated path cannot be invoked, and no
+`Task.Delay`-based processing exists.
 
-**REAL Mode** (production):
-- Uses **SixLabors.ImageSharp** for actual image processing
-- Uses **Microsoft.ML** for real machine learning
-- Uses **Brotli** for compression
-- Writes actual files to disk
-- Returns real processed data
+What actually runs:
 
-Switch modes:
-```csharp
-LightningAPI.UseRealServices();      // Production
-LightningAPI.UseSimulatedServices(); // Testing
+- **Imazhi (L):** `RealImageProcessor` — SkiaSharp
+- **Imazhi (R):** `FastScanService` — SixLabors.ImageSharp
+- **Kompresimi:** Brotli përmes `RealAIProcessor`
+- **Output-i:** skedar real në disk përmes `RealPrintService`
+
+Zgjedhja e motorit bëhet me `WWWMMM_IMAGE_ENGINE` dhe **nuk ka fallback**. Për të
+verifikuar që të dy punojnë:
+
+```bash
+dotnet run --project wwwmmm.csproj -- engines
 ```
+
+Inferenca e modelit ndodh vetëm me `LSPP_ONNX_MODEL_PATH` të konfiguruar.
 
 ### How fast is Lightning SPP really?
 
-**Benchmark Results** (100KB image):
+Nuk ka numër universal, dhe ky dokument nuk publikon numra që nuk janë matur.
 
-| Mode | Target | Actual | Status |
-|------|--------|--------|--------|
-| Instant | < 1ms | 0.3ms | ✅ 3x faster |
-| UltraFast | < 5ms | 3.7ms | ✅ 1.3ms margin |
-| Lightning | < 10ms | 8.2ms | ✅ 1.8ms margin |
+Mase vetë:
 
-Real-world performance depends on:
-- Data size
-- Processing mode (Lightning/TideWave/Resonance/NanoDecibel)
-- Hardware capabilities
-- Network latency (cloud deployments)
+```bash
+dotnet run --project wwwmmm.csproj -- speed
+```
+
+Komanda raporton median dhe p95 mbi 20 ekzekutime pas 5 ngrohjeve, me input
+64 KiB të përzier. Përfshije gjithmonë mjedisin (OS, CPU, RAM, version) kur
+citon rezultatin.
+
+Koha varet nga: madhësia dhe përmbajtja e input-it, modeli i skanimit
+(Lightning/TideWave/Resonance/NanoDecibel), motori L ose R, hardware-i dhe
+memoria e disponueshme.
+
+Pragjet e regresionit mbahen nga suite-i i testeve, jo nga ky dokument.
 
 ### Does Lightning SPP support batch processing?
 
@@ -188,6 +201,7 @@ Lightning SPP processes **byte arrays** and **streams**. For PDFs:
 3. **Process with Lightning SPP**
 
 Example:
+
 ```csharp
 // Extract PDF page as image
 var pdfBytes = File.ReadAllBytes("document.pdf");
@@ -227,8 +241,8 @@ var result = await instance.ProcessAsync(
 
 **Common causes:**
 
-1. **Using SIMULATED mode in production**
-   - Solution: `LightningAPI.UseRealServices()`
+1. **Input më i madh se sa pritej**
+   - Solution: kontrollo përmasat; rezolucioni kufizohet në 8 000 000 pikselë
 
 2. **Network latency (cloud deployments)**
    - Solution: Deploy closer to data source, use CDN
@@ -259,6 +273,7 @@ var result = await instance.ProcessAsync(data);
 **Yes!** Lightning SPP is stateless and perfect for serverless:
 
 **Azure Functions:**
+
 ```csharp
 [FunctionName("ProcessDocument")]
 public static async Task<IActionResult> Run(
@@ -272,6 +287,7 @@ public static async Task<IActionResult> Run(
 ```
 
 **AWS Lambda:**
+
 ```csharp
 public async Task<APIGatewayProxyResponse> FunctionHandler(
     APIGatewayProxyRequest request,
@@ -292,26 +308,35 @@ public async Task<APIGatewayProxyResponse> FunctionHandler(
 
 ## Compliance & Security
 
-### Is Lightning SPP HIPAA compliant?
+### A është Lightning SPP në përputhje me HIPAA?
 
-**Yes**, when configured correctly:
+**No certification is claimed.** Ky repository nuk përmban provë përputhshmërie
+HIPAA dhe nuk ofron një metodë `EnableAuditLogging()`.
 
-1. ✅ **Data Encryption**: All data encrypted in transit (TLS 1.3)
-2. ✅ **No Data Retention**: Lightning SPP doesn't store processed data
-3. ✅ **Audit Logging**: Enable with `LightningAPI.EnableAuditLogging()`
-4. ✅ **BAA Available**: Business Associate Agreement for healthcare customers
+Çka ekziston teknikisht:
 
-**Important**: You must sign a BAA for HIPAA compliance. Contact clisonix@pm.me.
+1. TLS ofrohet nga proxy-i (aplikacioni nuk terminon TLS vetë).
+2. Autentikim me fjalëkalim PBKDF2, sesione me cookie, CSRF dhe revokim.
+3. Regjistër auditimi për nënshkrimin e licencave dhe veprimet e administrimit.
+4. Ruajtja e të dhënave kontrollohet nga operatori përmes `LSPP_DATA_DIR`.
+
+Përputhshmëria HIPAA kërkojnë marrëveshje, politika, trajnim dhe auditim nga
+operatori. Ky produkt nuk e zëvendëson atë punë.
 
 ### What about GDPR?
 
-Lightning SPP is **GDPR compliant** by design:
+Nuk deklarohet certifikim. Faktet teknike:
 
-- ✅ **No Personal Data Collection**: Processes data in-memory only
-- ✅ **Data Minimization**: Only processes what you send
-- ✅ **Right to Erasure**: No persistent storage (unless you configure it)
-- ✅ **Data Portability**: Standard byte array I/O
-- ✅ **Privacy by Design**: Configurable data retention policies
+- Përpunimi bëhet lokalisht; nuk ka telefonim në shërbime të jashtme nga
+  pipeline-i i përpunimit.
+- Input-i që jep përdoruesi përpunohet ashtu siç jepet.
+- Skedarët e ndërmjetëm (artefakte `.br`, PNG/TIFF/PDF) mbeten në disk derisa
+  operohen nga politika e ruajtjes; fshirja është përgjegjësi e operatorit.
+- Llogaritë dhe entitlement-et ruhen në `LSPP_DATA_DIR` dhe Longo, me leje të
+  kontrolluara.
+
+Detyrimet GDPR (baza ligjore, DPIA, njoftimi i shkeljeve, të drejtat e subjektit)
+mbeten të operatorit.
 
 See [PRIVACY.md](../PRIVACY.md) for details.
 
@@ -324,7 +349,10 @@ See [PRIVACY.md](../PRIVACY.md) for details.
 - ❌ No analytics tracking
 - ✅ 100% on-premise processing
 
-**License validation** requires internet for activation, but processing is fully offline.
+**License activation** in the current hosted flow uses the issuer service; the
+processing pipeline itself runs fully offline. Offline commercial activation is
+an open item — see
+[Docs/ACCOUNT_SECURITY_REVIEW.md](../Docs/ACCOUNT_SECURITY_REVIEW.md).
 
 ---
 
@@ -335,7 +363,7 @@ See [PRIVACY.md](../PRIVACY.md) for details.
 **Possible causes:**
 
 1. **Expired license**
-   - Solution: Renew at https://aba-gmbh.de/lightning-spp
+   - Solution: Renew at <https://aba-gmbh.de/lightning-spp>
 
 2. **Invalid key format**
    - Solution: Copy key exactly as provided (including dashes)
@@ -359,6 +387,7 @@ You've hit your tier's monthly limit:
 ### Docker container won't start
 
 **Check logs:**
+
 ```bash
 docker logs <container-id>
 ```
@@ -366,16 +395,19 @@ docker logs <container-id>
 **Common fixes:**
 
 1. **Port conflict**
+
    ```bash
    docker run -p 8080:80 abagmbh/lightning-spp:3.14
    ```
 
 2. **Memory limit too low**
+
    ```bash
    docker run --memory="512m" abagmbh/lightning-spp:3.14
    ```
 
 3. **Missing volume mount**
+
    ```bash
    docker run -v /data:/app/data abagmbh/lightning-spp:3.14
    ```
@@ -387,26 +419,30 @@ docker logs <container-id>
 ### How do I integrate with existing .NET applications?
 
 **1. Add NuGet package:**
+
 ```bash
 dotnet add package LightningSPP
 ```
 
 **2. Add using statement:**
+
 ```csharp
 using LightningSPP;
 using LightningSPP.Licensing;
 ```
 
 **3. Initialize once (at startup):**
+
 ```csharp
 // Optional: Activate license
 LicenseManager.ActivateLicense("LSPP-UNLTD-...");
 
-// Configure services (REAL or SIMULATED)
+// Zgjedh konfigurimin e prodhimit (motorë realë; nuk ka mod të simuluar)
 LightningAPI.UseRealServices();
 ```
 
 **4. Use anywhere in your code:**
+
 ```csharp
 var result = await LightningAPI.QuickScanAsync(imageData);
 ```
@@ -416,6 +452,7 @@ var result = await LightningAPI.QuickScanAsync(imageData);
 **Yes!** Both Blazor Server and Blazor WebAssembly:
 
 **Blazor Server:**
+
 ```csharp
 @inject ILightningSPP Lightning
 
@@ -431,6 +468,7 @@ var result = await LightningAPI.QuickScanAsync(imageData);
 ```
 
 **Blazor WebAssembly** (note: WASM has some limitations):
+
 - REAL processing works with limitations
 - Consider calling backend API instead for heavy processing
 
@@ -439,6 +477,7 @@ var result = await LightningAPI.QuickScanAsync(imageData);
 Use the **REST API** wrapper (see Web API section below) or Docker container:
 
 **Python Example:**
+
 ```python
 import requests
 
@@ -459,36 +498,40 @@ print(f"Processed in {result['timeMs']}ms")
 ### Can I get a refund?
 
 **Yes**, within **30 days** of purchase if:
+
 - You haven't activated the license
 - OR you've used < 100 operations
 
-Email clisonix@pm.me with your license key.
+Email <clisonix@pm.me> with your license key.
 
 ### Do you offer volume discounts?
 
 **Yes, for ENTERPRISE tier:**
 
 | Locations | Discount |
-|-----------|----------|
+| ----------- | ---------- |
 | 6-10 | 15% off |
 | 11-25 | 25% off |
 | 26+ | 35% off |
 
-Contact clisonix@pm.me for custom quote.
+Contact <clisonix@pm.me> for custom quote.
 
 ### Can I pay monthly instead of annually?
 
 **PAY-AS-YOU-GO** tier is monthly billing:
+
 - €0.001/operation
 - Minimum €9.99/month
 - Unlimited operations
 
 **UNLIMITED** tier is annual only (better value):
+
 - €99.99/year = €8.33/month effective
 
 ### Do you accept cryptocurrency?
 
 Currently **no**, but it's under consideration. We accept:
+
 - Credit/Debit Cards (Visa, Mastercard, Amex)
 - PayPal
 - Bank Transfer (SEPA for EU customers)
@@ -509,9 +552,10 @@ See [CONTRIBUTING.md](Contributing.md) for guidelines.
 
 ### How do I report a bug?
 
-**GitHub Issues**: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues
+**GitHub Issues**: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues>
 
 **Include:**
+
 - Lightning SPP version
 - .NET version
 - Operating system
@@ -520,7 +564,7 @@ See [CONTRIBUTING.md](Contributing.md) for guidelines.
 
 ### Where can I request features?
 
-**GitHub Discussions**: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions
+**GitHub Discussions**: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions>
 
 Vote on existing requests or create new ones!
 
@@ -531,17 +575,18 @@ Vote on existing requests or create new ones!
 ### How do I get support?
 
 | Tier | Support Channel | Response Time |
-|------|----------------|---------------|
+| ------ | ---------------- | --------------- |
 | **FREE** | GitHub Issues, Community | Best effort |
-| **PAY-AS-YOU-GO** | Email (clisonix@pm.me) | 48 hours |
+| **PAY-AS-YOU-GO** | Email (<clisonix@pm.me>) | 48 hours |
 | **UNLIMITED** | Priority Email | 24 hours |
 | **ENTERPRISE** | Dedicated Support | 4 hours (SLA) |
 
 ### Is there a community forum?
 
-**GitHub Discussions**: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions
+**GitHub Discussions**: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions>
 
 Join to:
+
 - Ask questions
 - Share use cases
 - Get help from community
@@ -551,9 +596,9 @@ Join to:
 
 **Still have questions?**
 
-📧 Email: clisonix@pm.me
-💬 Discussions: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions
-🐛 Issues: https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues
+📧 Email: <clisonix@pm.me>
+💬 Discussions: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/discussions>
+🐛 Issues: <https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/issues>
 
 ---
 
