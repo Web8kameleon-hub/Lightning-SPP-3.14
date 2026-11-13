@@ -154,6 +154,8 @@ jobs:
           Tests/LightningSPP.Tests/TestResults/**/*.trx
           artifacts/benchmark-environment.txt
           artifacts/speed-benchmark.txt
+          artifacts/analysis-report.json
+          artifacts/analysis-report.md
         if-no-files-found: error
 
   docker-build:
