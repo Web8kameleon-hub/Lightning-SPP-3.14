@@ -139,84 +139,84 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
   ],
   "amendments": [
     {
-      "date_time": "2026-11-12T16:39:00+02:00",
+      "date_time": "2026-11-12T16:35:00+02:00",
       "phase": "P0",
       "field": "target_local",
       "from": "2026-11-09T17:00:00+02:00",
       "to": "2026-11-16T17:00:00+02:00",
-      "reason": "The CI enforcement run found the original deadline passed while the phase was still planned. Rebase the full schedule by seven days, preserving the original intervals and scope, rather than claim completion.",
+      "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-12.md"]
+      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
     },
     {
-      "date_time": "2026-11-12T16:39:00+02:00",
+      "date_time": "2026-11-12T16:35:00+02:00",
       "phase": "P1",
       "field": "target_local",
       "from": "2026-11-10T17:00:00+02:00",
       "to": "2026-11-17T17:00:00+02:00",
-      "reason": "The CI enforcement run found the original deadline passed while the phase was still planned. Rebase the full schedule by seven days, preserving the original intervals and scope, rather than claim completion.",
+      "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-12.md"]
+      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
     },
     {
-      "date_time": "2026-11-12T16:39:00+02:00",
+      "date_time": "2026-11-12T16:35:00+02:00",
       "phase": "P2",
       "field": "target_local",
       "from": "2026-11-13T17:00:00+02:00",
       "to": "2026-11-20T17:00:00+02:00",
-      "reason": "The CI enforcement run found the original deadline passed while the phase was still planned. Rebase the full schedule by seven days, preserving the original intervals and scope, rather than claim completion.",
+      "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-12.md"]
+      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
     },
     {
-      "date_time": "2026-11-12T16:39:00+02:00",
+      "date_time": "2026-11-12T16:35:00+02:00",
       "phase": "P3",
       "field": "target_local",
       "from": "2026-11-18T17:00:00+02:00",
       "to": "2026-11-25T17:00:00+02:00",
-      "reason": "The CI enforcement run found the original deadline passed while the phase was still planned. Rebase the full schedule by seven days, preserving the original intervals and scope, rather than claim completion.",
+      "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-12.md"]
+      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
     },
     {
-      "date_time": "2026-11-12T16:39:00+02:00",
+      "date_time": "2026-11-12T16:35:00+02:00",
       "phase": "P4",
       "field": "target_local",
       "from": "2026-11-20T17:00:00+02:00",
       "to": "2026-11-27T17:00:00+02:00",
-      "reason": "The CI enforcement run found the original deadline passed while the phase was still planned. Rebase the full schedule by seven days, preserving the original intervals and scope, rather than claim completion.",
+      "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-12.md"]
+      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
     },
     {
-      "date_time": "2026-11-12T16:39:00+02:00",
+      "date_time": "2026-11-12T16:35:00+02:00",
       "phase": "P5",
       "field": "target_local",
       "from": "2026-11-24T17:00:00+02:00",
       "to": "2026-12-01T17:00:00+02:00",
-      "reason": "The CI enforcement run found the original deadline passed while the phase was still planned. Rebase the full schedule by seven days, preserving the original intervals and scope, rather than claim completion.",
+      "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-12.md"]
+      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
     },
     {
-      "date_time": "2026-11-12T16:39:00+02:00",
+      "date_time": "2026-11-12T16:35:00+02:00",
       "phase": "P6",
       "field": "target_local",
       "from": "2026-11-25T17:00:00+02:00",
       "to": "2026-12-02T17:00:00+02:00",
-      "reason": "The CI enforcement run found the original deadline passed while the phase was still planned. Rebase the full schedule by seven days, preserving the original intervals and scope, rather than claim completion.",
+      "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-12.md"]
+      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
     },
     {
-      "date_time": "2026-11-12T16:39:00+02:00",
+      "date_time": "2026-11-12T16:35:00+02:00",
       "phase": "P7",
       "field": "target_local",
       "from": "2026-11-27T17:00:00+02:00",
       "to": "2026-12-04T17:00:00+02:00",
-      "reason": "The CI enforcement run found the original deadline passed while the phase was still planned. Rebase the full schedule by seven days, preserving the original intervals and scope, rather than claim completion.",
+      "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-12.md"]
+      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
     }
   ]
 }
@@ -230,7 +230,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 
 ## CI/CD enforcement
 
-`measured`: `Scripts/planlog-gate.py` was added in commit `b551f101a04bd2be130a56ee40a1b72a9eb3daf5`; `.github/workflows/ci-cd.yml` invokes it in commit `a582320cf7b91e33fe8ce3ddc83d9c81a29b7139`. At the time of this entry, these were source changes only and the gate had not yet run in CI.
+`measured`: `Scripts/planlog-gate.py` was added in commit `b551f101a04bd2be130a56ee40a1b72a9eb3daf5`; `.github/workflows/ci-cd.yml` invokes it in commit `a582320cf7b91e33fe8ce3ddc83d9c81a29b7139`. Actions run [43237654187](https://github.com/Web8kameleon-hub/Lightning-SPP-3.14/actions/runs/43237654187), job 131249243215, executed the gate on 2026-11-12 and blocked P0/P1 because their deadlines passed while still planned. The exact log output is recorded in `Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md`.
 
 `declared`: The workflow runs the gate before restore/build/tests and fetches full history so the checker can compare the Planlog with its base revision. It validates the contract, phase order, timezone-aware dates and both deliverable and evidence files for verified phases; requires a dated amendment for changes to state, scope, dates, owner or evidence requirements; and blocks once a target deadline passes without verified evidence. Existing build, test, Docker, release and production-deploy gates still apply.
 
@@ -252,7 +252,8 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 | 2026-11-07 | measured | Initial Planlog commit `930299cb21d072b2027a49a62a921a36935638b7`; convention-alignment commit `d67ce1cf24b9a66301c51f47fdd16588632411fc`. | Existing branch holds the planning history; no runtime implementation claimed. |
 | 2026-11-07 | declared | Owner clarified Planlog is a dynamic constitution that can set dates, conditions, deliverables and enforcement. | Add dated phases, amendment records and a CI/CD gate; schedule remains amendable with an audit trail. |
 | 2026-11-07 | declared | Added the planlog gate script and wired it into `ci-cd.yml` with full history for amendment checks in commits `b551f101a04bd2be130a56ee40a1b72a9eb3daf5`, `a582320cf7b91e33fe8ce3ddc83d9c81a29b7139`, `f7b95fd45fbbc3980b7d53586bd0be13dc7b3788`, `6d15d549ef34fd89f1bcc79709bbd6f9431cb108`, `d57755881bacc47c34c445e1dade72889741136b` and `70df6645d6cf16290d889a29e88263bcf3c29bae`. | Source gate is on the feature branch; it has not yet been run in CI or deployed. |
-| 2026-11-12 | declared | CI run `43237964375` found P0 and P1 overdue and still planned. The complete schedule was moved by seven days under the amendment process; all phases remain planned and no deliverables are claimed complete. | See [the dated replan evidence](USAGE_TELEMETRY_REPLAN_2026-11-12.md). |
+| 2026-11-12 | measured | Actions run `43237654187` executed the gate; P0/P1 were overdue and their deliverable files were absent. | Keep both phases planned and amend the complete schedule by seven days; no completion is claimed. See `Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md`. |
+| 2026-11-12 | declared | Amended P0–P7 dates by seven days after the gate failure; all phases remain planned. | Continue to block at each revised deadline until verified evidence exists. |
 
 `declared`: Add a log entry for each phase transition and every dynamic amendment. Record actual results and remaining unknowns; never mark a phase complete because a plan, callback, scaffold, endpoint or workflow exists.
 

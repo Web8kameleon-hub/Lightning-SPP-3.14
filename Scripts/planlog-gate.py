@@ -81,7 +81,7 @@ def phase_map(contract: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def validate_amendments(
-    current: dict[str, Any], baseline: dict[str, Any] | None
+    current: dict[str, Any], baseline: dict[str, Any] | None, root: Path
 ) -> list[str]:
     if baseline is None:
         return []
@@ -260,7 +260,7 @@ def main() -> int:
     errors.extend(baseline_errors)
     if contract is not None:
         errors.extend(validate_contract(root, contract, now))
-        errors.extend(validate_amendments(contract, baseline))
+        errors.extend(validate_amendments(contract, baseline, root))
 
     if errors:
         print("PLANLOG GATE: BLOCKED")

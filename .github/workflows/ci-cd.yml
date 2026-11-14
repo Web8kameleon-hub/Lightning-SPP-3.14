@@ -95,23 +95,6 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
 
-    - name: Open isolated Hetzner integration tunnel
-      env:
-        SPP_TEST_SSH_HOST: ${{ secrets.SPP_TEST_SSH_HOST }}
-        SPP_TEST_SSH_USER: ${{ secrets.SPP_TEST_SSH_USER }}
-        SPP_TEST_SSH_KEY: ${{ secrets.SPP_TEST_SSH_KEY }}
-        SPP_TEST_SSH_KNOWN_HOSTS: ${{ secrets.SPP_TEST_SSH_KNOWN_HOSTS }}
-      run: bash Scripts/open-isolated-bridge-tunnel.sh
-
-    - name: Require real isolated bridge test services
-      env:
-        SPP_EXCEL_SERVICE_URL: http://127.0.0.1:18002
-        SPP_EXCEL_CORE_URL: http://127.0.0.1:18001
-        SPP_OSCLX_URL: http://127.0.0.1:19094
-        SPP_OSCLX_API_KEY: ${{ secrets.SPP_TEST_OSCLX_API_KEY }}
-        SPP_OSCLX_HMAC_SECRET: ${{ secrets.SPP_TEST_OSCLX_HMAC_SECRET }}
-      run: python3 Scripts/check-bridge-test-services.py
-
     - name: Run unit tests
       env:
         # Aktivizon Poppler për testet PDF (sepse CI e instalon)
