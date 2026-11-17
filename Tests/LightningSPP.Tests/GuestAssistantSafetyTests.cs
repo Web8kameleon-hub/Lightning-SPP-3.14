@@ -24,7 +24,7 @@ public sealed class GuestAssistantSafetyTests
         var server = LicenseApiServer.RunAsync(port, cancellation.Token);
         try
         {
-            using var client = new HttpClient { BaseAddress = new Uri("http://localhost:" + port) };
+            using var client = IsolatedHttpClient.Create(port, 79);
             using (var method = await client.GetAsync("/api/fluid/bitpipeline")) Assert.Equal(HttpStatusCode.MethodNotAllowed, method.StatusCode);
             using (var missing = await client.PostAsJsonAsync("/api/fluid/missing", new { inputData = "" })) Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
             var bytes = "real binary round-trip fixture"u8.ToArray();
@@ -61,8 +61,8 @@ public sealed class GuestAssistantSafetyTests
             Environment.SetEnvironmentVariable("LSPP_MODEL_ROUTES_FILE", null); ModelRoutes.ClearCache();
             server = LicenseApiServer.RunAsync(port, cancellation.Token);
             using var handler = new HttpClientHandler { CookieContainer = new CookieContainer() };
-            using var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:" + port) };
-            client.DefaultRequestHeaders.Add("Origin", client.BaseAddress.GetLeftPart(UriPartial.Authority));
+            using var client = IsolatedHttpClient.Create(port, 80, handler.CookieContainer);
+            client.DefaultRequestHeaders.Add("Origin", client.BaseAddress!.GetLeftPart(UriPartial.Authority));
             using (var disabled = await client.GetAsync("/api/assistant")) Assert.Equal(HttpStatusCode.ServiceUnavailable, disabled.StatusCode);
             Environment.SetEnvironmentVariable("LSPP_GUEST_ASSISTANT_ENABLED", "true");
             var manifest = await client.GetFromJsonAsync<JsonElement>("/api/assistant");

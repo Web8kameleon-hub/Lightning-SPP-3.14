@@ -28,7 +28,7 @@ public class ApiSigningStatusIntegrationTests
             var serverTask = LicenseApiServer.RunAsync(port, cts.Token);
             await WaitUntilHealthyAsync(port, TimeSpan.FromSeconds(5));
 
-            using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+            using var client = IsolatedHttpClient.Create(port, 76);
 
             // Unauthorized request
             var unauthorized = await client.GetAsync("/api/license/signing-status");

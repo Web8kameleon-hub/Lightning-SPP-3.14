@@ -23,7 +23,7 @@ public sealed class ModelGateway
         foreach (var route in routes)
         {
             if (!Uri.TryCreate(route.Endpoint, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment) ||
-                route.Provider is not ("ollama" or "openai-compatible") || string.IsNullOrWhiteSpace(route.Model) || string.IsNullOrWhiteSpace(route.Id) || !this.routes.TryAdd(route.Id, route))
+                route.Provider is not ("ollama" or "openai-compatible") || string.IsNullOrWhiteSpace(route.Model) || string.IsNullOrWhiteSpace(route.Id) || !this.routes.TryAdd(route.Id, route with { Remote = route.Remote || !uri.IsLoopback }))
                 throw new ArgumentException("Invalid or duplicate configured model route.");
             if (uri.Scheme != "https" && route.ApiKeyEnvironment is not null && !uri.IsLoopback) throw new ArgumentException("Authenticated remote model routes require TLS.");
         }

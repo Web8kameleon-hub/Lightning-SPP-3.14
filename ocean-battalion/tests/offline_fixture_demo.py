@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from battalion.config import load_config
-from battalion.fetch import RecordedFetcher
+from battalion_test_fetcher import RecordedFetcher
 from battalion.orchestrator import Orchestrator
 from battalion.pipeline.ingest import ChunkOptions, offline_ingestor
 from battalion.policy import Policy

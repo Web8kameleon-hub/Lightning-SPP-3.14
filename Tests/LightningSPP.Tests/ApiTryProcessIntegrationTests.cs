@@ -29,7 +29,7 @@ public class ApiTryProcessIntegrationTests
         var serverTask = LicenseApiServer.RunAsync(port, cts.Token);
         await WaitUntilHealthyAsync(port, TimeSpan.FromSeconds(5));
 
-        using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+        using var client = IsolatedHttpClient.Create(port, 74);
 
         // 1. Valid upload, no profile header -> defaults to lightning.
         var r1 = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: null);

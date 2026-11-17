@@ -86,10 +86,7 @@ class BgeM3Embedder:
 
 
 def default_embedder(offline: bool = False) -> Embedder:
-    """Real embeddings when available; the offline stub only when asked."""
+    """A real model is required unless non-semantic hashing was explicitly selected."""
     if offline:
         return HashingEmbedder()
-    try:
-        return BgeM3Embedder()
-    except Exception:
-        return HashingEmbedder()
+    return BgeM3Embedder()

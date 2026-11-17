@@ -27,6 +27,9 @@ to the browser. Do not place route configuration or credentials in a workspace.
 The local product must use model endpoints on the customer's own infrastructure.
 Remote routes require the user's explicit consent; web access also requires
 `LSPP_WORKFLOW_ALLOW_REMOTE_MODELS=true`. No silent provider fallback occurs.
+All non-loopback endpoints are normalized to remote for this consent check,
+including operator-configured private-network endpoints. A false `remote` field
+cannot authorize unconfirmed document transfer. Local discovery never uses a proxy.
 Discovery reports provider-supplied identity/digest, not independently audited
 model weights or proof that a model is qualified for a domain.
 

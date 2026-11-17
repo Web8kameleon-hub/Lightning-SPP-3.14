@@ -14,6 +14,7 @@ public sealed class ModelQualityPolicyTests
     private static ModelQualityEvidence E(string model, double score, string language = "sq") =>
         new(model,Digest,language,Scope,score,3,"chrF2","test-fixture-signature",OtherDigest,Now.AddMinutes(-5),Now.AddDays(1));
     private static HashSet<string> Permissions => new(["model.invoke"]);
+    private static HashSet<string> RemotePermissions => new(["model.invoke", "network.remote"]);
 
     [Fact]
     public void LargeHistoryDoesNotPermanentlyBlockFutureQuestionsOrRemoveSafety()
@@ -55,7 +56,7 @@ public sealed class ModelQualityPolicyTests
         var handler = new Provider();
         var gateway = new ModelGateway([new("first","https://first.example.test","low"),new("second","https://second.example.test","high")],
             new HttpClient(handler),new([E("low",45),E("high",80)],40));
-        var result=await gateway.ChatBestAsync([new("user","test-only question")],"sq",Scope,Permissions,default);
+        var result=await gateway.ChatBestAsync([new("user","test-only question")],"sq",Scope,RemotePermissions,default);
         Assert.Equal("high",result.Selection.Identity.Model);
         Assert.Equal(80,result.Selection.Evidence.Score);
         Assert.Equal(["high"],handler.Inferences);
@@ -78,7 +79,7 @@ public sealed class ModelQualityPolicyTests
         var handler=new Provider { DenyInference=true };
         var gateway=new ModelGateway([new("one","https://first.example.test","high"),new("two","https://second.example.test","low")],
             new HttpClient(handler),new([E("high",90),E("low",50)],40));
-        var error=await Assert.ThrowsAsync<HttpRequestException>(() => gateway.ChatBestAsync([new("user","test-only")],"sq",Scope,Permissions,default));
+        var error=await Assert.ThrowsAsync<HttpRequestException>(() => gateway.ChatBestAsync([new("user","test-only")],"sq",Scope,RemotePermissions,default));
         Assert.Equal(HttpStatusCode.Forbidden,error.StatusCode);
         Assert.Single(handler.Inferences);
     }
@@ -88,7 +89,7 @@ public sealed class ModelQualityPolicyTests
     {
         var handler=new Provider { ChangeDigest=true };
         var gateway=new ModelGateway([new("one","https://first.example.test","high")],new HttpClient(handler),new([E("high",90)],40));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => gateway.ChatBestAsync([new("user","private-test-fixture")],"sq",Scope,Permissions,default));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => gateway.ChatBestAsync([new("user","private-test-fixture")],"sq",Scope,RemotePermissions,default));
         Assert.Empty(handler.Inferences);
     }
 

@@ -49,7 +49,7 @@ public class ApiLicenseActivationIntegrationTests
             var serverTask = LicenseApiServer.RunAsync(port, cts.Token);
             await WaitUntilHealthyAsync(port, TimeSpan.FromSeconds(5));
 
-            using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+            using var client = IsolatedHttpClient.Create(port, 75);
 
             // 1. Valid signed key, NO Authorization header at all -> must succeed (the fix).
             var activateOk = await client.PostAsync("/api/license/activate",

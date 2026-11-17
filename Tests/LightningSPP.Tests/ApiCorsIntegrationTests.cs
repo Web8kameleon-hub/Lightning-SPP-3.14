@@ -23,7 +23,7 @@ public class ApiCorsIntegrationTests
             var serverTask = LicenseApiServer.RunAsync(port, cts.Token);
             await WaitUntilHealthyAsync(port, TimeSpan.FromSeconds(5));
 
-            using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+            using var client = IsolatedHttpClient.Create(port, 77);
 
             using var allowedRequest = new HttpRequestMessage(HttpMethod.Get, "/api/health");
             allowedRequest.Headers.Add("Origin", "https://scanprocessprint.com");

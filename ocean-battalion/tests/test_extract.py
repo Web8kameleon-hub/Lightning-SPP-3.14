@@ -137,9 +137,44 @@ def test_missing_tool_is_an_explicit_error(monkeypatch):
     not (HAS_TESSERACT and shutil.which("pdftoppm")),
     reason="Tesseract or pdftoppm not installed",
 )
-def test_real_ocr_recognises_a_rendered_page():
-    # A PDF page that only exists as an image is the honest OCR case, but
-    # building one needs a rasteriser; here we assert the tools resolve and
-    # the OCR branch reaches them, which is what this environment can prove.
-    assert locator.try_locate("pdftoppm") is not None
-    assert locator.try_locate("tesseract") is not None
+def test_real_ocr_recognises_a_rendered_page(tmp_path):
+    import struct
+    import subprocess
+    source = tmp_path / "text.pdf"
+    source.write_bytes(build_pdf(("LIGHTNING SPP 314",)))
+    prefix = tmp_path / "rendered"
+    subprocess.run([locator.locate("pdftoppm").path, "-singlefile", "-scale-to", "2400", "-png", str(source), str(prefix)],
+                   check=True, capture_output=True, timeout=60)
+    png = prefix.with_suffix(".png").read_bytes()
+    width, height = struct.unpack(">II", png[16:24])
+    assert png[24:26] == bytes([8, 2]), "Fixture renderer must produce 8-bit RGB"
+    chunks = []; offset = 8
+    while offset < len(png):
+        size = struct.unpack(">I", png[offset:offset + 4])[0]
+        if png[offset + 4:offset + 8] == b"IDAT":
+            chunks.append(png[offset + 8:offset + 8 + size])
+        offset += size + 12
+    pixels = b"".join(chunks)
+    draw = b"q 612 0 0 792 0 0 cm /Im1 Do Q"
+    objects = [b"<< /Type /Catalog /Pages 2 0 R >>", b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /XObject << /Im1 5 0 R >> >> /Contents 4 0 R >>",
+        (f"<< /Length {len(draw)} >>\nstream\n".encode() + draw + b"\nendstream"),
+        (f"<< /Type /XObject /Subtype /Image /Width {width} /Height {height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns {width} >> /Length {len(pixels)} >>\nstream\n".encode() + pixels + b"\nendstream")]
+    out = bytearray(b"%PDF-1.4\n"); offsets = [0]
+    for number, obj in enumerate(objects, 1):
+        offsets.append(len(out)); out.extend(f"{number} 0 obj\n".encode() + obj + b"\nendobj\n")
+    xref = len(out); out.extend(f"xref\n0 {len(offsets)}\n0000000000 65535 f \n".encode())
+    for item in offsets[1:]:
+        out.extend(f"{item:010} 00000 n \n".encode())
+    out.extend(f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode())
+    result = extract(bytes(out), "application/pdf", ocr=True, ocr_lang="eng", max_ocr_pages=1)
+    assert result.reader == READER_OCR
+    assert "LIGHTNING" in result.text.upper()
+    assert "314" in result.text
+
+
+def test_native_output_budget_stops_real_subprocess_output():
+    import sys
+    from battalion.pipeline.extract import _run, ExtractionError
+    with pytest.raises(ExtractionError, match="output exceeds"):
+        _run([sys.executable, "-c", "import sys; sys.stdout.buffer.write(b'x' * (2*1024*1024+1))"])

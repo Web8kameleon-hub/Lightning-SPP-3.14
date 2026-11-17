@@ -116,6 +116,11 @@ jobs:
     - name: Require 100 percent test execution and pass rate
       run: python3 Scripts/require-all-tests-pass.py
 
+    - name: Test Ocean extraction, real OCR and bounded HTTP
+      run: |
+        python3 -m pip install './ocean-battalion[dev]'
+        python3 -m pytest ocean-battalion/tests -q -p no:cacheprovider --junitxml=artifacts/ocean-tests.xml
+
     - name: Run Lightning SPP Demo
       run: dotnet run --no-build --configuration Release -- demo
 

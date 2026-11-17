@@ -176,3 +176,23 @@ upstream NanoGrid codec and verify the real authenticated hybrid contract;
 verify live Excel/model classification and physical devices where enabled;
 complete CI plus deployment/rollback and exact-revision health verification.
 No production readiness or rollout is claimed by local test results.
+
+## PR 32 check repair
+
+The PR head `ad6f024` failed three application jobs. Provider test fixtures
+omitted explicit remote-network permission; multiple real HTTP fixtures shared
+one rate-limit identity. Fixtures now grant remote permission only where intended
+and bind distinct loopback source addresses without weakening server limits.
+Test license and account writes use fresh isolated directories. Non-loopback
+model endpoints are recorded as remote regardless of their configuration flag.
+
+Local repair verification: Release build passed with zero warnings/errors;
+the CI-equivalent .NET selection passed 395 tests with zero failed/skipped
+(`ci-fix-native-release.trx`, native document tests enabled). Ocean tests passed
+42 with zero skipped, including real raster PDF OCR and bounded loopback HTTP
+(`artifacts/ocean-tests.xml`). Ocean no longer silently substitutes hash vectors
+for a failed semantic model; deterministic fixtures live exclusively in tests.
+Extraction and transport enforce explicit byte/time/page limits. Policy,
+Planlog and release-companion gates passed. These results are local evidence;
+updated GitHub CI, required independent review and the remaining acceptance
+gates above are still required. No deployment is claimed.

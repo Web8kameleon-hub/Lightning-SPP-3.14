@@ -30,7 +30,7 @@ public sealed class ApiAdminSummaryIntegrationTests(LongoFixture fixture) : ICla
             try
             {
                 await WaitUntilHealthyAsync(port, TimeSpan.FromSeconds(5));
-                using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+                using var client = IsolatedHttpClient.Create(port, 78);
 
                 using var denied = await client.GetAsync("/api/admin/summary");
                 Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Sequence
@@ -60,6 +61,8 @@ def extract(
     runner: Runner | None = None,
 ) -> ExtractionResult:
     """Extract text from HTML, PDF or plain text."""
+    if type(dpi) is not int or not 72 <= dpi <= 600 or type(max_ocr_pages) is not int or not 1 <= max_ocr_pages <= 32:
+        raise ExtractionError("OCR requires 72–600 DPI and 1–32 pages")
     normalised = (mime or "").lower()
     run = runner or _run
 
@@ -69,6 +72,8 @@ def extract(
     else:
         raw = content
         body = ""
+    if len(raw) > 8 * 1024 * 1024:
+        raise ExtractionError("Extraction input exceeds 8 MiB")
 
     if "html" in normalised or (not raw[:4] == b"%PDF" and _looks_like_html(raw, body)):
         return ExtractionResult(_html_to_text(body or _decode(raw)), READER_HTML)
@@ -149,7 +154,7 @@ def _ocr_pdf(
 
     prefix = Path(workdir) / "page"
     code, _, err = run([
-        pdftoppm_tool.path, "-r", str(dpi), "-png",
+        pdftoppm_tool.path, "-r", str(dpi), "-scale-to", "2400", "-png",
         "-f", "1", "-l", str(max_pages), str(pdf_path), str(prefix),
     ])
     if code != 0:
@@ -183,12 +188,41 @@ def _ocr_pdf(
 
 
 def _run(command: Sequence[str]) -> tuple[int, bytes, bytes]:
-    completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
-        list(command),
-        capture_output=True,
-        check=False,
-    )
-    return completed.returncode, completed.stdout, completed.stderr
+    process = subprocess.Popen(list(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)  # noqa: S603
+    buffers = [bytearray(), bytearray()]
+    exceeded = threading.Event()
+
+    def drain(stream, target):
+        while chunk := stream.read(8192):
+            if len(target) + len(chunk) > 2 * 1024 * 1024:
+                exceeded.set()
+                try:
+                    process.kill()
+                except OSError:
+                    pass
+                return
+            target.extend(chunk)
+
+    readers = [threading.Thread(target=drain, args=(stream, target), daemon=True)
+               for stream, target in zip((process.stdout, process.stderr), buffers)]
+    try:
+        for reader in readers:
+            reader.start()
+        try:
+            process.wait(timeout=60)
+        except subprocess.TimeoutExpired as error:
+            raise ExtractionError("Native extraction exceeded its 60-second deadline") from error
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait()
+        for reader in readers:
+            reader.join()
+        process.stdout.close()
+        process.stderr.close()
+    if exceeded.is_set():
+        raise ExtractionError("Native extraction output exceeds 2 MiB")
+    return process.returncode, bytes(buffers[0]), bytes(buffers[1])
 
 
 def _decode(raw: bytes) -> str:
@@ -201,13 +235,7 @@ def _looks_like_html(raw: bytes, body: str) -> bool:
 
 
 def _html_to_text(body: str) -> str:
-    try:
-        from bs4 import BeautifulSoup
-    except ImportError:  # pragma: no cover - bs4 is a declared dependency
-        import re
-
-        without_tags = re.sub(r"<[^>]+>", " ", body)
-        return "\n".join(line.strip() for line in without_tags.splitlines() if line.strip())
+    from bs4 import BeautifulSoup  # A declared dependency; a broken install must fail explicitly.
 
     soup = BeautifulSoup(body, "html.parser")
     for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):

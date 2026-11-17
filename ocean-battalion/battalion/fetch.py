@@ -66,11 +66,15 @@ class Fetcher(Protocol):
 
 
 class HttpFetcher:
-    """Real network access, with a declared identity and a hard timeout."""
+    """Real network access with per-I/O timeout and bounded, uncompressed response bytes."""
 
-    def __init__(self, user_agent: str, timeout: float = 30.0) -> None:
+    def __init__(self, user_agent: str, timeout: float = 30.0, max_bytes: int = 8 * 1024 * 1024) -> None:
+        import math
+        if not math.isfinite(timeout) or timeout <= 0 or type(max_bytes) is not int or not 1 <= max_bytes <= 64 * 1024 * 1024:
+            raise ValueError("Fetcher timeout and response budget must be positive and bounded")
         self.user_agent = user_agent
         self.timeout = timeout
+        self.max_bytes = max_bytes
 
     def get(
         self,
@@ -82,46 +86,22 @@ class HttpFetcher:
         merged = {"User-Agent": self.user_agent, "Accept": "*/*"}
         if headers:
             merged.update(headers)
+        merged["Accept-Encoding"] = "identity"
         try:
             with httpx.Client(
                 follow_redirects=False,  # a redirect would escape the policy check
                 timeout=self.timeout,
                 headers=merged,
             ) as client:
-                result = client.get(url)
+                with client.stream("GET", url) as result:
+                    if result.headers.get("content-encoding", "identity").lower() != "identity":
+                        raise FetchError("Unsupported encoded HTTP body; no unbounded transparent decompression is allowed")
+                    chunks = bytearray()
+                    for chunk in result.iter_raw(chunk_size=8192):
+                        if len(chunks) + len(chunk) > self.max_bytes:
+                            raise FetchError("HTTP response exceeds its configured byte budget")
+                        chunks.extend(chunk)
+                    return Response(url=str(result.url), status=result.status_code, content=bytes(chunks),
+                                    headers={k.lower(): v for k, v in result.headers.items()})
         except Exception as error:
             raise FetchError(f"{url}: {error}") from error
-
-        return Response(
-            url=str(result.url),
-            status=result.status_code,
-            content=result.content,
-            headers={k.lower(): v for k, v in result.headers.items()},
-        )
-
-
-class RecordedFetcher:
-    """Serves canned responses; every request is recorded for assertions."""
-
-    def __init__(self, responses: Mapping[str, Response | bytes | str]) -> None:
-        self._responses = dict(responses)
-        self.requested: list[str] = []
-        self.sent_headers: list[Mapping[str, str]] = []
-
-    def get(
-        self,
-        url: str,
-        headers: Mapping[str, str] | None = None,
-    ) -> Response:
-        self.requested.append(url)
-        self.sent_headers.append(dict(headers or {}))
-        if url not in self._responses:
-            raise FetchError(f"no recorded response for {url}")
-
-        value = self._responses[url]
-        if isinstance(value, Response):
-            return value
-        if isinstance(value, str):
-            return Response(url, 200, value.encode("utf-8"),
-                            {"content-type": "text/html; charset=utf-8"})
-        return Response(url, 200, value, {"content-type": "application/pdf"})

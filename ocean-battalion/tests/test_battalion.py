@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from battalion.config import load_config
-from battalion.fetch import RecordedFetcher, Response
+from battalion.fetch import Response
+from battalion_test_fetcher import RecordedFetcher
 from battalion.orchestrator import Orchestrator
 from battalion.pipeline.ingest import ChunkOptions, offline_ingestor
 from battalion.storage.jsonl_store import JsonlStore

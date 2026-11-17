@@ -84,7 +84,7 @@ pip install -e ".[chroma]"       # optional: Chroma store
 python -m battalion.cli doctor
 
 # prove the wiring with no network and no model download
-python scripts/offline_demo.py
+python tests/offline_fixture_demo.py
 
 # the real thing (needs a populated sources.yaml)
 python -m battalion.cli run --sources sources.yaml
@@ -156,14 +156,14 @@ subprocess runner so it is covered even where Tesseract is absent.
 battalion/
   config.py        sources.yaml → validated Config
   policy.py        robots.txt, rate limiting, licence gating
-  fetch.py         Fetcher protocol + HttpFetcher + RecordedFetcher
+  fetch.py         Fetcher protocol + real HttpFetcher (recorded responses live only in tests)
   orchestrator.py  builds and runs one agent per source
   cli.py           doctor | run | stats | query
   workers/         rss, web, opendata, api_google, api_graph
   pipeline/        tokens, locator, extract, chunk, embed, ingest
   storage/         base contract, JSONL store, Chroma adapter
-scripts/           offline_demo.py
-tests/             37 tests, offline
+tests/             offline_fixture_demo.py (test fixtures only)
+tests/             protocol/unit fixtures and opt-in real native OCR
 ```
 
 ## Where this belongs
@@ -172,3 +172,5 @@ This is a standalone Python project inside the Lightning SPP repository. It
 shares the OCR discipline of the .NET engine (`Documents/OcrTextReader.cs`) —
 text layer first, OCR only when the layer is empty, and always report which
 reader produced the text — but it shares no code and no runtime with it.
+
+Model startup failures now fail explicitly. Hash-based, non-semantic vectors require explicit --offline; they never stand in silently for a failed model. Recorded fetchers and the offline fixture demonstration are test-only code, not production network/model evidence.
