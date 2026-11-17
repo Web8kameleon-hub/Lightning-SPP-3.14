@@ -20,6 +20,13 @@ Status: local real-model conversation verified; public service remains unaccepte
   fail; token limits are not evidence of latency or accuracy guarantees.
 - Both configured SSH aliases (`hetzner-new`, `hetzner-old`) timed out on port
   22. No production environment values were changed.
+- GitHub rejected `continuous-release-evidence.yml` because its required-test
+  step had neither `run` nor `uses`. The step now executes the unfiltered .NET
+  suite and the existing zero-skip report gate. That workflow still requires
+  real upstream bridge dependencies; this investigation does not establish
+  their availability or claim that its full gate passed. Other workflows'
+  `BridgeUpstreamTests` exclusions must not be interpreted as complete upstream
+  acceptance.
 
 ## Executed candidate checks
 
