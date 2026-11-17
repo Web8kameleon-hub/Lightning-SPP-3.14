@@ -26,7 +26,7 @@ public sealed class ApiAdminSummaryIntegrationTests(LongoFixture fixture) : ICla
             Assert.StartsWith("http://127.0.0.1:", fixture.Url, StringComparison.Ordinal);
             Environment.SetEnvironmentVariable("LSPP_DATA_DIR", directory);
             Environment.SetEnvironmentVariable("LSPP_ADMIN_TOKEN", adminToken);
-            var server = LicenseApiServer.RunAsync(port, cancellation.Token);
+            var server = LicenseApiServer.RunAsync(port, cancellation.Token, bindHost: "127.0.0.1");
             try
             {
                 await WaitUntilHealthyAsync(port, TimeSpan.FromSeconds(5));
@@ -76,7 +76,7 @@ public sealed class ApiAdminSummaryIntegrationTests(LongoFixture fixture) : ICla
 
     private static async Task WaitUntilHealthyAsync(int port, TimeSpan timeout)
     {
-        using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+        using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
         var deadline = DateTime.UtcNow + timeout;
         while (DateTime.UtcNow < deadline)
         {

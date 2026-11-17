@@ -120,6 +120,7 @@ jobs:
       run: |
         python3 -m pip install './ocean-battalion[dev]'
         python3 -m pytest ocean-battalion/tests -q -p no:cacheprovider --junitxml=artifacts/ocean-tests.xml
+        python3 -c "import xml.etree.ElementTree as E; s=E.parse('artifacts/ocean-tests.xml').getroot().findall('testsuite'); assert s and sum(int(x.get('tests', '0')) for x in s)>0 and all(int(x.get(k, '0'))==0 for x in s for k in ('errors', 'failures', 'skipped')), 'Ocean requires executed tests with zero failures or skips'"
 
     - name: Run Lightning SPP Demo
       run: dotnet run --no-build --configuration Release -- demo
@@ -170,6 +171,7 @@ jobs:
         path: |
           artifacts/ci-evidence-status.txt
           Tests/LightningSPP.Tests/TestResults/**/*.trx
+          artifacts/ocean-tests.xml
           artifacts/benchmark-environment.txt
           artifacts/speed-benchmark.txt
           artifacts/analysis-report.json

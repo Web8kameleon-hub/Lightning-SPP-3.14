@@ -196,3 +196,17 @@ Extraction and transport enforce explicit byte/time/page limits. Policy,
 Planlog and release-companion gates passed. These results are local evidence;
 updated GitHub CI, required independent review and the remaining acceptance
 gates above are still required. No deployment is claimed.
+
+The next PR head `23795c4` exposed seven Linux HTTP failures: the isolated
+IPv4 clients could not reach a `localhost` listener resolved to IPv6. The
+affected fixtures now bind both server and client explicitly to `127.0.0.1`;
+the server's default binding and production environment configuration are
+unchanged. Windows Release build passed with zero warnings/errors and the full
+selection again passed 395 tests, zero failed/skipped (`ipv4-pr32.trx`).
+The source-only export `5df253162fab` also built on Linux with zero
+warnings/errors and passed all 395 tests, zero failed/skipped
+(`artifacts/reproducible/5df253162fab/Tests/LightningSPP.Tests/TestResults/linux-ipv4.trx`).
+That local Linux container was supplied Poppler, Tesseract, DejaVu fonts and
+Java 25; this verifies the exercised cases, not production hosting or devices.
+The Ocean CI gate also requires a nonempty JUnit report with zero errors,
+failures or skipped tests and preserves that report as a validation artifact.

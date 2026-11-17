@@ -46,7 +46,7 @@ public class ApiLicenseActivationIntegrationTests
 
             var validKey = LicenseKey.Generate(LicenseKey.LicenseTier.Free, "edge@case.test", "Edge Case Co").Key;
 
-            var serverTask = LicenseApiServer.RunAsync(port, cts.Token);
+            var serverTask = LicenseApiServer.RunAsync(port, cts.Token, bindHost: "127.0.0.1");
             await WaitUntilHealthyAsync(port, TimeSpan.FromSeconds(5));
 
             using var client = IsolatedHttpClient.Create(port, 75);
@@ -125,7 +125,7 @@ public class ApiLicenseActivationIntegrationTests
 
     private static async Task WaitUntilHealthyAsync(int port, TimeSpan timeout)
     {
-        using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+        using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
         var deadline = DateTime.UtcNow + timeout;
 
         while (DateTime.UtcNow < deadline)

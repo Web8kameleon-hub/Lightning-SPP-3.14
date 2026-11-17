@@ -24,6 +24,6 @@ internal static class IsolatedHttpClient
                 catch { socket.Dispose(); throw; }
             }
         };
-        return new HttpClient(handler) { BaseAddress = new Uri("http://localhost:" + port) };
+        return new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:" + port) };
     }
 }

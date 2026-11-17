@@ -40,7 +40,7 @@ internal static class LicenseApiServer
 
     internal static bool IsTryRateLimited(string ip) => _tryRateLimits.IsLimited(ip, DateTimeOffset.UtcNow);
 
-    public static async Task RunAsync(int port, CancellationToken cancellationToken = default)
+    public static async Task RunAsync(int port, CancellationToken cancellationToken = default, string? bindHost = null)
     {
         RuntimeSecurity.ValidateProduction();
         if (RuntimeSecurity.IsProduction && CustomerAccounts.Enabled) _ = CustomerAccounts.Store.ReadState();
@@ -53,7 +53,7 @@ internal static class LicenseApiServer
             Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
             "true",
             StringComparison.OrdinalIgnoreCase);
-        var bindHost = Environment.GetEnvironmentVariable("LSPP_BIND_HOST") ?? (inContainer ? "+" : "localhost");
+        bindHost ??= Environment.GetEnvironmentVariable("LSPP_BIND_HOST") ?? (inContainer ? "+" : "localhost");
         listener.Prefixes.Add($"http://{bindHost}:{port}/");
         listener.Start();
 

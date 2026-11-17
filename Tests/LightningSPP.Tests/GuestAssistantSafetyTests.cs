@@ -21,7 +21,7 @@ public sealed class GuestAssistantSafetyTests
         using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop();
         using var cancellation = new CancellationTokenSource();
-        var server = LicenseApiServer.RunAsync(port, cancellation.Token);
+        var server = LicenseApiServer.RunAsync(port, cancellation.Token, bindHost: "127.0.0.1");
         try
         {
             using var client = IsolatedHttpClient.Create(port, 79);
@@ -59,7 +59,7 @@ public sealed class GuestAssistantSafetyTests
             Environment.SetEnvironmentVariable("LSPP_GUEST_ASSISTANT_ENABLED", null);
             Environment.SetEnvironmentVariable("LSPP_MODEL_AUTODISCOVER", "off");
             Environment.SetEnvironmentVariable("LSPP_MODEL_ROUTES_FILE", null); ModelRoutes.ClearCache();
-            server = LicenseApiServer.RunAsync(port, cancellation.Token);
+            server = LicenseApiServer.RunAsync(port, cancellation.Token, bindHost: "127.0.0.1");
             using var handler = new HttpClientHandler { CookieContainer = new CookieContainer() };
             using var client = IsolatedHttpClient.Create(port, 80, handler.CookieContainer);
             client.DefaultRequestHeaders.Add("Origin", client.BaseAddress!.GetLeftPart(UriPartial.Authority));

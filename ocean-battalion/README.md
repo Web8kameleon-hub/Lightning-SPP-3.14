@@ -146,9 +146,14 @@ cd ocean-battalion
 python -m pytest -q
 ```
 
-37 tests, no network. The PDF tests use a hand-built PDF with a real xref table
-and run against the host's Poppler; the OCR branch is exercised with an injected
-subprocess runner so it is covered even where Tesseract is absent.
+42 tests; HTTP tests use a real loopback server with test-only payloads.
+PDF text extraction uses the host's Poppler. The real OCR test renders a page,
+embeds its pixels in a PDF without a text layer and recognises it with Tesseract.
+Install Poppler and Tesseract (English data) on PATH to run every native test;
+missing binaries cause explicitly reported skips. CI installs these tools.
+Injected runner and model-failure fixtures are unit tests, not evidence of real
+OCR or model quality. Live upstream APIs and semantic model inference are not
+verified by this suite.
 
 ## Layout
 
