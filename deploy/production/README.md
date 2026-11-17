@@ -35,6 +35,34 @@ and the `.env.production` secret file.
 
 ## Automated zero-downtime deploy
 
+### Public assistant acceptance
+
+The public assistant requires explicit `LSPP_GUEST_ASSISTANT_ENABLED=true` in
+the private production environment. Enabling it is not proof that inference
+works. The application must reach a real model runtime from its own network
+namespace, or the Clisonix bridge must successfully answer. A model running
+on an operator's Windows computer is not automatically available to the
+production container. Guest local routes accept loopback endpoints only;
+do not bypass that boundary by relabeling a remote route as local.
+
+After a candidate release starts, and again after promotion, exercise the
+actual conversation endpoint with its cookie, CSRF token and confirmed backend:
+
+```bash
+python3 Scripts/verify-public-assistant.py \
+  --origin https://scanprocessprint.com \
+  --report artifacts/assistant-public.json
+```
+
+This command exits nonzero for a disabled assistant, invalid language metadata,
+missing backend identity, inference failure or empty answer. It performs one
+real conversation without substitutes. Review the recorded answer for product
+accuracy; a nonempty answer alone does not establish usefulness or correctness.
+Reports contain model output, so use a public, non-sensitive question. Cookies
+and CSRF tokens are not recorded. Keep globalization enabled in the application:
+language validation uses `CultureInfo`, and test-host defaults do not prove the
+published application's runtime configuration supports those cultures.
+
 [`deploy.sh`](./deploy.sh) automates the flow described under "Manual flow"
 below: it builds the new release alongside the active one, runs internal
 health/static/license/auth-rejection checks against it directly (bypassing the

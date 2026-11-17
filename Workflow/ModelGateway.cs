@@ -74,7 +74,7 @@ public sealed class ModelGateway
             ? values.EnumerateArray().Select(v => v.GetString() ?? "").ToArray() : [];
         return new(id, route.Model, digest, capabilities, "PROVIDER_REPORTED_IDENTITY");
     }
-    public async Task<(string Text, ModelIdentity Identity)> ChatAsync(string id, ConversationMessage[] messages, IReadOnlySet<string> permissions, CancellationToken token, byte[]? image = null, bool json = false, string? expectedDigest = null)
+    public async Task<(string Text, ModelIdentity Identity)> ChatAsync(string id, ConversationMessage[] messages, IReadOnlySet<string> permissions, CancellationToken token, byte[]? image = null, bool json = false, string? expectedDigest = null, bool interactive = false)
     {
         if (messages.Length is < 1 or > 40 || messages.Any(m => m.Role is not ("system" or "user" or "assistant") || m.Content.Length > 64 * 1024) || messages.Sum(m => (long)m.Content.Length) > 256 * 1024)
             throw new ArgumentException("Conversation exceeds configured context budget; select a smaller evidence batch.");
@@ -90,9 +90,9 @@ public sealed class ModelGateway
         {
             var payload = new Dictionary<string, object?> { ["model"] = route.Model, ["stream"] = false, ["format"] = json ? "json" : null,
                 ["messages"] = messages.Select((m, i) => new { role = m.Role, content = m.Content, images = image is not null && i == messages.Length - 1 ? new[] { Convert.ToBase64String(image) } : null }) };
-            if (expectedDigest is not null)
+            if (expectedDigest is not null || interactive)
             {
-                payload["options"] = new { temperature = 0, num_ctx = 8192, num_predict = 1536 };
+                payload["options"] = new { temperature = 0, num_ctx = 8192, num_predict = interactive ? 512 : 1536 };
                 if (identity.Capabilities.Contains("thinking")) payload["think"] = false;
             }
             body = payload;

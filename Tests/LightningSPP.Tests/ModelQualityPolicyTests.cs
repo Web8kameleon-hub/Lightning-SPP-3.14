@@ -93,9 +93,19 @@ public sealed class ModelQualityPolicyTests
         Assert.Empty(handler.Inferences);
     }
 
+    [Fact]
+    public async Task InteractiveChatBoundsGenerationAndRejectsTruncatedAnswers()
+    {
+        var handler = new Provider { Truncate = true };
+        var gateway = new ModelGateway([new("local", "http://localhost", "local")], new HttpClient(handler));
+        await Assert.ThrowsAsync<IOException>(() => gateway.ChatAsync("local", [new("user", "test fixture")], Permissions, default, interactive: true));
+        Assert.True(handler.BoundedInteractive);
+    }
+
     private sealed class Provider : HttpMessageHandler
     {
         public bool DenyInference,ChangeDigest;
+        public bool Truncate, BoundedInteractive;
         private int catalogs;
         public List<string> Inferences { get; }=[];
         public List<string> Hosts { get; }=[];
@@ -108,13 +118,17 @@ public sealed class ModelQualityPolicyTests
                 var digest=ChangeDigest&&++catalogs>1?OtherDigest:Digest;
                 body=new {models=new[]{"low","high","local","remote"}.Select(name=>new{name,digest})};
             }
-            else if(request.RequestUri.AbsolutePath=="/api/show") body=new{capabilities=new[]{"completion"}};
+            else if(request.RequestUri.AbsolutePath=="/api/show") body=new{capabilities=new[]{"completion", "thinking"}};
             else
             {
                 using var data=JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
                 var model=data.RootElement.GetProperty("model").GetString()!;Inferences.Add(model);
+                BoundedInteractive = data.RootElement.TryGetProperty("options", out var options)
+                    && options.GetProperty("num_predict").GetInt32() == 512
+                    && options.GetProperty("num_ctx").GetInt32() == 8192
+                    && data.RootElement.TryGetProperty("think", out var think) && think.ValueKind == JsonValueKind.False;
                 if(DenyInference)return new(HttpStatusCode.Forbidden);
-                body=new{model,done=true,done_reason="stop",message=new{content="Test fixture only"}};
+                body=new{model,done=true,done_reason=Truncate ? "length" : "stop",message=new{content="Test fixture only"}};
             }
             return new(HttpStatusCode.OK){Content=new StringContent(JsonSerializer.Serialize(body),System.Text.Encoding.UTF8,"application/json")};
         }

@@ -82,7 +82,7 @@ internal static class GuestAssistantApi
     private static async Task<(string Text, string Model)> AnswerLocallyAsync(GuestQuestion question, ModelRoute route, CancellationToken token)
     {
         var gateway = new ModelGateway([route]);
-        var reply = await gateway.ChatAsync(route.Id, [new("system", question.SystemInstruction), new("user", question.Text)], GuestPermissions, token);
+        var reply = await gateway.ChatAsync(route.Id, [new("system", question.SystemInstruction), new("user", question.Text)], GuestPermissions, token, interactive: true);
         return (reply.Text, reply.Identity.Model);
     }
 
