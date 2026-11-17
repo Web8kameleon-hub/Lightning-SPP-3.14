@@ -34,6 +34,19 @@ Status: local real-model conversation verified; public service remains unaccepte
   conversation exchange returned `42` for 17 + 25. Recorded duration: 29.279
   seconds for that single exchange, not a benchmark aggregate.
   Evidence: `artifacts/matia-local-bounded-ready.json`.
+- A subsequent real service question returned a complete answer in 57.933
+  seconds, but manual review rejected its unsupported hardware advice (including
+  an empty paper tray recommendation). HTTP success was not accepted as answer
+  quality. Evidence: `artifacts/matia-local-service.json`. The guest instruction
+  now supplies the documented product scope and explicitly requires manufacturer
+  instructions, actual device evidence and uncertainty instead of invented
+  hardware procedures. The repeated real question returned a complete answer in
+  32.623 seconds: it explicitly denied access to devices/files/logs, required
+  actual output compared with a known source and manufacturer self-tests, and
+  avoided claiming completed operations. This limited case passed manual review;
+  it is not a general accuracy evaluation. Evidence:
+  `artifacts/matia-local-service-grounded-ready.json`. The final relevant test
+  run again executed and passed all 29 cases with zero skips.
 - Repository policy checks passed. This does not replace deployment acceptance.
 
 The reusable `Scripts/verify-public-assistant.py` command records failures and
