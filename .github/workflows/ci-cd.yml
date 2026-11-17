@@ -67,6 +67,8 @@ jobs:
 
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -75,6 +77,9 @@ jobs:
 
     - name: Enforce repository production policy
       run: python3 Scripts/preflight-policy.py
+
+    - name: Enforce dynamic usage Planlog schedule and evidence
+      run: python3 Scripts/planlog-gate.py
 
     - name: Restore dependencies
       run: dotnet restore
@@ -94,8 +99,9 @@ jobs:
       env:
         # Aktivizon Poppler për testet PDF (sepse CI e instalon)
         SPP_TEST_NATIVE_DOCUMENTS: '1'
+
         # Shërbimet e jashtme (Excel/NodeDB) mbeten të anashkaluara në CI
-        SPP_BRIDGE_TEST_ALLOW_WRITES: ''
+
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr fonts-dejavu-core
@@ -122,15 +128,41 @@ jobs:
         echo 'Speed CLI: 1024 zero-filled bytes; 0 warm-up runs; 1 measured run per mode. Raw observations, not median/p95/p99 or throughput claims. Regression gates run in the test suite.' >> artifacts/benchmark-environment.txt
         dotnet run --no-build --configuration Release -- speed | tee artifacts/speed-benchmark.txt
 
+    - name: Write failure-safe CI evidence manifest
+      if: always()
+      shell: bash
+      run: |
+        mkdir -p artifacts
+        {
+          printf 'commit=%s\n' "$GITHUB_SHA"
+          printf 'job_status=%s\n' "${{ job.status }}"
+          if [[ -d Tests/LightningSPP.Tests/TestResults ]]; then
+            report_count=$(find Tests/LightningSPP.Tests/TestResults -type f -name '*.trx' | wc -l)
+          else
+            report_count=0
+          fi
+          printf 'test_reports_found=%s\n' "$report_count"
+          for artifact in benchmark-environment.txt speed-benchmark.txt; do
+            if [[ -s "artifacts/$artifact" ]]; then
+              printf '%s=present\n' "$artifact"
+            else
+              printf '%s=missing\n' "$artifact"
+            fi
+          done
+        } > artifacts/ci-evidence-status.txt
+
     - name: Preserve test and benchmark evidence
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: validation-${{ github.sha }}
         path: |
-          Tests/LightningSPP.Tests/TestResults/*.trx
+          artifacts/ci-evidence-status.txt
+          Tests/LightningSPP.Tests/TestResults/**/*.trx
           artifacts/benchmark-environment.txt
           artifacts/speed-benchmark.txt
+          artifacts/analysis-report.json
+          artifacts/analysis-report.md
         if-no-files-found: error
 
   docker-build:

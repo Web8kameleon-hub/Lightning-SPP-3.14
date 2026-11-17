@@ -1,0 +1,307 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "eventKind": {
+      "enum": [
+        "observed",
+        "correction"
+      ]
+    },
+    "correctionOf": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "occurredAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?Z$"
+    },
+    "route": {
+      "enum": [
+        "/",
+        "/account",
+        "/api/account",
+        "/api/account/activate",
+        "/api/account/billing",
+        "/api/account/checkout",
+        "/api/account/csrf",
+        "/api/account/license",
+        "/api/account/login",
+        "/api/account/logout",
+        "/api/account/register",
+        "/api/account/request-reset",
+        "/api/account/request-verification",
+        "/api/account/reset",
+        "/api/account/retry-email",
+        "/api/account/verify",
+        "/api/admin/summary",
+        "/api/alerts",
+        "/api/assistant",
+        "/api/assistant/conversation",
+        "/api/fluid/{pipeline}",
+        "/api/health",
+        "/api/license/activate",
+        "/api/license/issue",
+        "/api/license/signing-status",
+        "/api/license/status",
+        "/api/metrics",
+        "/api/stigma/schema",
+        "/api/stripe/recover",
+        "/api/stripe/webhook",
+        "/api/try/archive",
+        "/api/try/package",
+        "/api/try/process",
+        "/api/workflow",
+        "/api/workflow/acknowledge",
+        "/api/workflow/cancel",
+        "/api/workflow/conversation",
+        "/api/workflow/discover",
+        "/api/workflow/files",
+        "/api/workflow/import",
+        "/api/workflow/job",
+        "/api/workflow/plan",
+        "/api/workflow/propose",
+        "/api/workflow/report",
+        "/api/workflow/run",
+        "/benchmarks",
+        "/dashboard",
+        "/features",
+        "/openapi.json",
+        "/pdf",
+        "/pricing",
+        "/robots.txt",
+        "/sitemap.xml",
+        "/static/{asset}",
+        "/swagger",
+        "/technology",
+        "/try",
+        "/workspace",
+        "unmapped"
+      ]
+    },
+    "method": {
+      "enum": [
+        "GET",
+        "HEAD",
+        "POST",
+        "OPTIONS",
+        "OTHER"
+      ]
+    },
+    "identity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "anonymous"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "operator"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "service"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "customer"
+            },
+            "customerId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            }
+          },
+          "required": [
+            "kind",
+            "customerId"
+          ]
+        }
+      ]
+    },
+    "httpStatus": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 100,
+      "maximum": 599
+    },
+    "outcome": {
+      "enum": [
+        "succeeded",
+        "rejected",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "elapsedMs": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "inputBytes": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "outputBytes": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "plan": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "planSource": {
+      "enum": [
+        "entitlement",
+        "license",
+        "unavailable"
+      ]
+    },
+    "releaseCommit": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "failureCategory": {
+      "enum": [
+        null,
+        "invalid-input",
+        "unauthorized",
+        "rate-limited",
+        "not-found",
+        "storage-unavailable",
+        "downstream-unavailable",
+        "deadline",
+        "transport",
+        "internal"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "eventKind",
+    "correctionOf",
+    "occurredAt",
+    "route",
+    "method",
+    "identity",
+    "httpStatus",
+    "outcome",
+    "elapsedMs",
+    "inputBytes",
+    "outputBytes",
+    "plan",
+    "planSource",
+    "releaseCommit",
+    "failureCategory"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "eventKind": {
+            "const": "observed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "correctionOf": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "correctionOf": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "planSource": {
+            "const": "unavailable"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "plan": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "plan": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lightning-spp:usage-event:v1",
+  "title": "Private observed usage event v1",
+  "$comment": "Contract only: no emitter or durable ledger is implied. Customer identity is resolved by the server, never trusted from caller JSON. No bodies, credentials, filenames, raw URL/query/IP or cookies are permitted. Missing measurements are explicit null, never assumed zero. Deduplicate eventId; corrections retain the original and supersede one logical event."
+}

@@ -1,0 +1,443 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "utcDate": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "windowStart": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?Z$"
+    },
+    "windowEnd": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?Z$"
+    },
+    "generatedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?Z$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "supersedesSha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "evidenceState": {
+      "enum": [
+        "measured",
+        "unavailable"
+      ]
+    },
+    "completeness": {
+      "enum": [
+        "complete",
+        "partial",
+        "unavailable"
+      ]
+    },
+    "coverageGaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?Z$"
+          },
+          "end": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?Z$"
+          },
+          "reason": {
+            "enum": [
+              "not-instrumented",
+              "storage-unavailable",
+              "retained-source-gap"
+            ]
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "reason"
+        ]
+      },
+      "maxItems": 1000
+    },
+    "coveredRoutes": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "/",
+          "/account",
+          "/api/account",
+          "/api/account/activate",
+          "/api/account/billing",
+          "/api/account/checkout",
+          "/api/account/csrf",
+          "/api/account/license",
+          "/api/account/login",
+          "/api/account/logout",
+          "/api/account/register",
+          "/api/account/request-reset",
+          "/api/account/request-verification",
+          "/api/account/reset",
+          "/api/account/retry-email",
+          "/api/account/verify",
+          "/api/admin/summary",
+          "/api/alerts",
+          "/api/assistant",
+          "/api/assistant/conversation",
+          "/api/fluid/{pipeline}",
+          "/api/health",
+          "/api/license/activate",
+          "/api/license/issue",
+          "/api/license/signing-status",
+          "/api/license/status",
+          "/api/metrics",
+          "/api/stigma/schema",
+          "/api/stripe/recover",
+          "/api/stripe/webhook",
+          "/api/try/archive",
+          "/api/try/package",
+          "/api/try/process",
+          "/api/workflow",
+          "/api/workflow/acknowledge",
+          "/api/workflow/cancel",
+          "/api/workflow/conversation",
+          "/api/workflow/discover",
+          "/api/workflow/files",
+          "/api/workflow/import",
+          "/api/workflow/job",
+          "/api/workflow/plan",
+          "/api/workflow/propose",
+          "/api/workflow/report",
+          "/api/workflow/run",
+          "/benchmarks",
+          "/dashboard",
+          "/features",
+          "/openapi.json",
+          "/pdf",
+          "/pricing",
+          "/robots.txt",
+          "/sitemap.xml",
+          "/static/{asset}",
+          "/swagger",
+          "/technology",
+          "/try",
+          "/workspace",
+          "unmapped"
+        ]
+      },
+      "uniqueItems": true,
+      "maxItems": 59
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minimumContributors": {
+          "type": "integer",
+          "minimum": 10
+        },
+        "cohortSatisfied": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "minimumContributors",
+        "cohortSatisfied"
+      ]
+    },
+    "suppressed": {
+      "type": "boolean"
+    },
+    "totals": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requests": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "succeeded": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "rejected": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cancelled": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "durationMeasuredCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "elapsedTotalMs": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "inputBytesMeasuredCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "inputBytesTotal": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "outputBytesMeasuredCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "outputBytesTotal": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "requests",
+            "succeeded",
+            "rejected",
+            "failed",
+            "cancelled",
+            "durationMeasuredCount",
+            "elapsedTotalMs",
+            "inputBytesMeasuredCount",
+            "inputBytesTotal",
+            "outputBytesMeasuredCount",
+            "outputBytesTotal"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "releaseCommit": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{40}$"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "utcDate",
+    "windowStart",
+    "windowEnd",
+    "generatedAt",
+    "revision",
+    "supersedesSha256",
+    "evidenceState",
+    "completeness",
+    "coverageGaps",
+    "coveredRoutes",
+    "privacy",
+    "suppressed",
+    "totals",
+    "releaseCommit"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "suppressed": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "totals": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "totals": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "requests": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "succeeded": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rejected": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cancelled": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "durationMeasuredCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "elapsedTotalMs": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "inputBytesMeasuredCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inputBytesTotal": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "outputBytesMeasuredCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "outputBytesTotal": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              }
+            },
+            "required": [
+              "requests",
+              "succeeded",
+              "rejected",
+              "failed",
+              "cancelled",
+              "durationMeasuredCount",
+              "elapsedTotalMs",
+              "inputBytesMeasuredCount",
+              "inputBytesTotal",
+              "outputBytesMeasuredCount",
+              "outputBytesTotal"
+            ]
+          },
+          "privacy": {
+            "properties": {
+              "cohortSatisfied": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evidenceState": {
+            "const": "unavailable"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "totals": {
+            "type": "null"
+          },
+          "completeness": {
+            "const": "unavailable"
+          },
+          "suppressed": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "completeness": {
+            "const": "complete"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverageGaps": {
+            "maxItems": 0
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "coverageGaps": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "revision": {
+            "const": 1
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "supersedesSha256": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "supersedesSha256": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lightning-spp:daily-usage:v1",
+  "title": "Public privacy-limited UTC usage aggregate v1",
+  "$comment": "Contract only, not a published production day. No customer rows, stable identifiers or free-text labels. Cohorts below policy threshold publish no totals. Counts and totals derive only from deduplicated observed events after corrections. Null denotes unavailable measurements. Cross-field UTC-window, count-sum and coverage constraints are enforced by Scripts/validate-usage-contracts.py."
+}

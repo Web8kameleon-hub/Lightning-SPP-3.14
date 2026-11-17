@@ -1,0 +1,7 @@
+<Project>
+  <!-- Lexon .env.build vetëm nëse ekziston dhe SixLaborsLicenseKey nuk është vendosur tashmë.
+       Ky skedar NUK përmban çelës — vetëm logjikën e leximit. .env.build është gitignored. -->
+  <PropertyGroup Condition="'$(SixLaborsLicenseKey)' == '' and Exists('$(MSBuildThisFileDirectory).env.build')">
+    <SixLaborsLicenseKey>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory).env.build')), 'SIXLABORS_LICENSE\s*=\s*(.+)').Groups[1].Value.Trim())</SixLaborsLicenseKey>
+  </PropertyGroup>
+</Project>
