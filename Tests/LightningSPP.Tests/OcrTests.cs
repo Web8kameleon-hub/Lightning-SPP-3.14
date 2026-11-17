@@ -74,7 +74,10 @@ private static byte[] RenderTextImage(string text)
         using var canvas = new SKCanvas(bitmap);
         canvas.Clear(SKColors.White);
 
-        using var typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default;
+        var fontPath = new[] { @"C:\Windows\Fonts\arialbd.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf" }.FirstOrDefault(File.Exists)
+            ?? throw new IOException("OCR fixture requires an actual installed bold font.");
+        using var typeface = SKTypeface.FromFile(fontPath) ?? throw new IOException("OCR fixture font could not be loaded.");
         using var font = new SKFont(typeface, 92);
         using var paint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
         canvas.DrawText(text, 40, 190, SKTextAlign.Left, font, paint);

@@ -45,6 +45,19 @@ public sealed class WorkflowApiTests : IClassFixture<LongoFixture>
             client.DefaultRequestHeaders.Remove("X-CSRF-Token");
             Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/workflow/import", new { filename = "test.txt", base64 = "eA==" })).StatusCode);
             client.DefaultRequestHeaders.Add("X-CSRF-Token", manifest.GetProperty("csrfToken").GetString());
+            var crmPlan = new { goal = "Create an explicitly supplied CRM customer", steps = new[] { new { id = "customer", tool = "crm.create-customer", arguments = new { name = "CRM fixture", email = "crm-fixture@example.test" }, dependsOn = Array.Empty<string>() } } };
+            using (var noConsent = await client.PostAsJsonAsync("/api/workflow/plan", new { plan = crmPlan }))
+                Assert.Equal(HttpStatusCode.Forbidden, noConsent.StatusCode);
+            using var crmSaved = await client.PostAsJsonAsync("/api/workflow/plan", new { plan = crmPlan, allowCrm = true });
+            Assert.Equal(HttpStatusCode.Created, crmSaved.StatusCode);
+            var crmId = (await crmSaved.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
+            using (var noConsentRun = await client.PostAsJsonAsync("/api/workflow/run", new { id = crmId }))
+                Assert.Equal(HttpStatusCode.Forbidden, noConsentRun.StatusCode);
+            using (var crmRun = await client.PostAsJsonAsync("/api/workflow/run", new { id = crmId, allowCrm = true }))
+            {
+                Assert.Equal(HttpStatusCode.OK, crmRun.StatusCode);
+                Assert.Equal("SUCCEEDED", (await crmRun.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("state").GetString());
+            }
             var response = await client.PostAsJsonAsync("/api/workflow/import", new { filename = "source.txt", base64 = Convert.ToBase64String("real test-only input"u8.ToArray()) });
             Assert.Equal(HttpStatusCode.Created, response.StatusCode); var path = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("path").GetString();
             var plan = new { goal = "Read my imported source", steps = new[] { new { id = "read", tool = "files.read", arguments = new { path }, dependsOn = Array.Empty<string>() } } };
@@ -52,6 +65,13 @@ public sealed class WorkflowApiTests : IClassFixture<LongoFixture>
             var id = (await saved.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
             var executed = await client.PostAsJsonAsync("/api/workflow/run", new { id }); Assert.Equal(HttpStatusCode.OK, executed.StatusCode);
             Assert.Equal("SUCCEEDED", (await executed.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("state").GetString());
+            var xlsx = ExcelTestWorkbook.Create(["Count"], [1]);
+            var xlsxPath = WorkflowApi.Workspace(user.Id).Resolve("reports/report-fixture.xlsx", false);
+            await wwwmmm.Workflow.WorkspaceScope.AtomicWriteAsync(xlsxPath, xlsx, default);
+            using var download = await client.GetAsync("/api/workflow/report?path=reports%2Freport-fixture.xlsx");
+            Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+            Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", download.Content.Headers.ContentType?.MediaType);
+            Assert.Contains("filename=\"report.xlsx\"", download.Content.Headers.ContentDisposition!.ToString(), StringComparison.Ordinal);
             Environment.SetEnvironmentVariable("LSPP_WORKFLOW_ALLOWED_EMAILS", null);
             // A second valid customer's session still cannot name the first customer's job or file.
             var other = store.Register("other-workspace-fixture@example.test", password); Assert.True(store.ConsumeToken(store.CreateToken(other, "verify", TimeSpan.FromHours(1)), "verify"));
@@ -59,6 +79,8 @@ public sealed class WorkflowApiTests : IClassFixture<LongoFixture>
             var csrf = await client.GetFromJsonAsync<JsonElement>("/api/account/csrf"); client.DefaultRequestHeaders.Remove("X-CSRF-Token"); client.DefaultRequestHeaders.Add("X-CSRF-Token", csrf.GetProperty("csrfToken").GetString());
             Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/account/login", new { email = other.Email, password })).StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/workflow/job?id=" + id)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/workflow/job?id=" + crmId)).StatusCode);
+            Assert.Equal(0, new wwwmmm.Crm.CrmService(WorkflowApi.Workspace(other.Id)).Summary().Customers);
             var otherManifest = await client.GetFromJsonAsync<JsonElement>("/api/workflow"); client.DefaultRequestHeaders.Remove("X-CSRF-Token"); client.DefaultRequestHeaders.Add("X-CSRF-Token", otherManifest.GetProperty("csrfToken").GetString());
             var otherJob = await client.PostAsJsonAsync("/api/workflow/plan", new { plan }); var otherId = (await otherJob.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
             var denied = await client.PostAsJsonAsync("/api/workflow/run", new { id = otherId }); var deniedJob = await denied.Content.ReadFromJsonAsync<JsonElement>();

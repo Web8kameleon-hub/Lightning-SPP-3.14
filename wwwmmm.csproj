@@ -71,6 +71,12 @@
     <Compile Remove="VSExtension\**\*.cs" />
     <Compile Remove="Desktop\**\*.cs" />
     <Compile Remove="artifacts\**\*.cs" />
+<!-- The Rust core and its .NET interop harness are separate artefacts. Without this the
+         SDK default glob would compile their Program.cs into this assembly. -->
+<Compile Remove="native\**\*.cs" />
+<None Remove="native\**" />
+<EmbeddedResource Remove="native\**" />
+
   </ItemGroup>
 
   <ItemGroup>
@@ -105,4 +111,3 @@
     <EmbeddedResource Remove="wwwmmm.FluidEngine/**" />
   </ItemGroup>
 </Project>
-

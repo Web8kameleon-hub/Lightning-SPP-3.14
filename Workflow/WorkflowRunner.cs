@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using wwwmmm.FluidEngine.Core.Context;
+using wwwmmm.FluidEngine.Core.Pipelines;
 
 namespace wwwmmm.Workflow;
 
@@ -84,7 +86,28 @@ public sealed class WorkflowRunner(ToolRegistry registry)
         finally { Active.TryRemove(key, out _); Workers.Release(); }
         await Save(workspace, job, CancellationToken.None); return job;
     }
-    private static Task Save(WorkspaceScope workspace, WorkflowJob job, CancellationToken token) => workspace.SaveJsonAsync("jobs", job.Id, job, token);
+    private static async Task Save(WorkspaceScope workspace, WorkflowJob job, CancellationToken token)
+    {
+        await workspace.SaveJsonAsync("jobs", job.Id, job, token);
+        var pipeline = new StigmaMemoryFilmPipeline();
+        foreach (var step in job.Steps.Where(s => s.State is "SUCCEEDED" or "FAILED" or "BLOCKED" or "CANCELED" or "REVIEW_REQUIRED"))
+        {
+            var entry = new StigmaFilmEntry(job.Id, step.Id, step.State, job.RuntimeHash, step.ResultHash,
+                step.Result is null ? null : WorkflowJson.Hash(step.Result.Sources.Select(s => s.Sha256).Distinct().Order(StringComparer.Ordinal).ToArray()),
+                step.Result?.Verification ?? "NOT_ESTABLISHED", job.Updated);
+            var id = job.Id + "-" + step.Id;
+            var path = Path.Combine(workspace.StateDirectory, "film", id + ".json");
+            if (File.Exists(path))
+            {
+                WorkspaceScope.CheckAncestors(Path.GetDirectoryName(path)!);
+                if (new FileInfo(path).LinkTarget is not null || new FileInfo(path).Length > 8192) throw new IOException("Invalid Film Memory record.");
+                var existing = JsonSerializer.Deserialize<StigmaFilmEntry>(await File.ReadAllBytesAsync(path, token), WorkflowJson.Options)
+                    ?? throw new IOException("Null Film Memory record.");
+                if (existing with { RecordedAt = entry.RecordedAt } == entry) continue;
+            }
+            await pipeline.RecordAsync(entry, new PipelineContext(), (record, cancellation) => workspace.SaveJsonAsync("film", id, record, cancellation), token);
+        }
+    }
     private static JsonElement Resolve(JsonElement arguments, string[] dependencies, Dictionary<string, StepRecord> records)
     {
         JsonNode? Walk(JsonNode? node)

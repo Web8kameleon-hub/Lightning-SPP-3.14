@@ -2,6 +2,9 @@
   <Folder Name="/Desktop/">
     <Project Path="Desktop/LightningSPP.Desktop/LightningSPP.Desktop.csproj" />
   </Folder>
+  <Folder Name="/native/">
+    <Project Path="native/LightningCore.Interop/LightningCore.Interop.csproj" />
+  </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/LightningSPP.Tests/LightningSPP.Tests.csproj" />
   </Folder>

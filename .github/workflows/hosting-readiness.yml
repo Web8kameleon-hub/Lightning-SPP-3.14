@@ -60,7 +60,7 @@ jobs:
       - name: Install native PDF test tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
+          sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr fonts-dejavu-core
       - name: Run required tests
         env:
           SPP_TEST_NATIVE_DOCUMENTS: '1'

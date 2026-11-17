@@ -39,7 +39,7 @@ jobs:
           python-version: '3.12'
       - name: Install native PDF dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr fonts-dejavu-core
       - name: Build archive with private license supplied only through the environment
         run: python Scripts/package-release.py --runtime ${{ matrix.runtime }}
       - name: Verify extracted runtime and real document processing

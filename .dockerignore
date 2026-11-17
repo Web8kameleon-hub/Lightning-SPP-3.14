@@ -26,6 +26,7 @@ README.md
 **/.env.*
 Lightning-SPP-3.14/
 artifacts/
+native/lightning_core/target/
 tools/
 !tools/
 tools/*

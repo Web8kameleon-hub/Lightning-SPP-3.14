@@ -74,6 +74,22 @@ byId('loadDiagnostics').addEventListener('click',async () => {
   catch(error) { message('diagnostics',error.message,'error'); }
   finally { button.disabled = false; }
 });
+byId('loadAdminSummary').addEventListener('click',async () => {
+  const button = byId('loadAdminSummary'); const token = byId('adminToken').value.trim();
+  if (!token) { message('adminSummaryStatus','Enter your administrator access code above to continue.','error'); byId('adminToken').focus(); return; }
+  button.disabled = true; message('adminSummaryStatus','Loading aggregate counts...');
+  try {
+    const data = await request('/api/admin/summary',{headers:{Authorization:'Bearer '+token}});
+    const values = [
+      ['adminTotalUsers','totalUsers'],['adminVerifiedUsers','verifiedActiveUsers'],['adminLinkedCustomers','linkedCustomers'],
+      ['adminEntitlements','entitlements'],['adminActiveSessions','activeSessions'],['adminApiRequests','apiRequests'],
+      ['adminPipelineRequests','pipelineRequests'],['adminPipelineSuccess','pipelineSuccess'],['adminPipelineFailure','pipelineFailure']
+    ];
+    for (const [id,key] of values) { const number = Number(data[key]); byId(id).textContent = Number.isSafeInteger(number) && number >= 0 ? number.toLocaleString('en') : 'Unavailable'; }
+    byId('adminSummary').hidden = false; message('adminSummaryStatus','Aggregate counts loaded. No account identities were returned.','success');
+  } catch (error) { message('adminSummaryStatus',error.message,'error'); }
+  finally { button.disabled = false; }
+});
 if (location.hash === '#administration') byId('administration').open = true;
 if (new URLSearchParams(location.search).get('purchase') === 'success') {
   byId('purchaseStatus').textContent = 'Stripe returned you here after checkout. This redirect does not prove a license was provisioned or activated. Sign in to check your customer account. If you already paid, do not pay again.';

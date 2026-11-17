@@ -4,7 +4,7 @@
   let csrf, manifest, jobId, poll, previewUrl, nextOffset = 0;
   const selected = new Set();
   const status = (text, error = false) => { el('workspaceStatus').textContent = text; el('workspaceStatus').className = 'message ' + (error ? 'error' : ''); };
-  const consent = () => ({allowModel: el('allowModel').checked, allowRemote: el('allowRemote').checked, allowServices: el('allowServices').checked, allowPrint: el('allowPrint').checked});
+  const consent = () => ({allowModel: el('allowModel').checked, allowRemote: el('allowRemote').checked, allowServices: el('allowServices').checked, allowPrint: el('allowPrint').checked, allowCrm: el('allowCrm').checked});
   async function api(route, body) {
     const response = await fetch('/api/workflow' + route, body === undefined ? {signal: AbortSignal.timeout(20000)} : {
       method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrf}, body: JSON.stringify({...body, ...consent()}), signal: AbortSignal.timeout(600000)

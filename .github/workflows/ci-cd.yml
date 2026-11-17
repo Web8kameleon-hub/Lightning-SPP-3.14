@@ -98,7 +98,7 @@ jobs:
         SPP_BRIDGE_TEST_ALLOW_WRITES: ''
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
+        sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr fonts-dejavu-core
         dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=ci-tests.trx" --filter "FullyQualifiedName!~BridgeUpstreamTests"
 
     - name: Require 100 percent test execution and pass rate

@@ -17,6 +17,23 @@ public sealed class WorkflowTests
     private static async Task<ToolResult> Tool(string tool, object args, WorkspaceScope scope) => await Registry.Get(tool).ExecuteAsync(Json(args), new(scope, "testjob", "teststep", Permissions), CancellationToken.None);
 
     [Fact]
+    public async Task RemoteHostCannotBypassConsentByDeclaringItselfLocal()
+    {
+        var gateway = new ModelGateway([new("incorrect-local-label", "https://model.example.test", "fixture-model", Remote: false)]);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => gateway.DiscoverAsync("incorrect-local-label", new HashSet<string>(["model.invoke"]), default));
+    }
+
+    [Fact]
+    public void GuestLocalRoutesExcludeRemoteAndNonLoopbackDestinations()
+    {
+        var routes = GuestAssistantApi.LocalRoutes([
+            new("local", "http://127.0.0.1:11434", "configured-model"),
+            new("remote-flag", "http://127.0.0.1:11434", "configured-model", Remote: true),
+            new("remote-host", "https://model.example.test", "configured-model")]);
+        Assert.Equal("local", Assert.Single(routes).Id);
+    }
+
+    [Fact]
     public async Task ClassifiedFilingPreservesOriginalRejectsStaleReviewAndNeverOverwrites()
     {
         var scope = Scope();
@@ -28,7 +45,10 @@ public sealed class WorkflowTests
             var args = new { path, category = "invoices", sha256 = source.Source.Sha256 };
             var result = await Tool("documents.file-classified", args, scope);
             var destination = result.Data.GetProperty("path").GetString()!;
-            Assert.Equal(bytes, await File.ReadAllBytesAsync(scope.Resolve(destination)));
+            using var reference = JsonDocument.Parse(await File.ReadAllBytesAsync(scope.Resolve(destination)));
+            Assert.Equal(source.Source.Sha256, reference.RootElement.GetProperty("sha256").GetString());
+            Assert.Equal("workspace-original:" + source.Source.Sha256, reference.RootElement.GetProperty("canonicalSource").GetString());
+            Assert.False(result.Data.GetProperty("payloadCopied").GetBoolean());
             Assert.Equal(bytes, await File.ReadAllBytesAsync(scope.Resolve(path)));
             Assert.Equal(source.Source, Assert.Single(result.Sources));
             await Tool("documents.file-classified", args, scope);

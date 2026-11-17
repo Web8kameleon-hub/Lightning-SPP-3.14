@@ -27,21 +27,17 @@ public sealed class ModelGateway
                 throw new ArgumentException("Invalid or duplicate configured model route.");
             if (uri.Scheme != "https" && route.ApiKeyEnvironment is not null && !uri.IsLoopback) throw new ArgumentException("Authenticated remote model routes require TLS.");
         }
-        client = transport ?? new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromMinutes(3) };
+        client = transport ?? new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false }) { Timeout = TimeSpan.FromMinutes(3) };
     }
-    public static ModelGateway FromEnvironment()
-    {
-        var file = Environment.GetEnvironmentVariable("LSPP_MODEL_ROUTES_FILE");
-        if (string.IsNullOrWhiteSpace(file)) return new([]);
-        if (!Path.IsPathFullyQualified(file) || new FileInfo(file).Length > 1024 * 1024) throw new ArgumentException("Model routes require a bounded operator-owned configuration file.");
-        return new(JsonSerializer.Deserialize<ModelRoute[]>(File.ReadAllBytes(file), WorkflowJson.Options) ?? throw new ArgumentException("Model route array required."), qualityPolicy: ModelQualityPolicy.FromEnvironment());
-    }
+    /// <summary>Operator file first, then loopback discovery (see <see cref="ModelRoutes"/>).</summary>
+    public static ModelGateway FromEnvironment() =>
+        new(ModelRoutes.Resolve().Routes, qualityPolicy: ModelQualityPolicy.FromEnvironment());
     public IEnumerable<object> Routes => routes.Values.Select(r => new { r.Id, r.Model, r.Provider, r.Remote, state = "DISCOVERY_REQUIRED" });
     private ModelRoute Route(string id, IReadOnlySet<string> permissions)
     {
         if (!permissions.Contains("model.invoke")) throw new UnauthorizedAccessException("Model permission required.");
         var route = routes.GetValueOrDefault(id) ?? throw new InvalidOperationException("Model route is not configured.");
-        if (route.Remote && !permissions.Contains("network.remote")) throw new UnauthorizedAccessException("Remote data transfer is not authorized for this workspace operation.");
+        if ((route.Remote || !new Uri(route.Endpoint).IsLoopback) && !permissions.Contains("network.remote")) throw new UnauthorizedAccessException("Remote data transfer is not authorized for this workspace operation.");
         return route;
     }
     private async Task<JsonDocument> Send(ModelRoute route, HttpMethod method, string path, object? body, CancellationToken token)

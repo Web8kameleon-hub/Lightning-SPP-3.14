@@ -100,6 +100,79 @@ or durable queue. It is not registered as a browser tool or enabled in productio
 Upstream document agents' assumed accuracy and hardcoded Ocean endpoint were not
 imported. See `Workflow/Python/README.md` for scope, provenance and usage.
 
-Release licensing, live Excel/model/device verification, integration onto current
+At that checkpoint, Release licensing, live Excel/model/device verification, integration onto current
 shared main, and deployment/recovery acceptance remain open. Fixing these three
 tests does not accept all existing local changes for production.
+
+## Correction: local Six Labors license verified
+
+The private `.env.build` exists, contains a nonempty `SIXLABORS_LICENSE`, and is
+ignored by Git and not tracked. Earlier builds had not loaded this configuration;
+their warning was not evidence that the license was absent.
+
+The existing `Scripts/Load-BuildEnvironment.ps1` maps that entry to
+`SixLaborsLicenseKey`. Local PowerShell execution policy prevented dot-sourcing
+the script. Reading the same private entry as data and setting those variables
+only in the build process allowed the actual license validation to run. No system
+execution policy was changed and no credential was added to Git.
+
+`dotnet build wwwmmm.slnx --configuration Release --no-restore` with the private
+license loaded **passed**, zero errors and no licensing warnings. Two CS8604
+warnings came from the concurrently present, untracked
+`Classify/ClassificationTaxonomy.cs` (lines 62 and 73). Those local sources were
+not modified or accepted by this check. This verifies local Release license
+acceptance; it does not verify the CI secret or server build environment.
+
+Local license availability is no longer an acceptance blocker. The other live
+integration, current-main and deployment/recovery gates remain open.
+
+## CRM/classification continuation and single-payload requirement
+
+Current acceptance remains **not accepted for production**. The following is
+local verification of the current working tree, which also contains previously
+staged/unstaged work; it is not proof of a clean committed revision or deployed
+image. See [HYBRID_DOCUMENT_STORAGE.md](HYBRID_DOCUMENT_STORAGE.md) for the actual
+layout, upstream findings and limits.
+
+New browser imports store one canonical payload per SHA-256 per private
+workspace. Logical filenames and classification folders are metadata references;
+CRM links verify the actual bytes and hash. Legacy imports/copies are retained
+without an implicit migration. CRM metadata uses a flushed recovery journal,
+exclusive file lease, atomic record/audit publication and stale-update rejection.
+Unimplemented batching settings fail instead of pretending to change behavior.
+Separate CRM consent is checked at plan validation and again for execution.
+
+Workflow execution uses the existing FluidEngine `StigmaMemoryFilmPipeline` to
+persist one minimal record per job/step. Document bytes, filenames, prompt and
+customer fields are absent from these Film records. Film writes are not a
+second payload store or a distributed Tide implementation.
+
+Checks actually executed after these changes:
+
+- `dotnet build wwwmmm.slnx --configuration Release --no-restore`, with the
+  private Six Labors license loaded: passed, zero warnings and zero errors.
+- CRM/classification and core workflow selection: 35 passed, zero skipped.
+  Recovery interruption states are test fixtures over real local files, not
+  a physical crash or production-storage benchmark.
+- Real HTTP owner/CSRF/CRM-consent integration with
+  `SPP_WORKFLOW_BROWSER=1`: one passed. The browser imported a canonical
+  document, saved/reviewed a plan and displayed actual read output and hash.
+- Full CI-equivalent local selection with native tests enabled:
+  `dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --no-build --filter FullyQualifiedName!~BridgeUpstreamTests`
+  passed **391 tests, zero failed and zero skipped**. The excluded opt-in
+  `BridgeUpstreamTests` are not covered by this result.
+  TRX: `Tests/LightningSPP.Tests/TestResults/hybrid-workspace-20261117.trx`.
+- JavaScript syntax checks passed for the workspace script and browser driver;
+  changed-content whitespace checks and the new document's local link check passed.
+- Actual pinned upstream NanoGrid Python source reproduced
+  `struct.error: pack expected 8 items for packing (got 9)`. The retained
+  two-site patch passed application checks against that source, and the corrected
+  actual header passed a 14-byte encode/decode round-trip. It is not merged or
+  deployed upstream and does not establish full codec/security acceptance.
+
+Remaining gates: review and commit an independently reproducible source set;
+integrate on current shared main without losing other work; fix/accept the
+upstream NanoGrid codec and verify the real authenticated hybrid contract;
+verify live Excel/model classification and physical devices where enabled;
+complete CI plus deployment/rollback and exact-revision health verification.
+No production readiness or rollout is claimed by local test results.

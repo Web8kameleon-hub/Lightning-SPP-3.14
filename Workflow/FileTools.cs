@@ -20,7 +20,7 @@ internal static class FileTools
         yield return new DelegateTool(new("code.audit-patterns", "Find customer-supplied candidate patterns; findings require semantic review.", ["files.read"], ["path", "patterns"], []), Audit);
         yield return new DelegateTool(new("documents.pdf-text", "Extract PDF text with Poppler; OCR textless PDFs only when LSPP_OCR_ENABLED=true, up to 32 pages.", ["files.read"], ["path"], [], Dependency: "pdftotext"), Pdf);
         yield return new DelegateTool(new("reports.export", "Persist a source-referenced JSON, CSV or PDF report without changing originals.", ["reports.write"], ["data", "format"], []), Report);
-        yield return new DelegateTool(new("documents.file-classified", "Copy a document into reports/classified/<category>/<sha256>/ with its original filename. Requires a reviewed category and expected source hash; does not validate classification accuracy. Originals are retained.", ["files.read", "reports.write"], ["path", "category", "sha256"], []), FileClassified);
+        yield return new DelegateTool(new("documents.file-classified", "File a metadata reference under reports/classified/<category>/<sha256>/ to the one canonical source snapshot. No document payload copy is created. Requires a reviewed category and expected source hash.", ["files.read", "reports.write"], ["path", "category", "sha256"], []), FileClassified);
     }
     private static async Task<ToolResult> FileClassified(JsonElement a, ToolContext c, CancellationToken token)
     {
@@ -31,7 +31,10 @@ internal static class FileTools
         if (!string.Equals(input.Source.Sha256, WorkflowJson.Text(a, "sha256"), StringComparison.Ordinal))
             throw new IOException("Document changed since classification review; review it again before filing.");
         var filename = Path.GetFileName(input.Source.Path);
-        var relative = $"reports/classified/{category}/{input.Source.Sha256}/{filename}";
+        var relative = $"reports/classified/{category}/{input.Source.Sha256}/{filename}.reference.json";
+        var referenceBytes = JsonSerializer.SerializeToUtf8Bytes(new { schemaVersion = 1, documentPath = input.Source.Path,
+            sha256 = input.Source.Sha256, canonicalSource = "workspace-original:" + input.Source.Sha256,
+            category, classification = "REQUIRES_REVIEW" }, WorkflowJson.Options);
         var destination = c.Workspace.Resolve(relative, false);
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         WorkspaceScope.CheckAncestors(Path.GetDirectoryName(destination)!);
@@ -41,20 +44,20 @@ internal static class FileTools
         var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            await WorkspaceScope.AtomicWriteAsync(temporary, input.Bytes, token);
+            await WorkspaceScope.AtomicWriteAsync(temporary, referenceBytes, token);
             token.ThrowIfCancellationRequested();
             File.Move(temporary, destination, overwrite: false);
         }
         catch (IOException) when (File.Exists(destination))
         {
-            var existing = await c.Workspace.ReadAsync(relative, token);
-            if (existing.Source.Sha256 != input.Source.Sha256)
+            if (new FileInfo(destination).Length != referenceBytes.Length ||
+                !(await File.ReadAllBytesAsync(destination, token)).AsSpan().SequenceEqual(referenceBytes))
                 throw new IOException("Classified destination differs; refusing to overwrite it.");
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
-        var written = await c.Workspace.ReadAsync(relative, token);
-        if (written.Source.Sha256 != input.Source.Sha256) throw new IOException("Classified copy integrity failure.");
-        return new(WorkflowJson.Value(new { path = relative, category, sha256 = input.Source.Sha256, originalRetained = true, classification = "REQUIRES_REVIEW" }), [input.Source]);
+        if (!(await File.ReadAllBytesAsync(destination, token)).AsSpan().SequenceEqual(referenceBytes)) throw new IOException("Classified reference integrity failure.");
+        return new(WorkflowJson.Value(new { path = relative, documentPath = input.Source.Path, category, sha256 = input.Source.Sha256,
+            originalRetained = true, payloadCopied = false, canonicalSource = "workspace-original:" + input.Source.Sha256, classification = "REQUIRES_REVIEW" }), [input.Source]);
     }
     private static Task<ToolResult> List(JsonElement a, ToolContext c, CancellationToken token)
     {
@@ -72,7 +75,7 @@ internal static class FileTools
                 try { _ = c.Workspace.Resolve(relative); } catch (UnauthorizedAccessException) { continue; }
                 if (Directory.Exists(item)) queue.Push(item);
                 else if (skipped++ >= offset)
-                { if (files.Count == limit) { more = true; break; } files.Add(relative); }
+                { if (files.Count == limit) { more = true; break; } files.Add(WorkspaceScope.CanonicalReference(relative) ? relative[..^".reference.json".Length] : relative); }
             }
         }
         return Task.FromResult(new ToolResult(WorkflowJson.Value(new { files, offset, nextOffset = more ? (int?)(offset + files.Count) : null }), []));

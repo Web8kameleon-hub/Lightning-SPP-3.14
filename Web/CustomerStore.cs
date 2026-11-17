@@ -23,6 +23,7 @@ internal sealed class CustomerStore
     internal sealed record Customer(string Id, string? UserId, string Email);
     internal sealed record Notice(string State, int Attempts, long LeaseUntil, long NextAttempt);
     internal sealed record Limit(long Window, int Count);
+    internal sealed record SummaryCounts(int TotalUsers, int VerifiedActiveUsers, int LinkedCustomers, int Entitlements, int ActiveSessions);
     internal sealed record Checkout(string PriceId, string Nonce, long Created, string? SessionId = null);
     internal sealed class State
     {
@@ -76,6 +77,14 @@ internal sealed class CustomerStore
         return envelope;
     }
     internal State ReadState() => ReadEnvelope().Data;
+    internal SummaryCounts GetSummaryCounts()
+    {
+        var state = ReadState();
+        var activeSessions = state.Sessions.Values.Count(session => session.Expires > Now &&
+            state.Users.TryGetValue(session.UserId, out var user) && user.EmailVerified && user.Status == "ACTIVE" && user.Version == session.Version);
+        return new(state.Users.Count, state.Users.Values.Count(user => user.EmailVerified && user.Status == "ACTIVE"),
+            state.Customers.Values.Count(customer => customer.UserId is not null), state.Entitlements.Count, activeSessions);
+    }
     private T Change<T>(Func<State, T> action)
     {
         lock (gate)

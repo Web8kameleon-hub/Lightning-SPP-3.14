@@ -45,6 +45,25 @@ public sealed class WorkspaceScope
     }
     public async Task<(byte[] Bytes, SourceReference Source)> ReadAsync(string relative, CancellationToken token)
     {
+        var logical = Resolve(relative, mustExist: false);
+        if (!File.Exists(logical) && CanonicalReference(relative + ".reference.json"))
+        {
+            var referencePath = Resolve(relative + ".reference.json");
+            if (new FileInfo(referencePath).Length > 8192) throw new IOException("Document reference exceeds its budget.");
+            using var reference = JsonDocument.Parse(await File.ReadAllBytesAsync(referencePath, token));
+            var metadata = reference.RootElement;
+            var parts = relative.Replace('\\', '/').Split('/'); var canonicalHash = parts[1];
+            if (metadata.GetProperty("schemaVersion").GetInt32() != 1 || metadata.GetProperty("sha256").GetString() != canonicalHash ||
+                metadata.GetProperty("filename").GetString() != parts[2]) throw new IOException("Invalid canonical document reference.");
+            var canonicalSnapshot = Path.Combine(StateDirectory, "originals", canonicalHash);
+            CheckAncestors(Path.GetDirectoryName(canonicalSnapshot)!);
+            if (new FileInfo(canonicalSnapshot).LinkTarget is not null) throw new UnauthorizedAccessException("Linked canonical objects are forbidden.");
+            var info = new FileInfo(canonicalSnapshot);
+            if (info.Length > MaxFileBytes || info.Length != metadata.GetProperty("bytes").GetInt32()) throw new IOException("Canonical object size mismatch.");
+            var canonicalBytes = await File.ReadAllBytesAsync(canonicalSnapshot, token);
+            if (WorkflowJson.Hash(canonicalBytes) != canonicalHash) throw new IOException("Canonical object integrity failure.");
+            return (canonicalBytes, new(relative.Replace('\\', '/'), canonicalHash));
+        }
         var path = Resolve(relative);
         await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 8192, FileOptions.Asynchronous);
         if (stream.Length > MaxFileBytes) throw new ArgumentException("File exceeds configured per-file resource budget.");
@@ -57,6 +76,39 @@ public sealed class WorkspaceScope
         if (!File.Exists(snapshot)) await AtomicWriteAsync(snapshot, bytes, token);
         else if (WorkflowJson.Hash(await File.ReadAllBytesAsync(snapshot, token)) != hash) throw new IOException("Original snapshot integrity failure.");
         return (bytes, new(relative.Replace('\\', '/'), hash));
+    }
+    internal static bool CanonicalReference(string path)
+    {
+        var parts = path.Replace('\\', '/').Split('/');
+        return parts.Length == 3 && parts[0] == "documents" && parts[1].Length == 64 &&
+            parts[1].All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f') && parts[2].EndsWith(".reference.json", StringComparison.Ordinal);
+    }
+    /// <summary>Store one private content-addressed object; visible filenames are metadata references.</summary>
+    public async Task<string> ImportCanonicalAsync(string filename, byte[] bytes, CancellationToken token)
+    {
+        if (filename != Path.GetFileName(filename) || bytes.Length == 0 || bytes.Length > MaxFileBytes)
+            throw new ArgumentException("Invalid canonical import name or size.");
+        var hash = WorkflowJson.Hash(bytes); var relative = "documents/" + hash + "/" + filename;
+        _ = Resolve(relative, false);
+        var originals = Path.Combine(StateDirectory, "originals");
+        Directory.CreateDirectory(originals); CheckAncestors(originals); PrivateDirectory(originals);
+        var snapshot = Path.Combine(originals, hash);
+        if (new FileInfo(snapshot).LinkTarget is not null) throw new UnauthorizedAccessException("Linked canonical objects are forbidden.");
+        if (File.Exists(snapshot))
+        {
+            if (new FileInfo(snapshot).Length != bytes.Length || WorkflowJson.Hash(await File.ReadAllBytesAsync(snapshot, token)) != hash)
+                throw new IOException("Existing canonical object failed integrity verification.");
+        }
+        else await AtomicWriteAsync(snapshot, bytes, token);
+        var referencePath = Resolve(relative + ".reference.json", false);
+        var referenceBytes = JsonSerializer.SerializeToUtf8Bytes(new { schemaVersion = 1, sha256 = hash, filename, bytes = bytes.Length }, WorkflowJson.Options);
+        if (File.Exists(referencePath))
+        {
+            if (new FileInfo(referencePath).Length != referenceBytes.Length || !(await File.ReadAllBytesAsync(referencePath, token)).AsSpan().SequenceEqual(referenceBytes))
+                throw new IOException("Existing canonical reference differs; refusing to overwrite.");
+        }
+        else await AtomicWriteAsync(referencePath, referenceBytes, token);
+        return relative;
     }
     public async Task<string> ImportAsync(string filename, byte[] bytes, CancellationToken token)
     {
