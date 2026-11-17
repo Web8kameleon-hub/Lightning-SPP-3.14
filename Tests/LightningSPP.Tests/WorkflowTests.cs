@@ -16,6 +16,35 @@ public sealed class WorkflowTests
     private static WorkflowStep Step(string id, string tool, object args, params string[] deps) => new(id, tool, Json(args), deps);
     private static async Task<ToolResult> Tool(string tool, object args, WorkspaceScope scope) => await Registry.Get(tool).ExecuteAsync(Json(args), new(scope, "testjob", "teststep", Permissions), CancellationToken.None);
 
+    [Fact]
+    public async Task ClassifiedFilingPreservesOriginalRejectsStaleReviewAndNeverOverwrites()
+    {
+        var scope = Scope();
+        try
+        {
+            var bytes = Encoding.UTF8.GetBytes("actual document fixture");
+            var path = await scope.ImportAsync("invoice.txt", bytes, default);
+            var source = await scope.ReadAsync(path, default);
+            var args = new { path, category = "invoices", sha256 = source.Source.Sha256 };
+            var result = await Tool("documents.file-classified", args, scope);
+            var destination = result.Data.GetProperty("path").GetString()!;
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(scope.Resolve(destination)));
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(scope.Resolve(path)));
+            Assert.Equal(source.Source, Assert.Single(result.Sources));
+            await Tool("documents.file-classified", args, scope);
+            await File.WriteAllTextAsync(scope.Resolve(destination), "conflicting destination");
+            await Assert.ThrowsAsync<IOException>(() => Tool("documents.file-classified", args, scope));
+            Assert.Equal("conflicting destination", await File.ReadAllTextAsync(scope.Resolve(destination)));
+            await File.WriteAllTextAsync(scope.Resolve(path), "changed source");
+            await Assert.ThrowsAsync<IOException>(() => Tool("documents.file-classified", args, scope));
+            foreach (var category in new[] { "../escape", "nested/path", "", "UPPER" })
+                await Assert.ThrowsAsync<ArgumentException>(() => Tool("documents.file-classified", new { path, category, sha256 = source.Source.Sha256 }, scope));
+            var plan = new WorkflowPlan("file", [Step("file", "documents.file-classified", args)]);
+            Assert.Throws<UnauthorizedAccessException>(() => Registry.Validate(plan, new HashSet<string>(["files.read"])));
+        }
+        finally { Directory.Delete(scope.Root, true); }
+    }
+
     [Theory]
     [InlineData("../outside.txt")]
     [InlineData("nested/../../outside.txt")]

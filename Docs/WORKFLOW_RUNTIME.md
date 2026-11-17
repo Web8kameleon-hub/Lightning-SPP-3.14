@@ -68,6 +68,15 @@ not evidence of a 30,000-document capacity or restart-recovery benchmark.
 - Files: list, UTF-8 read, literal search, line comparison and customer-supplied
   audit patterns. A pattern hit is a candidate; it does not prove fake production
   processing, reachability, a vulnerability, or semantic correctness.
+- `documents.file-classified` copies an actual document into
+  `reports/classified/<category>/<sha256>/<original-name>`. Supply a reviewed
+  category (1–64 lowercase ASCII letters, digits, underscores or hyphens) and
+  the reviewed source `sha256`. It requires `files.read` and `reports.write`,
+  preserves originals, rejects changed sources and conflicting destinations,
+  and permits an identical retry. Each document is a separate checkpointed
+  workflow step, within the existing 256-step plan limit. The tool performs
+  filing; classification accuracy and end-to-end mass AI classification remain
+  unaccepted pending real model and representative document verification.
 - Native PDF text uses actual `pdftotext` and immutable source bytes, with page
   references. `SPP_PDFTOTEXT_PATH` can identify its installed executable. No text
   from scans is invented. Vision requires a discovered vision-capable Ollama
