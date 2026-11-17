@@ -1,4 +1,6 @@
 using wwwmmm.Documents;
+using wwwmmm.Workflow;
+using wwwmmm.Web;
 using SkiaSharp;
 using Xunit;
 
@@ -15,6 +17,29 @@ public sealed class OcrEnvironmentCollection { }
 public class OcrTests
 {
     private const string KnownText = "LIGHTNING SPP 314";
+
+    [Theory]
+    [InlineData("SPP_PDFINFO_PATH")]
+    [InlineData("SPP_PDFTOPPM_PATH")]
+    public async Task Renderer_ExplicitMissingToolIsRejectedWithoutFallback(string variable)
+    {
+        using var configured = new EnvironmentScope(variable,
+            Path.Combine(Path.GetTempPath(), "missing-poppler-" + Guid.NewGuid().ToString("N") + ".exe"));
+        var pdf = new PdfDocumentService().CreateFromImages([RenderTextImage(KnownText)]);
+        var error = await Assert.ThrowsAsync<FileNotFoundException>(() => new PdfDocumentService().RenderPageAsync(pdf));
+        Assert.Contains(variable, error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("SPP_PDFINFO_PATH")]
+    [InlineData("SPP_PDFTOPPM_PATH")]
+    public async Task Renderer_RelativeConfiguredToolIsRejected(string variable)
+    {
+        using var configured = new EnvironmentScope(variable, "relative-tool.exe");
+        var pdf = new PdfDocumentService().CreateFromImages([RenderTextImage(KnownText)]);
+        var error = await Assert.ThrowsAsync<ArgumentException>(() => new PdfDocumentService().RenderPageAsync(pdf));
+        Assert.Contains(variable, error.Message, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void Locator_ConfiguredPathThatDoesNotExist_IsAnExplicitError()
@@ -101,6 +126,37 @@ Assert.Contains("LIGHTNING", Normalize(document.Pages[0].Text), StringComparison
             File.Delete(path);
         }
     }
+    [Fact]
+    public async Task Workflow_PdfTextUsesOptInOcrForScannedPages()
+    {
+        var pdfPath = await WriteTempPdfAsync(new PdfDocumentService().CreateFromImages([RenderTextImage(KnownText)]));
+        var workspacePath = Path.Combine(Path.GetTempPath(), "spp-workflow-ocr-" + Guid.NewGuid().ToString("N"));
+        var workspace = new WorkspaceScope(workspacePath);
+        try
+        {
+            using var enabled = new EnvironmentScope(OcrTextReader.EnabledVariable, "true");
+            var path = await workspace.ImportAsync("scan.pdf", await File.ReadAllBytesAsync(pdfPath), default);
+            var result = await WorkflowApi.Registry(new([])).Get("documents.pdf-text").ExecuteAsync(
+                WorkflowJson.Value(new { path }),
+                new(workspace, "ocrjob", "extract", new HashSet<string>(StringComparer.Ordinal) { "files.read" }),
+                default);
+
+            Assert.Equal("ocr", result.Data.GetProperty("extraction").GetString());
+            Assert.True(result.Data.GetProperty("ocrAttempted").GetBoolean());
+            Assert.False(result.Data.GetProperty("truncated").GetBoolean());
+            Assert.False(result.Data.GetProperty("requiresOcr").GetBoolean());
+            var text = result.Data.GetProperty("pages")[0].GetProperty("text").GetString()!;
+            Assert.Contains("LIGHTNING", Normalize(text), StringComparison.Ordinal);
+            Assert.Contains("314", Normalize(text), StringComparison.Ordinal);
+            Assert.Equal(1, Assert.Single(result.Sources).Page);
+        }
+        finally
+        {
+            File.Delete(pdfPath);
+            if (Directory.Exists(workspacePath)) Directory.Delete(workspacePath, true);
+        }
+    }
+
 private static async Task<string> WriteTempPdfAsync(byte[] pdf)
     {
         var path = Path.Combine(Path.GetTempPath(), "spp-ocr-" + Guid.NewGuid().ToString("N") + ".pdf");

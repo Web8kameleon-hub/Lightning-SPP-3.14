@@ -17,6 +17,7 @@ public sealed record DocumentText(string Source, string Sha256, IReadOnlyList<Pa
     public const string OcrSource = "ocr";
 
     public int PageCount => Pages.Count;
+    public int TotalPageCount { get; init; } = Pages.Count;
 
     /// <summary>
     /// Which reader produced this text: <see cref="TextLayerSource"/> for the PDF's own

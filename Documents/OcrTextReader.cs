@@ -68,7 +68,7 @@ public static class OcrTextReader
         }
 
         var sha256 = layer?.Sha256 ?? await ComputeSha256Async(pdfPath, cancellationToken);
-        return new DocumentText(pdfPath, sha256, pages) { TextSource = DocumentText.OcrSource };
+        return new DocumentText(pdfPath, sha256, pages) { TextSource = DocumentText.OcrSource, TotalPageCount = first.TotalPages };
     }
     private static bool IsBlank(DocumentText document) =>
             document.Pages.Count == 0 || document.Pages.All(page => string.IsNullOrWhiteSpace(page.Text));

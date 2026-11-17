@@ -100,9 +100,23 @@ public sealed class PdfDocumentService
     private static string Tool(string variable, string fallback)
     {
         var configured = Environment.GetEnvironmentVariable(variable);
-        if (string.IsNullOrWhiteSpace(configured)) return fallback;
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            // Use the same Poppler installation as text extraction when its tools are
+            // bundled locally instead of installed on PATH (notably on Windows).
+            var textTool = PdfToTextLocator.TryLocate();
+            if (textTool is not null)
+            {
+                var sibling = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(textTool.Path))!,
+                    fallback + (OperatingSystem.IsWindows() ? ".exe" : ""));
+                if (File.Exists(sibling)) return sibling;
+            }
+            return fallback;
+        }
         if (!Path.IsPathFullyQualified(configured))
             throw new ArgumentException($"{variable} must be an absolute executable path.");
+        if (!File.Exists(configured))
+            throw new FileNotFoundException($"{variable} points to a missing executable.", configured);
         return configured;
     }
 }

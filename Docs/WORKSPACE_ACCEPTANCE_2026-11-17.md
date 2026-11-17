@@ -1,6 +1,9 @@
 # Workspace continuation — 2026-11-17
 
 Acceptance status: **not accepted for production**. No deployment performed.
+The three failures recorded below were subsequently investigated and resolved
+for the exercised cases; see the continuation section. Other acceptance gates
+remain open.
 Existing staged and unstaged work was retained. `git fetch origin` completed;
 `fix/security-vulns-20261112` matched its configured remote branch at inspection.
 Only the primary worktree was registered.
@@ -45,7 +48,58 @@ These contracts do not implement document filing or a mass classification API.
 Excel Core exposes the existing LAGTER workbook export contract used by the SPP
 bridge. Source inspection does not verify the running deployment or model quality.
 
-Remaining: native OCR runtime verification, HTTP integration failure resolution,
+Remaining at the initial snapshot: native OCR runtime verification, HTTP integration failure resolution,
 live Excel service verification, real model classification and reviewed taxonomy,
 CRM contract selection, physical scanner/printer verification, Release licensing,
 and deployment/recovery acceptance. Keep workflow enablement gated.
+
+## Continuation: three-test investigation and Clisonix agents
+
+The three failures were reproduced before changes:
+
+- `OcrTests.Reader_WithOcrEnabled_RecognizesARealRasterPage`
+- `OcrTests.Workflow_PdfTextUsesOptInOcrForScannedPages`
+- `WorkflowApiTests.CustomerWorkspaceRequiresCsrfAndKeepsDocumentsJobsAndReportsPrivate`
+
+Both OCR failures arose because rendering called `pdfinfo`/`pdftoppm` by bare
+name, while text extraction found the repository-bundled Poppler installation.
+Rendering now discovers sibling binaries from that installation when no explicit
+renderer path is configured. Explicit renderer paths remain authoritative and
+must be absolute existing files. The HTTP test passed unchanged outside the
+restricted execution sandbox. No authentication, CSRF or HTTP contract was weakened.
+
+Actual subsequent checks:
+
+- Solution Debug build after the renderer fix: passed with the same ImageSharp
+  licensing warning.
+- OCR/PDF tests with `SPP_TEST_NATIVE_DOCUMENTS=1`: 17 passed, zero skipped.
+  These include actual raster PDF rendering and Tesseract recognition.
+- Workflow HTTP integration outside the sandbox: one passed, zero skipped.
+- Broader OCR/workflow/PDF/archive/processor selection outside the sandbox:
+  71 passed, eight native opt-in cases skipped, zero failed. This run did not
+  activate the native flag; it is not evidence for the eight skipped cases.
+- Python agent tests: six passed, including real file hashing, worker growth and
+  idle reduction, error/timeout propagation, queue bounds and cancellation cleanup.
+- Final solution Debug build after adding four explicit renderer-path failure
+  regressions: passed with the same licensing warning. Python `compileall` and
+  AST parsing of all four Python source files passed; the copied registry's Git
+  blob matches the pinned upstream blob.
+- Final affected-test selection with `SPP_TEST_NATIVE_DOCUMENTS=1`, outside the
+  sandbox: **83 passed, zero failed, zero skipped**. This includes the three
+  original failures, four new missing/relative renderer-path regressions, native
+  PDF page selection, archive/processor failure cases and owner-scoped HTTP flow.
+  It supersedes the earlier subset results for these cases, not the full suite.
+
+`Workflow/Python/clisonix_agents/registry.py` preserves the exact upstream
+`agents.py` bytes at the revision recorded above (blob
+`b95ad3ac29fa19bd9358e77de97ba7420e85deb3`). The accompanying pool is an SPP
+adaptation of upstream bounded-queue and scaling concepts, not a byte copy of
+upstream `agents/pool.py`. It schedules real caller-provided asynchronous handlers
+with bounded concurrency. It is not a distributed service, model implementation,
+or durable queue. It is not registered as a browser tool or enabled in production.
+Upstream document agents' assumed accuracy and hardcoded Ocean endpoint were not
+imported. See `Workflow/Python/README.md` for scope, provenance and usage.
+
+Release licensing, live Excel/model/device verification, integration onto current
+shared main, and deployment/recovery acceptance remain open. Fixing these three
+tests does not accept all existing local changes for production.
