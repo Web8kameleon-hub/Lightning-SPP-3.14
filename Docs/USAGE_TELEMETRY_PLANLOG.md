@@ -48,8 +48,8 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 
 | Phase | Target (Athens) | State | Deliverable | Completion condition |
 |---|---|---|---|---|
-| P0 — source and identity map | 2026-11-16 17:00 | planned | `Docs/USAGE_TELEMETRY_ROUTE_MATRIX.md` | Every customer-facing route maps to authenticated customer/license identity or anonymous traffic; production history sources and unmapped cases are documented. |
-| P1 — event and JSON contracts | 2026-11-17 17:00 | planned | `Docs/schemas/usage-event.schema.json`, `Docs/schemas/daily-usage.schema.json` | Schemas define versioning, idempotency, UTC windows, privacy exclusions, completeness and correction semantics. |
+| P0 — source and identity map | 2026-11-16 17:00 | verified | `Docs/USAGE_TELEMETRY_ROUTE_MATRIX.md` | Every customer-facing route maps to authenticated customer/license identity or anonymous traffic; production history sources and unmapped cases are documented. |
+| P1 — event and JSON contracts | 2026-11-17 17:00 | verified | `Docs/schemas/usage-event.schema.json`, `Docs/schemas/daily-usage.schema.json` | Schemas define versioning, idempotency, UTC windows, privacy exclusions, completeness and correction semantics. |
 | P2 — persistent ledger | 2026-11-20 17:00 | planned | `Services/PersistentUsageLedger.cs`, `Tests/LightningSPP.Tests/PersistentUsageLedgerTests.cs` | Longo records survive restart; duplicate events count once; contention and storage failures are visible. |
 | P3 — instrumentation and scoped views | 2026-11-25 17:00 | planned | `Web/UsageApi.cs`, `Tests/LightningSPP.Tests/UsageAuthorizationTests.cs` | API outcomes, time and bytes are recorded; customer A cannot read customer B; anonymous use stays anonymous. |
 | P4 — daily public JSON | 2026-11-27 17:00 | planned | `.github/workflows/publish-usage-daily.yml`, `Scripts/validate-usage-json.py`, first real daily JSON | Workflow publishes one redacted UTC-day aggregate idempotently with least privilege; no customer identifiers or placeholder values. |
@@ -67,73 +67,146 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     {
       "id": "P0",
       "target_local": "2026-11-16T17:00:00+02:00",
-      "state": "planned",
-      "deliverable": ["Docs/USAGE_TELEMETRY_ROUTE_MATRIX.md"],
-      "acceptance": ["Route-to-identity matrix covers authenticated, licensed, anonymous and failure paths", "Retained production history sources and gaps are documented"],
-      "evidence": ["Docs/USAGE_TELEMETRY_ROUTE_MATRIX.md"],
+      "state": "verified",
+      "deliverable": [
+        "Docs/USAGE_TELEMETRY_ROUTE_MATRIX.md"
+      ],
+      "acceptance": [
+        "Route-to-identity matrix covers authenticated, licensed, anonymous and failure paths",
+        "Retained production history sources and gaps are documented"
+      ],
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_ROUTE_MATRIX.md"
+      ],
       "owner": "repository-maintainer"
     },
     {
       "id": "P1",
       "target_local": "2026-11-17T17:00:00+02:00",
-      "state": "planned",
-      "deliverable": ["Docs/schemas/usage-event.schema.json", "Docs/schemas/daily-usage.schema.json"],
-      "acceptance": ["Both schemas are versioned and validate privacy, idempotency, UTC windows and completeness rules"],
-      "evidence": ["Docs/schemas/usage-event.schema.json", "Docs/schemas/daily-usage.schema.json"],
+      "state": "verified",
+      "deliverable": [
+        "Docs/schemas/usage-event.schema.json",
+        "Docs/schemas/daily-usage.schema.json"
+      ],
+      "acceptance": [
+        "Both schemas are versioned and validate privacy, idempotency, UTC windows and completeness rules"
+      ],
+      "evidence": [
+        "Docs/schemas/usage-event.schema.json",
+        "Docs/schemas/daily-usage.schema.json"
+      ],
       "owner": "repository-maintainer"
     },
     {
       "id": "P2",
       "target_local": "2026-11-20T17:00:00+02:00",
       "state": "planned",
-      "deliverable": ["Services/PersistentUsageLedger.cs", "Tests/LightningSPP.Tests/PersistentUsageLedgerTests.cs"],
-      "acceptance": ["Durable Longo writes survive process restart", "Replay is idempotent", "Persistence errors and contention are visible"],
-      "evidence": ["Services/PersistentUsageLedger.cs", "Tests/LightningSPP.Tests/PersistentUsageLedgerTests.cs"],
+      "deliverable": [
+        "Services/PersistentUsageLedger.cs",
+        "Tests/LightningSPP.Tests/PersistentUsageLedgerTests.cs"
+      ],
+      "acceptance": [
+        "Durable Longo writes survive process restart",
+        "Replay is idempotent",
+        "Persistence errors and contention are visible"
+      ],
+      "evidence": [
+        "Services/PersistentUsageLedger.cs",
+        "Tests/LightningSPP.Tests/PersistentUsageLedgerTests.cs"
+      ],
       "owner": "repository-maintainer"
     },
     {
       "id": "P3",
       "target_local": "2026-11-25T17:00:00+02:00",
       "state": "planned",
-      "deliverable": ["Web/UsageApi.cs", "Tests/LightningSPP.Tests/UsageAuthorizationTests.cs"],
-      "acceptance": ["All instrumented API paths record status, duration and bytes", "Customer ownership is enforced", "Anonymous calls are not attributed to a customer"],
-      "evidence": ["Web/UsageApi.cs", "Tests/LightningSPP.Tests/UsageAuthorizationTests.cs"],
+      "deliverable": [
+        "Web/UsageApi.cs",
+        "Tests/LightningSPP.Tests/UsageAuthorizationTests.cs"
+      ],
+      "acceptance": [
+        "All instrumented API paths record status, duration and bytes",
+        "Customer ownership is enforced",
+        "Anonymous calls are not attributed to a customer"
+      ],
+      "evidence": [
+        "Web/UsageApi.cs",
+        "Tests/LightningSPP.Tests/UsageAuthorizationTests.cs"
+      ],
       "owner": "repository-maintainer"
     },
     {
       "id": "P4",
       "target_local": "2026-11-27T17:00:00+02:00",
       "state": "planned",
-      "deliverable": [".github/workflows/publish-usage-daily.yml", "Scripts/validate-usage-json.py", "artifacts/usage/daily/*.json"],
-      "acceptance": ["A real daily aggregate is produced and schema-validated", "Git publication is idempotent", "Public JSON contains no customer identifiers or placeholder measurements"],
-      "evidence": [".github/workflows/publish-usage-daily.yml", "Scripts/validate-usage-json.py", "artifacts/usage/daily/*.json"],
+      "deliverable": [
+        ".github/workflows/publish-usage-daily.yml",
+        "Scripts/validate-usage-json.py",
+        "artifacts/usage/daily/*.json"
+      ],
+      "acceptance": [
+        "A real daily aggregate is produced and schema-validated",
+        "Git publication is idempotent",
+        "Public JSON contains no customer identifiers or placeholder measurements"
+      ],
+      "evidence": [
+        ".github/workflows/publish-usage-daily.yml",
+        "Scripts/validate-usage-json.py",
+        "artifacts/usage/daily/*.json"
+      ],
       "owner": "repository-maintainer"
     },
     {
       "id": "P5",
       "target_local": "2026-12-01T17:00:00+02:00",
       "state": "planned",
-      "deliverable": ["Docs/USAGE_BACKFILL_REPORT.md"],
-      "acceptance": ["Sources and timezones are named", "Coverage is reconciled", "Unknown days are marked as gaps"],
-      "evidence": ["Docs/USAGE_BACKFILL_REPORT.md"],
+      "deliverable": [
+        "Docs/USAGE_BACKFILL_REPORT.md"
+      ],
+      "acceptance": [
+        "Sources and timezones are named",
+        "Coverage is reconciled",
+        "Unknown days are marked as gaps"
+      ],
+      "evidence": [
+        "Docs/USAGE_BACKFILL_REPORT.md"
+      ],
       "owner": "repository-maintainer"
     },
     {
       "id": "P6",
       "target_local": "2026-12-02T17:00:00+02:00",
       "state": "planned",
-      "deliverable": ["Web/wwwroot/benchmarks.html", "Docs/RELEASE_EVIDENCE.md"],
-      "acceptance": ["Workstation, production and customer-workload evidence are distinguished", "Every published number has source window and completeness"],
-      "evidence": ["Web/wwwroot/benchmarks.html", "Docs/RELEASE_EVIDENCE.md"],
+      "deliverable": [
+        "Web/wwwroot/benchmarks.html",
+        "Docs/RELEASE_EVIDENCE.md"
+      ],
+      "acceptance": [
+        "Workstation, production and customer-workload evidence are distinguished",
+        "Every published number has source window and completeness"
+      ],
+      "evidence": [
+        "Web/wwwroot/benchmarks.html",
+        "Docs/RELEASE_EVIDENCE.md"
+      ],
       "owner": "repository-maintainer"
     },
     {
       "id": "P7",
       "target_local": "2026-12-04T17:00:00+02:00",
       "state": "planned",
-      "deliverable": [".github/workflows/ci-cd.yml", "Docs/RELEASE_EVIDENCE.md", "Docs/USAGE_TELEMETRY_DEPLOYMENT_EVIDENCE.md"],
-      "acceptance": ["Planlog gate, applicable CI, deployment and post-deploy persistence checks pass"],
-      "evidence": [".github/workflows/ci-cd.yml", "Docs/USAGE_TELEMETRY_DEPLOYMENT_EVIDENCE.md"],
+      "deliverable": [
+        ".github/workflows/ci-cd.yml",
+        "Docs/RELEASE_EVIDENCE.md",
+        "Docs/USAGE_TELEMETRY_DEPLOYMENT_EVIDENCE.md"
+      ],
+      "acceptance": [
+        "Planlog gate, applicable CI, deployment and post-deploy persistence checks pass"
+      ],
+      "evidence": [
+        ".github/workflows/ci-cd.yml",
+        "Docs/USAGE_TELEMETRY_DEPLOYMENT_EVIDENCE.md"
+      ],
       "owner": "repository-maintainer"
     }
   ],
@@ -146,7 +219,9 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "to": "2026-11-16T17:00:00+02:00",
       "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"
+      ]
     },
     {
       "date_time": "2026-11-12T16:35:00+02:00",
@@ -156,7 +231,9 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "to": "2026-11-17T17:00:00+02:00",
       "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"
+      ]
     },
     {
       "date_time": "2026-11-12T16:35:00+02:00",
@@ -166,7 +243,9 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "to": "2026-11-20T17:00:00+02:00",
       "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"
+      ]
     },
     {
       "date_time": "2026-11-12T16:35:00+02:00",
@@ -176,7 +255,9 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "to": "2026-11-25T17:00:00+02:00",
       "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"
+      ]
     },
     {
       "date_time": "2026-11-12T16:35:00+02:00",
@@ -186,7 +267,9 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "to": "2026-11-27T17:00:00+02:00",
       "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"
+      ]
     },
     {
       "date_time": "2026-11-12T16:35:00+02:00",
@@ -196,7 +279,9 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "to": "2026-12-01T17:00:00+02:00",
       "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"
+      ]
     },
     {
       "date_time": "2026-11-12T16:35:00+02:00",
@@ -206,7 +291,9 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "to": "2026-12-02T17:00:00+02:00",
       "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"
+      ]
     },
     {
       "date_time": "2026-11-12T16:35:00+02:00",
@@ -216,7 +303,33 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "to": "2026-12-04T17:00:00+02:00",
       "reason": "The first CI enforcement run found P0 and P1 overdue and still planned. Shift the complete sequence by seven days so the remaining work has an explicit, ordered schedule; this is a schedule change only, not a completion claim.",
       "decision_owner": "repository-maintainer",
-      "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"]
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md"
+      ]
+    },
+    {
+      "date_time": "2026-11-17T16:52:10.606668+00:00",
+      "phase": "P0",
+      "field": "state",
+      "from": "planned",
+      "to": "verified",
+      "reason": "Created and verified the overdue source-inventory/contracts deliverables; deadlines unchanged. No runtime ledger, production metric or rollout is claimed.",
+      "decision_owner": "Codex implementation under maintainer request",
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md"
+      ]
+    },
+    {
+      "date_time": "2026-11-17T16:52:10.606668+00:00",
+      "phase": "P1",
+      "field": "state",
+      "from": "planned",
+      "to": "verified",
+      "reason": "Created and verified the overdue source-inventory/contracts deliverables; deadlines unchanged. No runtime ledger, production metric or rollout is claimed.",
+      "decision_owner": "Codex implementation under maintainer request",
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md"
+      ]
     }
   ]
 }
@@ -270,3 +383,6 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 ## Reference convention
 
 The Planlog structure follows the repository convention documented in [NeuCLX Planlog Reference](https://github.com/Web8kameleon-hub/neuclx/blob/main/docs/PLANLOG_REFERENCE.md). The source log and evidence state remain separate from planned status; TODO syntax is not used as a substitute for lifecycle evidence.
+
+
+2026-11-17: P0/P1 verified for the created source inventory and validated contracts only; both original deadlines remained unchanged. Validation and remaining runtime limits: [Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md](USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md). No P2–P7 completion or production telemetry is claimed.
