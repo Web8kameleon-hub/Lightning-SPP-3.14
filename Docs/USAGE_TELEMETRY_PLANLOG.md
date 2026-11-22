@@ -50,12 +50,12 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 |---|---|---|---|---|
 | P0 — source and identity map | 2026-11-16 17:00 | verified | `Docs/USAGE_TELEMETRY_ROUTE_MATRIX.md` | Every customer-facing route maps to authenticated customer/license identity or anonymous traffic; production history sources and unmapped cases are documented. |
 | P1 — event and JSON contracts | 2026-11-17 17:00 | verified | `Docs/schemas/usage-event.schema.json`, `Docs/schemas/daily-usage.schema.json` | Schemas define versioning, idempotency, UTC windows, privacy exclusions, completeness and correction semantics. |
-| P2 — persistent ledger | 2026-11-20 17:00 | planned | `Services/PersistentUsageLedger.cs`, `Tests/LightningSPP.Tests/PersistentUsageLedgerTests.cs` | Longo records survive restart; duplicate events count once; contention and storage failures are visible. |
-| P3 — instrumentation and scoped views | 2026-11-25 17:00 | planned | `Web/UsageApi.cs`, `Tests/LightningSPP.Tests/UsageAuthorizationTests.cs` | API outcomes, time and bytes are recorded; customer A cannot read customer B; anonymous use stays anonymous. |
-| P4 — daily public JSON | 2026-11-27 17:00 | planned | `.github/workflows/publish-usage-daily.yml`, `Scripts/validate-usage-json.py`, first real daily JSON | Workflow publishes one redacted UTC-day aggregate idempotently with least privilege; no customer identifiers or placeholder values. |
-| P5 — historical reconciliation | 2026-12-01 17:00 | planned | `Docs/USAGE_BACKFILL_REPORT.md` | Retained sources, timezone, coverage and gaps for the live period are documented; only verifiable days are published. |
-| P6 — evidence pages | 2026-12-02 17:00 | planned | Updated `Web/wwwroot/benchmarks.html` and evidence documentation | Workstation benchmarks, live usage, customer workloads and competitor comparisons are labeled separately; all public numbers have source windows. |
-| P7 — release and production gate | 2026-12-04 17:00 | planned | Release evidence and controlled deployment record | CI/CD checks pass, production rollout uses existing deployment controls, and post-deploy persistence and JSON publication are verified. |
+| P2 — persistent ledger | 2026-12-11 17:00 | planned | `Services/PersistentUsageLedger.cs`, `Tests/LightningSPP.Tests/PersistentUsageLedgerTests.cs` | Longo records survive restart; duplicate events count once; contention and storage failures are visible. |
+| P3 — instrumentation and scoped views | 2026-12-16 17:00 | planned | `Web/UsageApi.cs`, `Tests/LightningSPP.Tests/UsageAuthorizationTests.cs` | API outcomes, time and bytes are recorded; customer A cannot read customer B; anonymous use stays anonymous. |
+| P4 — daily public JSON | 2026-12-18 17:00 | planned | `.github/workflows/publish-usage-daily.yml`, `Scripts/validate-usage-json.py`, first real daily JSON | Workflow publishes one redacted UTC-day aggregate idempotently with least privilege; no customer identifiers or placeholder values. |
+| P5 — historical reconciliation | 2026-12-22 17:00 | planned | `Docs/USAGE_BACKFILL_REPORT.md` | Retained sources, timezone, coverage and gaps for the live period are documented; only verifiable days are published. |
+| P6 — evidence pages | 2026-12-23 17:00 | planned | Updated `Web/wwwroot/benchmarks.html` and evidence documentation | Workstation benchmarks, live usage, customer workloads and competitor comparisons are labeled separately; all public numbers have source windows. |
+| P7 — release and production gate | 2026-12-25 17:00 | planned | Release evidence and controlled deployment record | CI/CD checks pass, production rollout uses existing deployment controls, and post-deploy persistence and JSON publication are verified. |
 
 `declared`: The machine-readable contract below is the CI source of truth. A phase becomes `verified` only when its evidence paths exist and are non-empty. At its target time, CI blocks build/release/deployment if the phase is not verified.
 
@@ -99,7 +99,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P2",
-      "target_local": "2026-11-20T17:00:00+02:00",
+      "target_local": "2026-12-11T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         "Services/PersistentUsageLedger.cs",
@@ -118,7 +118,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P3",
-      "target_local": "2026-11-25T17:00:00+02:00",
+      "target_local": "2026-12-16T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         "Web/UsageApi.cs",
@@ -137,7 +137,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P4",
-      "target_local": "2026-11-27T17:00:00+02:00",
+      "target_local": "2026-12-18T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         ".github/workflows/publish-usage-daily.yml",
@@ -158,7 +158,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P5",
-      "target_local": "2026-12-01T17:00:00+02:00",
+      "target_local": "2026-12-22T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         "Docs/USAGE_BACKFILL_REPORT.md"
@@ -175,7 +175,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P6",
-      "target_local": "2026-12-02T17:00:00+02:00",
+      "target_local": "2026-12-23T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         "Web/wwwroot/benchmarks.html",
@@ -193,7 +193,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P7",
-      "target_local": "2026-12-04T17:00:00+02:00",
+      "target_local": "2026-12-25T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         ".github/workflows/ci-cd.yml",
@@ -330,6 +330,78 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "evidence": [
         "Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md"
       ]
+    },
+    {
+      "date_time": "2026-11-22T18:27:00+02:00",
+      "phase": "P2",
+      "field": "target_local",
+      "from": "2026-11-20T17:00:00+02:00",
+      "to": "2026-12-11T17:00:00+02:00",
+      "reason": "Replan remaining dependent phases after P0/P1 evidence was completed; the Longo ledger, integration and production verification remain unfinished. Dates are provisional planning targets, not completion claims.",
+      "decision_owner": "repository-maintainer",
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md"
+      ]
+    },
+    {
+      "date_time": "2026-11-22T18:27:00+02:00",
+      "phase": "P3",
+      "field": "target_local",
+      "from": "2026-11-25T17:00:00+02:00",
+      "to": "2026-12-16T17:00:00+02:00",
+      "reason": "Replan remaining dependent phases after P0/P1 evidence was completed; the Longo ledger, integration and production verification remain unfinished. Dates are provisional planning targets, not completion claims.",
+      "decision_owner": "repository-maintainer",
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md"
+      ]
+    },
+    {
+      "date_time": "2026-11-22T18:27:00+02:00",
+      "phase": "P4",
+      "field": "target_local",
+      "from": "2026-11-27T17:00:00+02:00",
+      "to": "2026-12-18T17:00:00+02:00",
+      "reason": "Replan remaining dependent phases after P0/P1 evidence was completed; the Longo ledger, integration and production verification remain unfinished. Dates are provisional planning targets, not completion claims.",
+      "decision_owner": "repository-maintainer",
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md"
+      ]
+    },
+    {
+      "date_time": "2026-11-22T18:27:00+02:00",
+      "phase": "P5",
+      "field": "target_local",
+      "from": "2026-12-01T17:00:00+02:00",
+      "to": "2026-12-22T17:00:00+02:00",
+      "reason": "Replan remaining dependent phases after P0/P1 evidence was completed; the Longo ledger, integration and production verification remain unfinished. Dates are provisional planning targets, not completion claims.",
+      "decision_owner": "repository-maintainer",
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md"
+      ]
+    },
+    {
+      "date_time": "2026-11-22T18:27:00+02:00",
+      "phase": "P6",
+      "field": "target_local",
+      "from": "2026-12-02T17:00:00+02:00",
+      "to": "2026-12-23T17:00:00+02:00",
+      "reason": "Replan remaining dependent phases after P0/P1 evidence was completed; the Longo ledger, integration and production verification remain unfinished. Dates are provisional planning targets, not completion claims.",
+      "decision_owner": "repository-maintainer",
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md"
+      ]
+    },
+    {
+      "date_time": "2026-11-22T18:27:00+02:00",
+      "phase": "P7",
+      "field": "target_local",
+      "from": "2026-12-04T17:00:00+02:00",
+      "to": "2026-12-25T17:00:00+02:00",
+      "reason": "Replan remaining dependent phases after P0/P1 evidence was completed; the Longo ledger, integration and production verification remain unfinished. Dates are provisional planning targets, not completion claims.",
+      "decision_owner": "repository-maintainer",
+      "evidence": [
+        "Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md"
+      ]
     }
   ]
 }
@@ -386,3 +458,5 @@ The Planlog structure follows the repository convention documented in [NeuCLX Pl
 
 
 2026-11-17: P0/P1 verified for the created source inventory and validated contracts only; both original deadlines remained unchanged. Validation and remaining runtime limits: [Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md](USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md). No P2–P7 completion or production telemetry is claimed.
+
+2026-11-22: Proposed three-week schedule extension for P2–P7 after P0/P1 evidence; remaining implementation and verification are not complete. Subject to pull-request review.
