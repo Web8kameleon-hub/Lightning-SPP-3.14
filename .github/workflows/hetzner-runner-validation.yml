@@ -22,6 +22,9 @@ jobs:
           dotnet --version
           python3 --version
           pdfinfo -v
+          pdftoppm -v
+          pdftotext -v
+          fc-match --format='%{family}' 'DejaVu Sans Mono' | grep -F 'DejaVu Sans Mono'
           docker info --format '{{json .SecurityOptions}}' | grep -F 'name=rootless'
           docker compose version
           docker run --rm hello-world
