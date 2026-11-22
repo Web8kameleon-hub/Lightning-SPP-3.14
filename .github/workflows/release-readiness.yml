@@ -45,7 +45,7 @@ jobs:
       - name: Install native PDF test tools
         run: |
           command -v pdfinfo
-          fc-match DejaVuSans
+          fc-match --format='%{family}' 'DejaVu Sans Mono' | grep -F 'DejaVu Sans Mono'
       - name: Run required tests
         env:
           SPP_TEST_NATIVE_DOCUMENTS: '1'
