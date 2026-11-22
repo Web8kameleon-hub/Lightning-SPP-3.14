@@ -12,6 +12,7 @@ jobs:
       contents: read
     steps:
       - name: Auto assign reviewer
+        if: github.event.pull_request.user.login != 'Web8kameleon-hub'
         uses: kentaro-m/auto-assign-action@v2.0.0
         with:
           configuration-path: .github/auto_assign.yml
