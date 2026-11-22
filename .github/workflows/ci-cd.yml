@@ -51,6 +51,8 @@ jobs:
   build-and-test:
     name: Build & Test
     runs-on: [self-hosted, linux, x64, lightning-hetzner]
+    env:
+      DOTNET_INSTALL_DIR: /home/lightning-runner/.dotnet
 
     steps:
     - name: Configure private Six Labors license
