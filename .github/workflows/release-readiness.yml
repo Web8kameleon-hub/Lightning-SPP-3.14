@@ -19,7 +19,9 @@ env:
 jobs:
   evidence:
     name: Code, tests, docs and customer UI
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, lightning-hetzner]
+    env:
+      DOTNET_INSTALL_DIR: /home/lightning-runner/.dotnet
     steps:
       - uses: actions/checkout@v4
       - name: Configure private Six Labors license
@@ -42,8 +44,8 @@ jobs:
         run: dotnet build wwwmmm.csproj -c Release --no-restore
       - name: Install native PDF test tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
+          command -v pdfinfo
+          fc-match --format='%{family}' 'DejaVu Sans Mono' | grep -F 'DejaVu Sans Mono'
       - name: Run required tests
         env:
           SPP_TEST_NATIVE_DOCUMENTS: '1'
