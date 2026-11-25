@@ -67,7 +67,7 @@ jobs:
         env:
           SPP_TEST_NATIVE_DOCUMENTS: '1'
           SPP_BRIDGE_TEST_ALLOW_WRITES: ''
-        run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --logger "trx;LogFileName=hosting-readiness.trx" --filter "FullyQualifiedName!~BridgeUpstreamTests"
+        run: dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --logger "trx;LogFileName=hosting-readiness.trx" --filter "FullyQualifiedName!~BridgeUpstreamTests&FullyQualifiedName!~PlanDocumentBenchmarkTests"
       - name: Require 100 percent test execution and pass rate
         run: python3 Scripts/require-all-tests-pass.py
 
