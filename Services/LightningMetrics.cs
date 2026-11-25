@@ -12,6 +12,7 @@ internal static class LightningMetrics
 
     private static readonly object _sync = new();
 
+    private static long _apiRequests;
     private static long _pipelineRequests;
     private static long _pipelineSuccess;
     private static long _pipelineFailure;
@@ -33,6 +34,17 @@ internal static class LightningMetrics
             if (success) _pipelineSuccess++;
             else _pipelineFailure++;
         }
+    }
+
+    public static void RecordApiRequest()
+    {
+        lock (_sync)
+            _apiRequests++;
+    }
+
+    public static long ApiRequests
+    {
+        get { lock (_sync) return _apiRequests; }
     }
 
     public static void RecordScan(long ms)
@@ -62,7 +74,7 @@ internal static class LightningMetrics
         }
     }
 
-    public static string ToText()
+    public static string ToText(bool includeApiRequests = false)
     {
         lock (_sync)
         {
@@ -79,6 +91,7 @@ internal static class LightningMetrics
             var sb = new StringBuilder();
             sb.AppendLine("ok=true");
             sb.AppendLine($"hasMeasurements={(_pipelineRequests > 0).ToString().ToLowerInvariant()}");
+            if (includeApiRequests) sb.AppendLine($"apiRequests={_apiRequests}");
             sb.AppendLine($"pipelineRequests={_pipelineRequests}");
             sb.AppendLine($"pipelineSuccess={_pipelineSuccess}");
             sb.AppendLine($"pipelineFailure={_pipelineFailure}");

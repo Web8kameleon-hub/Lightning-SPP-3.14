@@ -17,11 +17,16 @@ public class LicenseManager
         InternalQuantum
     }
 
-    private static readonly string LicenseFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "LightningSPP",
-        "license.json"
-    );
+    private static readonly string LicenseFilePath = ResolveLicenseFilePath();
+
+    private static string ResolveLicenseFilePath()
+    {
+        var configured = Environment.GetEnvironmentVariable("LSPP_LICENSE_DATA_DIR");
+        if (string.IsNullOrWhiteSpace(configured)) return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LightningSPP", "license.json");
+        if (!Path.IsPathFullyQualified(configured)) throw new InvalidOperationException("LSPP_LICENSE_DATA_DIR must be absolute.");
+        return Path.Combine(configured, "license.json");
+    }
 
     private static LicenseKey? _activeLicense;
 

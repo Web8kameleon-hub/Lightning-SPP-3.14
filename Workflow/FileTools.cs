@@ -18,8 +18,46 @@ internal static class FileTools
         yield return new DelegateTool(new("files.search", "Literal search with line references, no inferred semantics.", ["files.read"], ["path", "query"], []), Search);
         yield return new DelegateTool(new("files.compare", "Compare two real text sources with changed line evidence.", ["files.read"], ["left", "right"], []), Compare);
         yield return new DelegateTool(new("code.audit-patterns", "Find customer-supplied candidate patterns; findings require semantic review.", ["files.read"], ["path", "patterns"], []), Audit);
-        yield return new DelegateTool(new("documents.pdf-text", "Extract actual native PDF text and page references using Poppler; no OCR.", ["files.read"], ["path"], [], Dependency: "pdftotext"), Pdf);
+        yield return new DelegateTool(new("documents.pdf-text", "Extract PDF text with Poppler; OCR textless PDFs only when LSPP_OCR_ENABLED=true, up to 32 pages.", ["files.read"], ["path"], [], Dependency: "pdftotext"), Pdf);
         yield return new DelegateTool(new("reports.export", "Persist a source-referenced JSON, CSV or PDF report without changing originals.", ["reports.write"], ["data", "format"], []), Report);
+        yield return new DelegateTool(new("documents.file-classified", "File a metadata reference under reports/classified/<category>/<sha256>/ to the one canonical source snapshot. No document payload copy is created. Requires a reviewed category and expected source hash.", ["files.read", "reports.write"], ["path", "category", "sha256"], []), FileClassified);
+    }
+    private static async Task<ToolResult> FileClassified(JsonElement a, ToolContext c, CancellationToken token)
+    {
+        var category = WorkflowJson.Text(a, "category");
+        if (!Regex.IsMatch(category, "^[a-z0-9][a-z0-9_-]{0,63}$", RegexOptions.CultureInvariant))
+            throw new ArgumentException("Category must contain 1–64 lowercase ASCII letters, digits, underscores or hyphens.");
+        var input = await c.Workspace.ReadAsync(WorkflowJson.Text(a, "path"), token);
+        if (!string.Equals(input.Source.Sha256, WorkflowJson.Text(a, "sha256"), StringComparison.Ordinal))
+            throw new IOException("Document changed since classification review; review it again before filing.");
+        var filename = Path.GetFileName(input.Source.Path);
+        var relative = $"reports/classified/{category}/{input.Source.Sha256}/{filename}.reference.json";
+        var referenceBytes = JsonSerializer.SerializeToUtf8Bytes(new { schemaVersion = 1, documentPath = input.Source.Path,
+            sha256 = input.Source.Sha256, canonicalSource = "workspace-original:" + input.Source.Sha256,
+            category, classification = "REQUIRES_REVIEW" }, WorkflowJson.Options);
+        var destination = c.Workspace.Resolve(relative, false);
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        WorkspaceScope.CheckAncestors(Path.GetDirectoryName(destination)!);
+        WorkspaceScope.PrivateDirectory(Path.GetDirectoryName(destination)!);
+        token.ThrowIfCancellationRequested();
+        // Publish only a complete private snapshot, without overwriting a conflicting destination.
+        var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            await WorkspaceScope.AtomicWriteAsync(temporary, referenceBytes, token);
+            token.ThrowIfCancellationRequested();
+            File.Move(temporary, destination, overwrite: false);
+        }
+        catch (IOException) when (File.Exists(destination))
+        {
+            if (new FileInfo(destination).Length != referenceBytes.Length ||
+                !(await File.ReadAllBytesAsync(destination, token)).AsSpan().SequenceEqual(referenceBytes))
+                throw new IOException("Classified destination differs; refusing to overwrite it.");
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        if (!(await File.ReadAllBytesAsync(destination, token)).AsSpan().SequenceEqual(referenceBytes)) throw new IOException("Classified reference integrity failure.");
+        return new(WorkflowJson.Value(new { path = relative, documentPath = input.Source.Path, category, sha256 = input.Source.Sha256,
+            originalRetained = true, payloadCopied = false, canonicalSource = "workspace-original:" + input.Source.Sha256, classification = "REQUIRES_REVIEW" }), [input.Source]);
     }
     private static Task<ToolResult> List(JsonElement a, ToolContext c, CancellationToken token)
     {
@@ -37,7 +75,7 @@ internal static class FileTools
                 try { _ = c.Workspace.Resolve(relative); } catch (UnauthorizedAccessException) { continue; }
                 if (Directory.Exists(item)) queue.Push(item);
                 else if (skipped++ >= offset)
-                { if (files.Count == limit) { more = true; break; } files.Add(relative); }
+                { if (files.Count == limit) { more = true; break; } files.Add(WorkspaceScope.CanonicalReference(relative) ? relative[..^".reference.json".Length] : relative); }
             }
         }
         return Task.FromResult(new ToolResult(WorkflowJson.Value(new { files, offset, nextOffset = more ? (int?)(offset + files.Count) : null }), []));
@@ -96,10 +134,13 @@ internal static class FileTools
         try
         {
             var pdf = Path.Combine(directory, "original.pdf"); await WorkspaceScope.AtomicWriteAsync(pdf, input.Bytes, token);
-            var executable = Environment.GetEnvironmentVariable("SPP_PDFTOTEXT_PATH") ?? "pdftotext";
-            var text = await NativeCommand.RunAsync(executable, ["-layout", "-enc", "UTF-8", pdf, "-"], TimeSpan.FromSeconds(30), token);
-            var pages = text.TrimEnd('\f').Split('\f').Select((value, i) => new { page = i + 1, text = value }).ToArray();
-            return new(WorkflowJson.Value(new { pages, extraction = "native_text", requiresOcr = pages.All(p => string.IsNullOrWhiteSpace(p.text)) }), pages.Select(p => input.Source with { Page = p.page }).ToArray());
+            var document = await OcrTextReader.ReadAsync(pdf, token);
+            var pages = document.Pages.Select(page => new { page = page.PageNumber, text = page.Text }).ToArray();
+            var hasText = pages.Any(page => !string.IsNullOrWhiteSpace(page.text));
+            var truncated = pages.Length < document.TotalPageCount;
+            var ocrAttempted = document.TextSource == DocumentText.OcrSource;
+            var extraction = ocrAttempted ? "ocr" : "native_text";
+            return new(WorkflowJson.Value(new { pages, extraction, ocrAttempted, truncated, requiresOcr = !hasText || truncated }), pages.Select(page => input.Source with { Page = page.page }).ToArray());
         }
         finally { Directory.Delete(directory, true); }
     }

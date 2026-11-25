@@ -1,0 +1,26 @@
+[package]
+name = "lightning_core"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Native Lightning SPP core: real image operations, Brotli, parallel batch"
+
+[lib]
+name = "lightning_core"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "lightning-cli"
+path = "src/bin/lightning-cli.rs"
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp", "tiff"] }
+brotli = "7"
+rayon = "1"
+libc = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "unwind"

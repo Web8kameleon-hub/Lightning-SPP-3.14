@@ -19,6 +19,7 @@ try {
    check(login.ok,'Real fixture login failed'); sessionStorage.setItem('workflow-acceptance-login','1'); location.reload(); return;
  }
  await wait(()=>!el('workspaceBody').hidden);
+ check(el('allowCrm') && !el('allowCrm').checked, 'CRM consent must be present and disabled by default');
  const dt = new DataTransfer(); dt.items.add(new File(['actual browser-imported text'],'browser-source.txt',{type:'text/plain'})); el('workspaceUpload').files=dt.files;
  el('importFiles').click(); await wait(()=>el('workspaceFiles').textContent.includes('browser-source.txt')&&!el('importFiles').disabled);
  el('workflowGoal').value='Read the selected original'; el('registeredTool').value='files.read'; el('registeredTool').dispatchEvent(new Event('change')); el('addTool').click();

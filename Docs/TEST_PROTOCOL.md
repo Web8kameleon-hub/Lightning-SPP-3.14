@@ -13,8 +13,9 @@ dotnet bin/Release/net10.0/wwwmmm.dll flow doctor doctor.json
 
 `doctor.json` përmban: sistemin, runtime-in, printerët që ekzistojnë vërtet
 (CUPS në Linux, spooler-i në Windows), providerët e skanimit (SANE/WIA/TWAIN),
-dhe a gjenden `pdftotext` dhe `java`. Nëse `printers` është bosh, `printerNote`
-thotë pse — nuk është "sukses i heshtur".
+dhe a gjenden `pdftotext`, `tesseract` dhe `java`, plus `ocrEnabled` (flamuri
+`LSPP_OCR_ENABLED`). Nëse `printers` është bosh, `printerNote` thotë pse — nuk
+është "sukses i heshtur".
 
 ## 1. Suite-i i plotë
 
@@ -95,6 +96,8 @@ numrat — trail-i mban `documentSha256`, jo përmbajtjen.
 | `resume` ripërpunon dokumente të kryera | defekt në checkpoint — rregullohet |
 | `missingRequired` për fusha që duhet të ekzistojnë | rregull i gabuar ose tekst që mungon — verifikohet me faqen |
 | `printers=[]` në një host që ka printer | defekt në probe — raportohet me `printerNote` |
-| OCR i nevojshëm për input imazh | jashtë fushës: dështon qartë, nuk shtiret |
+| OCR i nevojshëm për input imazh | `flow run` pranon vetëm PDF: ktheje imazhin me `document pdf-create` dhe aktivizo `LSPP_OCR_ENABLED=true` |
+| `textSource=ocr` në një PDF digjital | shtresa e tekstit u lexua bosh — verifiko PDF-në para se t'i besosh vlerave |
+| OCR i kërkuar por `tesseract` mungon | dështon me gabim të qartë; `flow doctor` e tregon `tool=tesseract\|found=false` |
 
 Rregulli: asnjë rezultat nuk raportohet si "kaloi" pa komandën dhe daljen e saj.

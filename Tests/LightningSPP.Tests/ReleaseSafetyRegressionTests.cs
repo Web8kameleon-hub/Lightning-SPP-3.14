@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using LightningSPP.Licensing;
 using wwwmmm.Batch;
+using wwwmmm.Documents;
 using wwwmmm.Packaging;
 using wwwmmm.Provenance;
 using Xunit;
@@ -113,7 +114,7 @@ public sealed class ReleaseSafetyRegressionTests
             await Assert.ThrowsAsync<IOException>(() => new BatchRunner(workspace).RunAsync([], (_, _) =>
             {
                 invoked = true;
-                return Task.FromResult(BatchDocumentResult.Ok(1, 1, []));
+                return Task.FromResult(BatchDocumentResult.Ok(1, 1, [], DocumentText.TextLayerSource));
             }));
             Assert.False(invoked);
             Assert.False(File.Exists(workspace.IndexPath));
@@ -147,7 +148,8 @@ public sealed class ReleaseSafetyRegressionTests
             await File.WriteAllTextAsync(source, "test fixture bytes");
             var workspace = BatchWorkspace.Open(Path.Combine(root, "work"));
             var runner = new BatchRunner(workspace);
-            await runner.RunAsync([source], (_, _) => Task.FromResult(BatchDocumentResult.Ok(1, 1, [])));
+            await runner.RunAsync([source], (_, _) =>
+                Task.FromResult(BatchDocumentResult.Ok(1, 1, [], DocumentText.TextLayerSource)));
             workspace.SaveCheckpoint(new BatchCheckpoint(0, 0, 0, DateTime.UtcNow.ToString("O")));
             var resumed = await runner.RunAsync([source], (_, _) => throw new Exception("Must not repeat durable work"));
             Assert.Equal(0, resumed.Processed);

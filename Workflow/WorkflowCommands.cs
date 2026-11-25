@@ -14,6 +14,7 @@ internal static class WorkflowCommands
             if (args.Contains("--allow-remote")) permissions.Add("network.remote");
             if (args.Contains("--allow-print")) { permissions.Add("devices.print"); permissions.Add("devices.read"); }
             if (args.Contains("--allow-services")) permissions.Add("services.read");
+            if (args.Contains("--allow-crm")) { permissions.Add("crm.read"); permissions.Add("crm.write"); }
             object result;
             switch (args.ElementAtOrDefault(1))
             {
@@ -36,7 +37,7 @@ internal static class WorkflowCommands
                 case "resume" when args.Length >= 4:
                     result = await new WorkflowRunner(registry).RunAsync(new(args[2]), "local-operator", args[3], permissions, token); break;
                 default:
-                    Console.Error.WriteLine("workflow tools | discover <route> | ask <route> <prompt> | propose <root> <route> <goal> | run <root> <plan.json> | resume <root> <job-id> [--allow-remote]"); return 2;
+                    Console.Error.WriteLine("workflow tools | discover <route> | ask <route> <prompt> | propose <root> <route> <goal> | run <root> <plan.json> | resume <root> <job-id> [--allow-remote] [--allow-services] [--allow-print] [--allow-crm]"); return 2;
             }
             Console.WriteLine(JsonSerializer.Serialize(result, WorkflowJson.Options));
             return result is WorkflowJob completed && completed.State != "SUCCEEDED" ? 1 : 0;

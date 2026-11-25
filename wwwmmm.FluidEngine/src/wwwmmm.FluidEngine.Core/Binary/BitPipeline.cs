@@ -13,6 +13,7 @@ public sealed class BitPipeline : IFluidStep<byte[], byte[]>
     public Task<byte[]> ExecuteAsync(byte[] input, PipelineContext context, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(input);
+        ct.ThrowIfCancellationRequested();
 
         var sw = Stopwatch.StartNew();
 

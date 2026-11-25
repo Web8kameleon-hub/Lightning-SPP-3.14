@@ -26,10 +26,10 @@ public class ApiTryProcessIntegrationTests
     {
         var port = GetFreePort();
         using var cts = new CancellationTokenSource();
-        var serverTask = LicenseApiServer.RunAsync(port, cts.Token);
+        var serverTask = LicenseApiServer.RunAsync(port, cts.Token, bindHost: "127.0.0.1");
         await WaitUntilHealthyAsync(port, TimeSpan.FromSeconds(5));
 
-        using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+        using var client = IsolatedHttpClient.Create(port, 74);
 
         // 1. Valid upload, no profile header -> defaults to lightning.
         var r1 = await PostImageAsync(client, RealTestImage.Png(), "image/png", profile: null);
@@ -208,7 +208,7 @@ public class ApiTryProcessIntegrationTests
 
     private static async Task WaitUntilHealthyAsync(int port, TimeSpan timeout)
     {
-        using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+        using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
         var deadline = DateTime.UtcNow + timeout;
 
         while (DateTime.UtcNow < deadline)

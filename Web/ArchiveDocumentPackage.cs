@@ -24,7 +24,7 @@ internal static class ArchiveDocumentPackage
         report["operation"] = "archive-pdf-processing";
         report["profile"] = mode.ToString();
         report["aiEnabled"] = false;
-        report["scope"] = "Original bytes preserved. Optional PDF processing rasterizes pages and does not preserve PDF text, signatures or interactive structure. No code execution, OCR, supplier classification or malware scan.";
+        report["scope"] = "Original bytes preserved. Optional PDF processing rasterizes pages and does not preserve PDF text, signatures or interactive structure. No code execution, supplier classification or malware scan. This path never runs OCR; OCR is available only through the flow text reader when LSPP_OCR_ENABLED=true.";
         report["documentLimits"] = new JsonObject { ["maxPdfFiles"] = MaxPdfFiles,
             ["maxPagesPerPdf"] = 32, ["maxBytesPerPdf"] = PdfDocumentService.MaxInputBytes,
             ["maxGeneratedBytes"] = MaxGeneratedBytes, ["secondsPerPdf"] = 20 };

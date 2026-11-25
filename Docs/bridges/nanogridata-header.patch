@@ -1,0 +1,12 @@
+--- a/nanogridata_protocol_v1.py
++++ b/nanogridata_protocol_v1.py
+@@ -78,3 +78,3 @@
+         return struct.pack(
+-            ">BBBBBHIH",
++            ">BBBBBBHIH",
+             self.magic[0],
+@@ -97,3 +97,3 @@
+         magic_0, magic_1, version, model_id, payload_type, flags, length, timestamp, reserved = struct.unpack(
+-            ">BBBBBHIH", data[:HEADER_SIZE]
++            ">BBBBBBHIH", data[:HEADER_SIZE]
+         )

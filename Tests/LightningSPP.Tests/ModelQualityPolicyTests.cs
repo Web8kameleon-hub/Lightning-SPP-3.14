@@ -14,6 +14,7 @@ public sealed class ModelQualityPolicyTests
     private static ModelQualityEvidence E(string model, double score, string language = "sq") =>
         new(model,Digest,language,Scope,score,3,"chrF2","test-fixture-signature",OtherDigest,Now.AddMinutes(-5),Now.AddDays(1));
     private static HashSet<string> Permissions => new(["model.invoke"]);
+    private static HashSet<string> RemotePermissions => new(["model.invoke", "network.remote"]);
 
     [Fact]
     public void LargeHistoryDoesNotPermanentlyBlockFutureQuestionsOrRemoveSafety()
@@ -55,7 +56,7 @@ public sealed class ModelQualityPolicyTests
         var handler = new Provider();
         var gateway = new ModelGateway([new("first","https://first.example.test","low"),new("second","https://second.example.test","high")],
             new HttpClient(handler),new([E("low",45),E("high",80)],40));
-        var result=await gateway.ChatBestAsync([new("user","test-only question")],"sq",Scope,Permissions,default);
+        var result=await gateway.ChatBestAsync([new("user","test-only question")],"sq",Scope,RemotePermissions,default);
         Assert.Equal("high",result.Selection.Identity.Model);
         Assert.Equal(80,result.Selection.Evidence.Score);
         Assert.Equal(["high"],handler.Inferences);
@@ -78,7 +79,7 @@ public sealed class ModelQualityPolicyTests
         var handler=new Provider { DenyInference=true };
         var gateway=new ModelGateway([new("one","https://first.example.test","high"),new("two","https://second.example.test","low")],
             new HttpClient(handler),new([E("high",90),E("low",50)],40));
-        var error=await Assert.ThrowsAsync<HttpRequestException>(() => gateway.ChatBestAsync([new("user","test-only")],"sq",Scope,Permissions,default));
+        var error=await Assert.ThrowsAsync<HttpRequestException>(() => gateway.ChatBestAsync([new("user","test-only")],"sq",Scope,RemotePermissions,default));
         Assert.Equal(HttpStatusCode.Forbidden,error.StatusCode);
         Assert.Single(handler.Inferences);
     }
@@ -88,13 +89,23 @@ public sealed class ModelQualityPolicyTests
     {
         var handler=new Provider { ChangeDigest=true };
         var gateway=new ModelGateway([new("one","https://first.example.test","high")],new HttpClient(handler),new([E("high",90)],40));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => gateway.ChatBestAsync([new("user","private-test-fixture")],"sq",Scope,Permissions,default));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => gateway.ChatBestAsync([new("user","private-test-fixture")],"sq",Scope,RemotePermissions,default));
         Assert.Empty(handler.Inferences);
+    }
+
+    [Fact]
+    public async Task InteractiveChatBoundsGenerationAndRejectsTruncatedAnswers()
+    {
+        var handler = new Provider { Truncate = true };
+        var gateway = new ModelGateway([new("local", "http://localhost", "local")], new HttpClient(handler));
+        await Assert.ThrowsAsync<IOException>(() => gateway.ChatAsync("local", [new("user", "test fixture")], Permissions, default, interactive: true));
+        Assert.True(handler.BoundedInteractive);
     }
 
     private sealed class Provider : HttpMessageHandler
     {
         public bool DenyInference,ChangeDigest;
+        public bool Truncate, BoundedInteractive;
         private int catalogs;
         public List<string> Inferences { get; }=[];
         public List<string> Hosts { get; }=[];
@@ -107,13 +118,17 @@ public sealed class ModelQualityPolicyTests
                 var digest=ChangeDigest&&++catalogs>1?OtherDigest:Digest;
                 body=new {models=new[]{"low","high","local","remote"}.Select(name=>new{name,digest})};
             }
-            else if(request.RequestUri.AbsolutePath=="/api/show") body=new{capabilities=new[]{"completion"}};
+            else if(request.RequestUri.AbsolutePath=="/api/show") body=new{capabilities=new[]{"completion", "thinking"}};
             else
             {
                 using var data=JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
                 var model=data.RootElement.GetProperty("model").GetString()!;Inferences.Add(model);
+                BoundedInteractive = data.RootElement.TryGetProperty("options", out var options)
+                    && options.GetProperty("num_predict").GetInt32() == 512
+                    && options.GetProperty("num_ctx").GetInt32() == 8192
+                    && data.RootElement.TryGetProperty("think", out var think) && think.ValueKind == JsonValueKind.False;
                 if(DenyInference)return new(HttpStatusCode.Forbidden);
-                body=new{model,done=true,done_reason="stop",message=new{content="Test fixture only"}};
+                body=new{model,done=true,done_reason=Truncate ? "length" : "stop",message=new{content="Test fixture only"}};
             }
             return new(HttpStatusCode.OK){Content=new StringContent(JsonSerializer.Serialize(body),System.Text.Encoding.UTF8,"application/json")};
         }

@@ -12,7 +12,7 @@ internal static class ServiceAdapters
     internal static IEnumerable<IWorkflowTool> FromEnvironment()
     {
         var file = Environment.GetEnvironmentVariable("LSPP_TOOL_ADAPTERS_FILE");
-        if (string.IsNullOrWhiteSpace(file)) return [];
+        if (string.IsNullOrWhiteSpace(file)) return Create([]);
         if (!Path.IsPathFullyQualified(file) || new FileInfo(file).Length > 1024 * 1024) throw new ArgumentException("Bounded operator adapter configuration required.");
         return Create(JsonSerializer.Deserialize<ReadOnlyServiceAdapter[]>(File.ReadAllBytes(file), WorkflowJson.Options) ?? throw new ArgumentException("Adapter configuration array required."));
     }
@@ -49,5 +49,7 @@ internal static class ServiceAdapters
                 return new ToolResult(WorkflowJson.Value(new { service = adapter.Id, retrievedUtc = DateTimeOffset.UtcNow, response = json.RootElement, responseHash = hash }), [new("service:" + adapter.Id, hash)], "UPSTREAM_RESPONSE_REQUIRES_REVIEW");
             });
         }
+        foreach (var excelTool in ExcelWorkflowTools.FromEnvironment())
+            yield return excelTool;
     }
 }

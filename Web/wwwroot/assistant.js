@@ -75,34 +75,56 @@
         ![d.originalBytes, d.afterBytes, d.totalTimeMs].every(n => Number.isFinite(n) && n >= 0) || d.originalBytes === 0) return;
     latestPdf = { ...d };
   });
-  let csrf = null, route = null, automaticQualityRouting = false, mode = 'unknown', loaded = false;
+  let csrf = null, route = null, channel = 'workspace', publicBackend = null, automaticQualityRouting = false, mode = 'unknown', loaded = false;
   const say = (who, text, note) => { const m = h('div', { class: 'lspp-msg ' + who }, h('p', {}, text)); if (note) m.append(h('small', {}, note)); log.append(m); log.scrollTop = log.scrollHeight; return m; };
   function renderChips() { chips.replaceChildren(); for (const [index, q] of profile.asks.entries()) chips.append(h('button', { type: 'button', onclick: () => { input.value = q; if (profile.readScreenOnAsk?.includes(index)) { readToggle.checked = true; updateRead(); } ask(); } }, q)); }
   function setMode(next, message, link) {
     mode = next; state.replaceChildren(message); if (link) state.append(' ', h('a', { href: link[0] }, link[1]));
     const live = next === 'live'; input.disabled = sendBtn.disabled = !live; chips.hidden = !live; root.dataset.mode = next;
   }
-  async function load() {
-    loaded = true; setMode('loading', T.thinking);
+  // The private workspace answers first when it is usable. Anything else (signed out, disabled,
+  // no account store, no model) falls back to the public assistant so the entry point still works.
+  async function loadWorkspace() {
     try {
       const r = await fetch('/api/workflow', { credentials: 'same-origin', signal: AbortSignal.timeout(15000) });
-      if (r.status === 503) return setMode('disabled', T.disabled);
-      if (r.status === 401 || r.status === 403) {
-        const failure = await r.json().catch(() => ({}));
-        if (failure.code === 'workspace_access_denied') return setMode('denied', T.denied);
-        return setMode('signin', T.signIn, ['/account', T.signInLink]);
-      }
-      if (!r.ok) throw new Error();
-      const m = await r.json(); csrf = m.csrfToken;
+      if (!r.ok) return { ok: false, failure: await r.json().catch(() => ({})) };
+      const m = await r.json();
       const routes = Array.isArray(m.models) ? m.models : [];
-      if (!routes.length) return setMode('nomodel', T.noModel);
-      automaticQualityRouting = m.automaticQualityRouting === true;
+      if (!routes.length) return { ok: false, failure: { code: 'no_model' } };
+      const automatic = m.automaticQualityRouting === true;
       // Existing single-route installations remain compatible. Multiple routes require measured selection.
-      if (!automaticQualityRouting && routes.length !== 1) return setMode('nomodel', T.qualityUnavailable);
-      route = automaticQualityRouting ? null : routes[0].id;
-      setMode('live', automaticQualityRouting ? T.qualityRouting : text('live', {model: routes[0].model})); renderChips();
+      if (!automatic && routes.length !== 1) return { ok: false, failure: { code: 'quality_unavailable' } };
+      csrf = m.csrfToken; channel = 'workspace'; automaticQualityRouting = automatic;
+      route = automatic ? null : routes[0].id;
+      setMode('live', automatic ? T.qualityRouting : text('live', {model: routes[0].model})); renderChips();
       if (path !== '/workspace') links.append(h('a', { href: '/workspace' }, T.workspace));
-    } catch { setMode('error', T.error); }
+      return { ok: true };
+    } catch { return { ok: false, failure: { code: 'workspace_unreachable' } }; }
+  }
+  async function loadPublic(failure) {
+    try {
+      const r = await fetch('/api/assistant', { credentials: 'same-origin', signal: AbortSignal.timeout(15000) });
+      if (r.ok) {
+        const m = await r.json(); csrf = m.csrfToken; channel = 'public'; route = null; automaticQualityRouting = false;
+        publicBackend = m.channel;
+        const model = Array.isArray(m.models) && m.models.length ? m.models[0].model : '';
+        setMode('live', model ? text('publicLive', {model}) : T.publicLiveGeneric); renderChips();
+        if (m.privacy) state.append(h('small', {}, m.privacy));
+        return;
+      }
+    } catch { /* The public assistant is optional; fall through to the workspace reason. */ }
+    if (failure.code === 'workspace_access_denied') return setMode('denied', T.denied);
+    if (failure.code === 'authentication_required') return setMode('signin', T.signIn, ['/account', T.signInLink]);
+    if (failure.code === 'workflow_disabled') return setMode('disabled', T.disabled);
+    if (failure.code === 'quality_unavailable') return setMode('nomodel', T.qualityUnavailable);
+    if (failure.code === 'no_model' || failure.code === 'workspace_store_unavailable') return setMode('nomodel', T.noModel);
+    return setMode('error', T.error);
+  }
+  async function load() {
+    loaded = true; setMode('loading', T.thinking);
+    const workspace = await loadWorkspace();
+    if (workspace.ok) return;
+    await loadPublic(workspace.failure || {});
   }
   function updateRead() {
     const on = readToggle.checked; const text = on ? visibleText() : '';
@@ -125,9 +147,11 @@
     say('me', goal); input.value = ''; grow(); sendBtn.disabled = true; root.dataset.busy = 'true';
     const pending = say('ai', T.thinking);
     const screen = readToggle.checked ? { page: path, title: document.title, text: visibleText() } : null;
+    const shared = { locale, ...(responseSelect.value ? {responseLanguage: responseSelect.value} : {}), goal: `[${profile.role} · ${path}] ${goal}`, ...(screen && screen.text ? { screen } : {}) };
+    const body = channel === 'public' ? {...shared, backend: publicBackend} : { ...(automaticQualityRouting ? {automaticQualityRouting:true} : {route}), allowModel: true, ...shared };
     try {
-      const r = await fetch('/api/workflow/conversation', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-        body: JSON.stringify({ ...(automaticQualityRouting ? {automaticQualityRouting:true} : {route}), locale, ...(responseSelect.value ? {responseLanguage: responseSelect.value} : {}), goal: `[${profile.role} · ${path}] ${goal}`, allowModel: true, ...(screen && screen.text ? { screen } : {}) }), signal: AbortSignal.timeout(200000) });
+      const r = await fetch(channel === 'public' ? '/api/assistant/conversation' : '/api/workflow/conversation', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify(body), signal: AbortSignal.timeout(200000) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || T.error);
       const answer = data.text || data.Text;

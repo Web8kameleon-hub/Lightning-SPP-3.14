@@ -8,7 +8,8 @@ repositories inspected on 2026-11-04; it is not a full inventory of the account.
 
 These adapters are available in the `wwwmmm.Integrations` namespace and through
 the `bridge` CLI command. They do not add public HTTP endpoints or change the
-existing scan/process/output pipeline, and are not registered as workflow tools.
+existing scan/process/output pipeline. The Excel bridges are also available as
+tools in the authenticated private workspace when their service URLs are configured.
 Configuration is explicit; no service address, credential, telemetry signal or
 successful result is invented.
 
@@ -96,6 +97,23 @@ It checks the returned XLSX container and workbook metadata before saving. Parse
 validate and NodeDB commands write the upstream JSON response to stdout. Failures
 write a diagnostic to stderr and return exit code 1; incorrect usage returns 2.
 Ctrl+C cancels the request. SDK callers can supply a cancellation token.
+
+## Private browser workspace
+
+Configure the Excel URLs above on the server to register these workspace tools:
+`excel.parse` and `excel.validate` use `SPP_EXCEL_SERVICE_URL`; `excel.core.export-lagter`
+uses `SPP_EXCEL_CORE_URL`. Users first import an `.xlsx` into their own private
+workspace and explicitly allow `services.read`. Non-loopback endpoints are not
+registered unless the operator sets `LSPP_WORKFLOW_ALLOW_REMOTE_SERVICES=true`.
+Parse and validation retain the imported file hash as
+source evidence. LAGTER exports are checked as XLSX files and saved under that
+user's private `reports/` area. No public Excel HTTP route was added to SPP.
+
+The dashboard's **Workspace administration → Aggregate service counts** panel
+calls `GET /api/admin/summary` with the administrator bearer token. It returns
+numeric Longo account/session/entitlement totals and process-lifetime API and
+pipeline counters only; it does not return email addresses or account IDs. The
+API and pipeline counters reset when the service restarts. The existing public `GET /api/metrics` response does not include the API request counter.
 
 The telemetry file must be UTF-8 JSON. Required fields are `fabric_id`,
 `trust_domain`, `pressure`, `resonance`, `health_score`, `memory`, `momentum`,

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <AssemblyName>LightningCore.Interop</AssemblyName>
+        <RootNamespace>LightningCore.Interop</RootNamespace>
+    </PropertyGroup>
+    <ItemGroup>
+        <!-- The native artefact is produced by cargo and copied next to the assembly so the
+             default probe path finds it. Absent until a release cargo build has run. -->
+        <None Include="..\lightning_core\target\release\lightning_core.dll" Link="lightning_core.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\lightning_core\target\release\lightning_core.dll')" />
+        <None Include="..\lightning_core\target\release\liblightning_core.so" Link="liblightning_core.so" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\lightning_core\target\release\liblightning_core.so')" />
+        <None Include="..\lightning_core\target\release\liblightning_core.dylib" Link="liblightning_core.dylib" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\lightning_core\target\release\liblightning_core.dylib')" />
+    </ItemGroup>
+</Project>

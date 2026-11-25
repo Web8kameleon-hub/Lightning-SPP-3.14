@@ -27,6 +27,9 @@ to the browser. Do not place route configuration or credentials in a workspace.
 The local product must use model endpoints on the customer's own infrastructure.
 Remote routes require the user's explicit consent; web access also requires
 `LSPP_WORKFLOW_ALLOW_REMOTE_MODELS=true`. No silent provider fallback occurs.
+All non-loopback endpoints are normalized to remote for this consent check,
+including operator-configured private-network endpoints. A false `remote` field
+cannot authorize unconfirmed document transfer. Local discovery never uses a proxy.
 Discovery reports provider-supplied identity/digest, not independently audited
 model weights or proof that a model is qualified for a domain.
 
@@ -68,6 +71,25 @@ not evidence of a 30,000-document capacity or restart-recovery benchmark.
 - Files: list, UTF-8 read, literal search, line comparison and customer-supplied
   audit patterns. A pattern hit is a candidate; it does not prove fake production
   processing, reachability, a vulnerability, or semantic correctness.
+- `documents.file-classified` records a reference to the canonical document in
+  `reports/classified/<category>/<sha256>/<original-name>.reference.json`. Supply a reviewed
+  category (1–64 lowercase ASCII letters, digits, underscores or hyphens) and
+  the reviewed source `sha256`. It requires `files.read` and `reports.write`,
+  creates no document payload copy, rejects changed sources and conflicting destinations,
+  and permits an identical retry. Each document is a separate checkpointed
+  workflow step, within the existing 256-step plan limit. The tool performs
+  filing; classification accuracy and end-to-end mass AI classification remain
+  unaccepted pending real model and representative document verification.
+- `documents.classify` reads a document plus an explicitly supplied taxonomy JSON
+  and persists matched-rule evidence and both source hashes. PDF extraction uses
+  the existing Poppler/OCR path; raster OCR requires explicit enablement. Scores
+  count rules, not model probabilities. Outputs and truncation require review.
+- CRM tools require separate `allowCrm` consent in the browser or `--allow-crm`
+  on the CLI. Customer, contact and actual hash-verified document links are private
+  metadata, with a recoverable record/audit transaction. The supported mode is
+  `LSPP_CRM_STORAGE=durable`; unimplemented batching settings are rejected.
+  [Hybrid document storage](HYBRID_DOCUMENT_STORAGE.md) records the single-payload
+  layout, Film Memory integration and the verified NanoGrid/Tide source limits.
 - Native PDF text uses actual `pdftotext` and immutable source bytes, with page
   references. `SPP_PDFTOTEXT_PATH` can identify its installed executable. No text
   from scans is invented. Vision requires a discovered vision-capable Ollama

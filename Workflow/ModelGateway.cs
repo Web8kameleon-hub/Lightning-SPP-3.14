@@ -23,25 +23,21 @@ public sealed class ModelGateway
         foreach (var route in routes)
         {
             if (!Uri.TryCreate(route.Endpoint, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment) ||
-                route.Provider is not ("ollama" or "openai-compatible") || string.IsNullOrWhiteSpace(route.Model) || string.IsNullOrWhiteSpace(route.Id) || !this.routes.TryAdd(route.Id, route))
+                route.Provider is not ("ollama" or "openai-compatible") || string.IsNullOrWhiteSpace(route.Model) || string.IsNullOrWhiteSpace(route.Id) || !this.routes.TryAdd(route.Id, route with { Remote = route.Remote || !uri.IsLoopback }))
                 throw new ArgumentException("Invalid or duplicate configured model route.");
             if (uri.Scheme != "https" && route.ApiKeyEnvironment is not null && !uri.IsLoopback) throw new ArgumentException("Authenticated remote model routes require TLS.");
         }
-        client = transport ?? new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromMinutes(3) };
+        client = transport ?? new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false }) { Timeout = TimeSpan.FromMinutes(3) };
     }
-    public static ModelGateway FromEnvironment()
-    {
-        var file = Environment.GetEnvironmentVariable("LSPP_MODEL_ROUTES_FILE");
-        if (string.IsNullOrWhiteSpace(file)) return new([]);
-        if (!Path.IsPathFullyQualified(file) || new FileInfo(file).Length > 1024 * 1024) throw new ArgumentException("Model routes require a bounded operator-owned configuration file.");
-        return new(JsonSerializer.Deserialize<ModelRoute[]>(File.ReadAllBytes(file), WorkflowJson.Options) ?? throw new ArgumentException("Model route array required."), qualityPolicy: ModelQualityPolicy.FromEnvironment());
-    }
+    /// <summary>Operator file first, then loopback discovery (see <see cref="ModelRoutes"/>).</summary>
+    public static ModelGateway FromEnvironment() =>
+        new(ModelRoutes.Resolve().Routes, qualityPolicy: ModelQualityPolicy.FromEnvironment());
     public IEnumerable<object> Routes => routes.Values.Select(r => new { r.Id, r.Model, r.Provider, r.Remote, state = "DISCOVERY_REQUIRED" });
     private ModelRoute Route(string id, IReadOnlySet<string> permissions)
     {
         if (!permissions.Contains("model.invoke")) throw new UnauthorizedAccessException("Model permission required.");
         var route = routes.GetValueOrDefault(id) ?? throw new InvalidOperationException("Model route is not configured.");
-        if (route.Remote && !permissions.Contains("network.remote")) throw new UnauthorizedAccessException("Remote data transfer is not authorized for this workspace operation.");
+        if ((route.Remote || !new Uri(route.Endpoint).IsLoopback) && !permissions.Contains("network.remote")) throw new UnauthorizedAccessException("Remote data transfer is not authorized for this workspace operation.");
         return route;
     }
     private async Task<JsonDocument> Send(ModelRoute route, HttpMethod method, string path, object? body, CancellationToken token)
@@ -78,7 +74,7 @@ public sealed class ModelGateway
             ? values.EnumerateArray().Select(v => v.GetString() ?? "").ToArray() : [];
         return new(id, route.Model, digest, capabilities, "PROVIDER_REPORTED_IDENTITY");
     }
-    public async Task<(string Text, ModelIdentity Identity)> ChatAsync(string id, ConversationMessage[] messages, IReadOnlySet<string> permissions, CancellationToken token, byte[]? image = null, bool json = false, string? expectedDigest = null)
+    public async Task<(string Text, ModelIdentity Identity)> ChatAsync(string id, ConversationMessage[] messages, IReadOnlySet<string> permissions, CancellationToken token, byte[]? image = null, bool json = false, string? expectedDigest = null, bool interactive = false)
     {
         if (messages.Length is < 1 or > 40 || messages.Any(m => m.Role is not ("system" or "user" or "assistant") || m.Content.Length > 64 * 1024) || messages.Sum(m => (long)m.Content.Length) > 256 * 1024)
             throw new ArgumentException("Conversation exceeds configured context budget; select a smaller evidence batch.");
@@ -94,9 +90,9 @@ public sealed class ModelGateway
         {
             var payload = new Dictionary<string, object?> { ["model"] = route.Model, ["stream"] = false, ["format"] = json ? "json" : null,
                 ["messages"] = messages.Select((m, i) => new { role = m.Role, content = m.Content, images = image is not null && i == messages.Length - 1 ? new[] { Convert.ToBase64String(image) } : null }) };
-            if (expectedDigest is not null)
+            if (expectedDigest is not null || interactive)
             {
-                payload["options"] = new { temperature = 0, num_ctx = 8192, num_predict = 1536 };
+                payload["options"] = new { temperature = 0, num_ctx = 8192, num_predict = interactive ? 512 : 1536 };
                 if (identity.Capabilities.Contains("thinking")) payload["think"] = false;
             }
             body = payload;

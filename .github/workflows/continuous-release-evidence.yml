@@ -48,10 +48,13 @@ jobs:
       - name: Install native PDF test tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends poppler-utils fonts-dejavu-core
+          sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr fonts-dejavu-core
       - name: Run required tests
         env:
           SPP_TEST_NATIVE_DOCUMENTS: '1'
+        run: dotnet test Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --logger "trx;LogFileName=release-evidence.trx"
+      - name: Require every reported test to execute and pass
+        run: python3 Scripts/require-all-tests-pass.py
 
       - name: Capture real benchmark and changelog
         shell: bash

@@ -183,7 +183,8 @@ return 0;
 - Nuk premton rezultat identik bit-për-bit ndërmjet motorëve (`Skia` vs
   `ImageSharp` janë rrugë të ndryshme, pa fallback).
 - Nuk premton latencë nga emrat e metodave.
-- Nuk premton OCR: tekst nga skanime nuk nxirret nëse nuk ka mjet real
-  (`pdftotext` për PDF me tekst).
+- Nuk premton OCR si pjesë e API-t të imazhit: OCR jeton vetëm në rrugën e
+  dokumenteve (`wwwmmm.Documents.OcrTextReader`), kërkon `LSPP_OCR_ENABLED=true`
+  dhe Tesseract, dhe saktësia e tij nuk është matur në corpus real.
 - Nuk premton inferencë AI pa `LSPP_ONNX_MODEL_PATH`.
 </content>

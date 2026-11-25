@@ -418,6 +418,12 @@ tools/ffmpeg.zip
 tools/ffmpeg-*-essentials_build/
 *.mp4
 
+# Rust build artifacts (native/lightning_core)
+/native/lightning_core/target/
+!/native/lightning_core/src/bin/
+!/native/lightning_core/src/bin/*.rs
+**/*.rs.bk
+
 # Embedded repository (avoid accidental submodule-like add)
 Lightning-SPP-3.14/
 .env
@@ -430,3 +436,10 @@ artifacts/
 *.bak
 Quality/Corpus/
 Quality/aes-report.json
+.env.build
+*.lic
+sixlabors.lic
+_audit/
+dep-tree.txt
+vuln-report.txt
+ocean-battalion/ocean_battalion.egg-info/

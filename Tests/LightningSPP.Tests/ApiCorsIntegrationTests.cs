@@ -20,10 +20,10 @@ public class ApiCorsIntegrationTests
                 "LSPP_ALLOWED_ORIGINS",
                 "https://scanprocessprint.com,https://www.scanprocessprint.com");
 
-            var serverTask = LicenseApiServer.RunAsync(port, cts.Token);
+            var serverTask = LicenseApiServer.RunAsync(port, cts.Token, bindHost: "127.0.0.1");
             await WaitUntilHealthyAsync(port, TimeSpan.FromSeconds(5));
 
-            using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+            using var client = IsolatedHttpClient.Create(port, 77);
 
             using var allowedRequest = new HttpRequestMessage(HttpMethod.Get, "/api/health");
             allowedRequest.Headers.Add("Origin", "https://scanprocessprint.com");
@@ -55,7 +55,7 @@ public class ApiCorsIntegrationTests
 
     private static async Task WaitUntilHealthyAsync(int port, TimeSpan timeout)
     {
-        using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+        using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
         var deadline = DateTime.UtcNow + timeout;
 
         while (DateTime.UtcNow < deadline)

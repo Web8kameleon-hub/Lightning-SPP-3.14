@@ -7,7 +7,7 @@ namespace wwwmmm.Web;
 
 internal static class WorkflowApi
 {
-    internal static ToolRegistry Registry(ModelGateway models) => new(FileTools.Create().Concat(TableTools.Create()).Concat(DomainTools.Create()).Concat(models.Tools()).Concat(DeviceTools.Create()).Concat(StripeWorkspaceTools.Create()).Concat(ServiceAdapters.FromEnvironment()));
+    internal static ToolRegistry Registry(ModelGateway models) => new(FileTools.Create().Concat(ClassificationTools.Create()).Concat(CrmTools.Create()).Concat(TableTools.Create()).Concat(DomainTools.Create()).Concat(models.Tools()).Concat(DeviceTools.Create()).Concat(StripeWorkspaceTools.Create()).Concat(ServiceAdapters.FromEnvironment()));
     internal static WorkspaceScope Workspace(string owner)
     {
         if (!Guid.TryParseExact(owner, "N", out _)) throw new UnauthorizedAccessException("Invalid workspace owner.");
@@ -55,7 +55,7 @@ internal static class WorkflowApi
         try
         {
             if (RuntimeSecurity.IsProduction && Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ENABLED") != "true")
-            { await Reply(transport, 503, new { error = "Workflows are not enabled on this release." }); return; }
+            { await Reply(transport, 503, new { code = "workflow_disabled", error = "Workflows are not enabled on this release." }); return; }
             if (transport.Request.HttpMethod is not ("GET" or "POST")) { await Reply(transport, 405, new { error = "GET or POST required." }); return; }
             var auth = await CustomerAccounts.AuthorizeWorkspaceAsync(transport, transport.Request.HttpMethod == "POST");
             authenticated = true;
@@ -69,7 +69,7 @@ internal static class WorkflowApi
                 {
                     var directory = Path.Combine(workspace.StateDirectory, "jobs");
                     var jobs = Directory.Exists(directory) ? Directory.EnumerateFiles(directory, "*.json").OrderByDescending(File.GetLastWriteTimeUtc).Take(100).Select(Path.GetFileNameWithoutExtension).ToArray() : [];
-                    await Reply(transport, 200, new { csrfToken = auth.Csrf, tools = registry.Contracts, models = models.Routes, jobs, automaticQualityRouting = models.QualityRoutingEnabled, qualityScope = "translation-reference-fidelity", remoteModelsEnabled = Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ALLOW_REMOTE_MODELS") == "true", printEnabled = Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ALLOW_PRINT") == "true", domainValidation = "NOT_ESTABLISHED" }); return;
+                    await Reply(transport, 200, new { csrfToken = auth.Csrf, tools = registry.Contracts, models = models.Routes, modelSource = ModelRoutes.Resolve().Source, jobs, automaticQualityRouting = models.QualityRoutingEnabled, qualityScope = "translation-reference-fidelity", remoteModelsEnabled = Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ALLOW_REMOTE_MODELS") == "true", printEnabled = Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ALLOW_PRINT") == "true", domainValidation = "NOT_ESTABLISHED" }); return;
                 }
                 if (route == "/job")
                 {
@@ -94,8 +94,8 @@ internal static class WorkflowApi
                     if (!relative.StartsWith("reports/", StringComparison.Ordinal)) throw new UnauthorizedAccessException("Report path required.");
                     var input = await workspace.ReadAsync(relative, CancellationToken.None);
                     var extension = Path.GetExtension(relative);
-                    transport.Response.ContentType = extension == ".pdf" ? "application/pdf" : extension == ".csv" ? "text/csv; charset=utf-8" : "application/json; charset=utf-8";
-                    transport.Response.Headers["Content-Disposition"] = "attachment; filename=\"report" + (extension is ".csv" or ".pdf" ? extension : ".json") + "\"";
+                    transport.Response.ContentType = extension == ".pdf" ? "application/pdf" : extension == ".csv" ? "text/csv; charset=utf-8" : extension == ".xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/json; charset=utf-8";
+                    transport.Response.Headers["Content-Disposition"] = "attachment; filename=\"report" + (extension is ".csv" or ".pdf" or ".xlsx" ? extension : ".json") + "\"";
                     transport.Response.ContentLength64 = input.Bytes.Length; await transport.Response.OutputStream.WriteAsync(input.Bytes); transport.Response.Close(); return;
                 }
                 await Reply(transport, 404, new { error = "Workspace route not found." }); return;
@@ -106,11 +106,12 @@ internal static class WorkflowApi
             using var document = JsonDocument.Parse(body.ToArray()); var data = document.RootElement;
             var permissions = Permissions(data.TryGetProperty("allowModel", out var allow) && allow.ValueKind == JsonValueKind.True, data.TryGetProperty("allowRemote", out var remote) && remote.ValueKind == JsonValueKind.True);
             if (data.TryGetProperty("allowServices", out var services) && services.ValueKind == JsonValueKind.True) permissions.Add("services.read");
+            if (data.TryGetProperty("allowCrm", out var crm) && crm.ValueKind == JsonValueKind.True) { permissions.Add("crm.read"); permissions.Add("crm.write"); }
             if (data.TryGetProperty("allowPrint", out var print) && print.ValueKind == JsonValueKind.True && Environment.GetEnvironmentVariable("LSPP_WORKFLOW_ALLOW_PRINT") == "true")
             { permissions.Add("devices.print"); permissions.Add("devices.read"); }
             if (route == "/import")
             {
-                var path = await workspace.ImportAsync(WorkflowJson.Text(data, "filename"), Convert.FromBase64String(WorkflowJson.Text(data, "base64")), CancellationToken.None);
+                var path = await workspace.ImportCanonicalAsync(WorkflowJson.Text(data, "filename"), Convert.FromBase64String(WorkflowJson.Text(data, "base64")), CancellationToken.None);
                 await Reply(transport, 201, new { path, state = "IMPORTED" }); return;
             }
             if (route == "/plan")
@@ -186,7 +187,18 @@ internal static class WorkflowApi
         catch (FileNotFoundException) { await Reply(transport, 404, new { error = "Workspace resource not found." }); }
         catch (Exception ex) when (ex is ArgumentException or JsonException or FormatException or OverflowException) { await Reply(transport, 400, new { error = "Invalid workspace input or plan. No operation is implied successful." }); }
         catch (Exception ex)
-        { InternalAuditLogger.Error("Workflow request unavailable: " + ex.GetType().Name); await Reply(transport, 503, new { error = "Workspace service unavailable. Check durable job state before retrying." }); }
+        {
+            // Name the cause instead of reporting a generic "not available": the workspace needs both an
+            // account store and an enrolled model, and each has its own failure.
+            InternalAuditLogger.Error("Workflow request unavailable: " + ex.GetType().Name);
+            var code = ex switch
+            {
+                InvalidOperationException => "workspace_store_unavailable",
+                HttpRequestException => "model_unavailable",
+                _ => "workspace_unavailable"
+            };
+            await Reply(transport, 503, new { code, error = "Workspace service unavailable. Check durable job state before retrying." });
+        }
     }
     private static async Task Reply(HttpListenerContext transport, int status, object value)
     {

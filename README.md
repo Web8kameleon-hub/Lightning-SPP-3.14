@@ -54,7 +54,9 @@ Model Gateway mund të propozojë hapa për një kërkesë në gjuhë natyrore, 
 kthehet si `PROPOSED_REQUIRES_REVIEW` dhe ekzekutimi kërkon shqyrtim të qartë.
 `finance.reconcile` pranon regjistra të strukturuar, të normalizuar dhe alokime
 të shqyrtuara; nuk nxjerr vetë fusha nga faturat dhe nuk klasifikon PDF të skanuar.
-`documents.pdf-text` nxjerr vetëm tekstin ekzistues me Poppler, pa OCR.
+`documents.pdf-text` nxjerr tekstin me Poppler; nëse PDF-ja nuk ka fare tekst
+të nxjerrshëm, mund të bëjë OCR me Tesseract vetëm me `LSPP_OCR_ENABLED=true`.
+Përpunohen deri në 32 faqet e para; saktësia e OCR nuk është matur.
 
 Prandaj kërkesa “nga këto fatura, printo vetëm …” nuk është ende rrjedhë
 autonome e plotë: faturat duhet të jenë të lexuara dhe të normalizuara, ndërsa
