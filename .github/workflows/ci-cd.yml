@@ -50,9 +50,7 @@ jobs:
 
   build-and-test:
     name: Build & Test
-    runs-on: [self-hosted, linux, x64, lightning-hetzner]
-    env:
-      DOTNET_INSTALL_DIR: /home/lightning-runner/.dotnet
+    runs-on: ubuntu-latest
 
     steps:
     - name: Configure private Six Labors license
@@ -111,6 +109,8 @@ jobs:
         # Shërbimet e jashtme (Excel/NodeDB) mbeten të anashkaluara në CI
 
       run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr fonts-dejavu-core
         command -v pdfinfo
         command -v pdftoppm
         command -v pdftotext

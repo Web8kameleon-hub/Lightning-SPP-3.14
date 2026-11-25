@@ -19,9 +19,7 @@ env:
 jobs:
   evidence:
     name: Code, tests, docs and customer UI
-    runs-on: [self-hosted, linux, x64, lightning-hetzner]
-    env:
-      DOTNET_INSTALL_DIR: /home/lightning-runner/.dotnet
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Configure private Six Labors license
@@ -44,6 +42,8 @@ jobs:
         run: dotnet build wwwmmm.csproj -c Release --no-restore
       - name: Install native PDF test tools
         run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr fonts-dejavu-core
           command -v pdfinfo
           command -v pdftoppm
           command -v pdftotext
