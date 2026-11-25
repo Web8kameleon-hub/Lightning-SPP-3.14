@@ -19,7 +19,9 @@ env:
 jobs:
   evidence:
     name: Code, tests, docs and customer UI
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, lightning-hetzner]
+    env:
+      DOTNET_INSTALL_DIR: /home/lightning-runner/.dotnet
     steps:
       - uses: actions/checkout@v4
       - name: Configure private Six Labors license

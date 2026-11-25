@@ -30,7 +30,7 @@ env:
 jobs:
   select-production:
     name: Select production deployment
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, lightning-hetzner]
     permissions:
       contents: read
       deployments: read
@@ -50,7 +50,9 @@ jobs:
 
   build-and-test:
     name: Build & Test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, lightning-hetzner]
+    env:
+      DOTNET_INSTALL_DIR: /home/lightning-runner/.dotnet
 
     steps:
     - name: Configure private Six Labors license
@@ -180,7 +182,7 @@ jobs:
 
   docker-build:
     name: Docker Build & Test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, lightning-hetzner]
     needs: build-and-test
 
     steps:

@@ -1,6 +1,6 @@
 # Lightning SPP — Usage Telemetry Planlog
 
-`declared`: Version 1.1, 2026-11-07. This is a dynamic project constitution: it records direction, dated deliverables, conditions, evidence and decisions. It may change when facts or priorities change; changes must be dated and justified. CI/CD enforces the current contract and blocks overdue work without evidence. Planned behavior is not runtime capability.
+`declared`: Version 1.2, 2026-11-22. This is a dynamic project constitution: it records direction, dated deliverables, conditions, evidence and decisions. It may change when facts or priorities change; changes must be dated and justified. CI/CD enforces the current contract and blocks overdue work without evidence. Planned behavior is not runtime capability.
 
 ## Approved direction
 
@@ -411,7 +411,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 
 `declared`: Plan dates, phase scope, acceptance conditions and states may change. Preserve the previous value; append an amendment containing date/time with timezone, phase, field, prior value, new value, reason, decision owner and evidence/review reference. Do not erase or silently replace history.
 
-`declared`: CI compares the current machine-readable contract with the base revision. Any change to a phase's date, state, deliverables, acceptance conditions or evidence requirements must have a matching amendment. Deadline extensions therefore remain possible, but undocumented extensions fail the gate. Normal pull-request review remains required.
+`declared`: CI compares the current machine-readable contract with the base revision. Any change to a phase's date, state, deliverables, acceptance conditions or evidence requirements must have a matching amendment. Deadline extensions therefore remain possible, but undocumented extensions fail the gate. Repository branch protection governs pull-request review requirements.
 
 ## CI/CD enforcement
 
@@ -439,6 +439,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 | 2026-11-07 | declared | Added the planlog gate script and wired it into `ci-cd.yml` with full history for amendment checks in commits `b551f101a04bd2be130a56ee40a1b72a9eb3daf5`, `a582320cf7b91e33fe8ce3ddc83d9c81a29b7139`, `f7b95fd45fbbc3980b7d53586bd0be13dc7b3788`, `6d15d549ef34fd89f1bcc79709bbd6f9431cb108`, `d57755881bacc47c34c445e1dade72889741136b` and `70df6645d6cf16290d889a29e88263bcf3c29bae`. | Source gate is on the feature branch; it has not yet been run in CI or deployed. |
 | 2026-11-12 | measured | Actions run `43237654187` executed the gate; P0/P1 were overdue and their deliverable files were absent. | Keep both phases planned and amend the complete schedule by seven days; no completion is claimed. See `Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md`. |
 | 2026-11-12 | declared | Amended P0–P7 dates by seven days after the gate failure; all phases remain planned. | Continue to block at each revised deadline until verified evidence exists. |
+| 2026-11-22 | measured | Actions run `45049104818` blocked P0–P2 as overdue and planned; the required P0–P2 deliverables were absent. | Rebaseline P0–P7 by seven days, keep all phases planned, and continue enforcement; see `Docs/USAGE_TELEMETRY_REPLAN_2026-11-22.md`. |
 
 `declared`: Add a log entry for each phase transition and every dynamic amendment. Record actual results and remaining unknowns; never mark a phase complete because a plan, callback, scaffold, endpoint or workflow exists.
 

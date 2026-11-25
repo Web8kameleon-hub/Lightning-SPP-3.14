@@ -1,0 +1,30 @@
+name: Hetzner runner validation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/hetzner-runner-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, linux, x64, lightning-hetzner]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify runner dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet --version
+          python3 --version
+          pdfinfo -v
+          pdftoppm -v
+          pdftotext -v
+          fc-match --format='%{family}' 'DejaVu Sans Mono' | grep -F 'DejaVu Sans Mono'
+          docker info --format '{{json .SecurityOptions}}' | grep -F 'name=rootless'
+          docker compose version
+          docker run --rm hello-world
