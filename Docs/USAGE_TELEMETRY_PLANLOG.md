@@ -48,14 +48,14 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 
 | Phase | Target (Athens) | State | Deliverable | Completion condition |
 |---|---|---|---|---|
-| P0 — source and identity map | 2026-11-16 17:00 | verified | `Docs/USAGE_TELEMETRY_ROUTE_MATRIX.md` | Every customer-facing route maps to authenticated customer/license identity or anonymous traffic; production history sources and unmapped cases are documented. |
-| P1 — event and JSON contracts | 2026-11-17 17:00 | verified | `Docs/schemas/usage-event.schema.json`, `Docs/schemas/daily-usage.schema.json` | Schemas define versioning, idempotency, UTC windows, privacy exclusions, completeness and correction semantics. |
-| P2 — persistent ledger | 2026-12-11 17:00 | planned | `Services/PersistentUsageLedger.cs`, `Tests/LightningSPP.Tests/PersistentUsageLedgerTests.cs` | Longo records survive restart; duplicate events count once; contention and storage failures are visible. |
-| P3 — instrumentation and scoped views | 2026-12-16 17:00 | planned | `Web/UsageApi.cs`, `Tests/LightningSPP.Tests/UsageAuthorizationTests.cs` | API outcomes, time and bytes are recorded; customer A cannot read customer B; anonymous use stays anonymous. |
-| P4 — daily public JSON | 2026-12-18 17:00 | planned | `.github/workflows/publish-usage-daily.yml`, `Scripts/validate-usage-json.py`, first real daily JSON | Workflow publishes one redacted UTC-day aggregate idempotently with least privilege; no customer identifiers or placeholder values. |
-| P5 — historical reconciliation | 2026-12-22 17:00 | planned | `Docs/USAGE_BACKFILL_REPORT.md` | Retained sources, timezone, coverage and gaps for the live period are documented; only verifiable days are published. |
-| P6 — evidence pages | 2026-12-23 17:00 | planned | Updated `Web/wwwroot/benchmarks.html` and evidence documentation | Workstation benchmarks, live usage, customer workloads and competitor comparisons are labeled separately; all public numbers have source windows. |
-| P7 — release and production gate | 2026-12-25 17:00 | planned | Release evidence and controlled deployment record | CI/CD checks pass, production rollout uses existing deployment controls, and post-deploy persistence and JSON publication are verified. |
+| P0 — source and identity map | 2026-11-30 17:00 | verified | `Docs/USAGE_TELEMETRY_ROUTE_MATRIX.md` | Every customer-facing route maps to authenticated customer/license identity or anonymous traffic; production history sources and unmapped cases are documented. |
+| P1 — event and JSON contracts | 2026-12-01 17:00 | verified | `Docs/schemas/usage-event.schema.json`, `Docs/schemas/daily-usage.schema.json` | Schemas define versioning, idempotency, UTC windows, privacy exclusions, completeness and correction semantics. |
+| P2 — persistent ledger | 2026-12-04 17:00 | planned | `Services/PersistentUsageLedger.cs`, `Tests/LightningSPP.Tests/PersistentUsageLedgerTests.cs` | Longo records survive restart; duplicate events count once; contention and storage failures are visible. |
+| P3 — instrumentation and scoped views | 2026-12-09 17:00 | planned | `Web/UsageApi.cs`, `Tests/LightningSPP.Tests/UsageAuthorizationTests.cs` | API outcomes, time and bytes are recorded; customer A cannot read customer B; anonymous use stays anonymous. |
+| P4 — daily public JSON | 2026-12-11 17:00 | planned | `.github/workflows/publish-usage-daily.yml`, `Scripts/validate-usage-json.py`, first real daily JSON | Workflow publishes one redacted UTC-day aggregate idempotently with least privilege; no customer identifiers or placeholder values. |
+| P5 — historical reconciliation | 2026-12-15 17:00 | planned | `Docs/USAGE_BACKFILL_REPORT.md` | Retained sources, timezone, coverage and gaps for the live period are documented; only verifiable days are published. |
+| P6 — evidence pages | 2026-12-16 17:00 | planned | Updated `Web/wwwroot/benchmarks.html` and evidence documentation | Workstation benchmarks, live usage, customer workloads and competitor comparisons are labeled separately; all public numbers have source windows. |
+| P7 — release and production gate | 2026-12-18 17:00 | planned | Release evidence and controlled deployment record | CI/CD checks pass, production rollout uses existing deployment controls, and post-deploy persistence and JSON publication are verified. |
 
 `declared`: The machine-readable contract below is the CI source of truth. A phase becomes `verified` only when its evidence paths exist and are non-empty. At its target time, CI blocks build/release/deployment if the phase is not verified.
 
@@ -66,7 +66,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
   "phases": [
     {
       "id": "P0",
-      "target_local": "2026-11-16T17:00:00+02:00",
+      "target_local": "2026-11-30T17:00:00+02:00",
       "state": "verified",
       "deliverable": [
         "Docs/USAGE_TELEMETRY_ROUTE_MATRIX.md"
@@ -82,7 +82,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P1",
-      "target_local": "2026-11-17T17:00:00+02:00",
+      "target_local": "2026-12-01T17:00:00+02:00",
       "state": "verified",
       "deliverable": [
         "Docs/schemas/usage-event.schema.json",
@@ -99,7 +99,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P2",
-      "target_local": "2026-12-11T17:00:00+02:00",
+      "target_local": "2026-12-04T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         "Services/PersistentUsageLedger.cs",
@@ -118,7 +118,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P3",
-      "target_local": "2026-12-16T17:00:00+02:00",
+      "target_local": "2026-12-09T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         "Web/UsageApi.cs",
@@ -137,7 +137,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P4",
-      "target_local": "2026-12-18T17:00:00+02:00",
+      "target_local": "2026-12-11T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         ".github/workflows/publish-usage-daily.yml",
@@ -158,7 +158,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P5",
-      "target_local": "2026-12-22T17:00:00+02:00",
+      "target_local": "2026-12-15T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         "Docs/USAGE_BACKFILL_REPORT.md"
@@ -175,7 +175,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P6",
-      "target_local": "2026-12-23T17:00:00+02:00",
+      "target_local": "2026-12-16T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         "Web/wwwroot/benchmarks.html",
@@ -193,7 +193,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
     },
     {
       "id": "P7",
-      "target_local": "2026-12-25T17:00:00+02:00",
+      "target_local": "2026-12-18T17:00:00+02:00",
       "state": "planned",
       "deliverable": [
         ".github/workflows/ci-cd.yml",
@@ -402,7 +402,31 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
       "evidence": [
         "Docs/USAGE_TELEMETRY_P0_P1_EVIDENCE_2026-11-17.md"
       ]
-    }
+    },
+    {"date_time": "2026-11-22T19:35:00+02:00", "phase": "P0", "field": "target_local", "from": "2026-11-16T17:00:00+02:00", "to": "2026-11-23T17:00:00+02:00", "reason": "The CI gate found P0-P2 overdue and still planned, and their required deliverables are absent. Rebaseline the full schedule by seven days without changing scope or claiming completion; the gate will continue to block overdue phases.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-22.md"]},
+    {"date_time": "2026-11-22T19:35:00+02:00", "phase": "P1", "field": "target_local", "from": "2026-11-17T17:00:00+02:00", "to": "2026-11-24T17:00:00+02:00", "reason": "The CI gate found P0-P2 overdue and still planned, and their required deliverables are absent. Rebaseline the full schedule by seven days without changing scope or claiming completion; the gate will continue to block overdue phases.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-22.md"]},
+    {"date_time": "2026-11-22T19:35:00+02:00", "phase": "P2", "field": "target_local", "from": "2026-11-20T17:00:00+02:00", "to": "2026-11-27T17:00:00+02:00", "reason": "The CI gate found P0-P2 overdue and still planned, and their required deliverables are absent. Rebaseline the full schedule by seven days without changing scope or claiming completion; the gate will continue to block overdue phases.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-22.md"]},
+    {"date_time": "2026-11-22T19:35:00+02:00", "phase": "P3", "field": "target_local", "from": "2026-11-25T17:00:00+02:00", "to": "2026-12-02T17:00:00+02:00", "reason": "The CI gate found P0-P2 overdue and still planned, and their required deliverables are absent. Rebaseline the full schedule by seven days without changing scope or claiming completion; the gate will continue to block overdue phases.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-22.md"]},
+    {"date_time": "2026-11-22T19:35:00+02:00", "phase": "P4", "field": "target_local", "from": "2026-11-27T17:00:00+02:00", "to": "2026-12-04T17:00:00+02:00", "reason": "The CI gate found P0-P2 overdue and still planned, and their required deliverables are absent. Rebaseline the full schedule by seven days without changing scope or claiming completion; the gate will continue to block overdue phases.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-22.md"]},
+    {"date_time": "2026-11-22T19:35:00+02:00", "phase": "P5", "field": "target_local", "from": "2026-12-01T17:00:00+02:00", "to": "2026-12-08T17:00:00+02:00", "reason": "The CI gate found P0-P2 overdue and still planned, and their required deliverables are absent. Rebaseline the full schedule by seven days without changing scope or claiming completion; the gate will continue to block overdue phases.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-22.md"]},
+    {"date_time": "2026-11-22T19:35:00+02:00", "phase": "P6", "field": "target_local", "from": "2026-12-02T17:00:00+02:00", "to": "2026-12-09T17:00:00+02:00", "reason": "The CI gate found P0-P2 overdue and still planned, and their required deliverables are absent. Rebaseline the full schedule by seven days without changing scope or claiming completion; the gate will continue to block overdue phases.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-22.md"]},
+    {"date_time": "2026-11-22T19:35:00+02:00", "phase": "P7", "field": "target_local", "from": "2026-12-04T17:00:00+02:00", "to": "2026-12-11T17:00:00+02:00", "reason": "The CI gate found P0-P2 overdue and still planned, and their required deliverables are absent. Rebaseline the full schedule by seven days without changing scope or claiming completion; the gate will continue to block overdue phases.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_REPLAN_2026-11-22.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P0", "field": "target_local", "from": "2026-11-23T17:00:00+02:00", "to": "2026-11-30T17:00:00+02:00", "reason": "Reschedule unfinished telemetry work after the CI deadline gate blocked; completion remains unverified.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P1", "field": "target_local", "from": "2026-11-24T17:00:00+02:00", "to": "2026-12-01T17:00:00+02:00", "reason": "Reschedule unfinished telemetry work after the CI deadline gate blocked; completion remains unverified.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P2", "field": "target_local", "from": "2026-11-27T17:00:00+02:00", "to": "2026-12-04T17:00:00+02:00", "reason": "Reschedule unfinished telemetry work after the CI deadline gate blocked; completion remains unverified.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P3", "field": "target_local", "from": "2026-12-02T17:00:00+02:00", "to": "2026-12-09T17:00:00+02:00", "reason": "Reschedule unfinished telemetry work after the CI deadline gate blocked; completion remains unverified.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P4", "field": "target_local", "from": "2026-12-04T17:00:00+02:00", "to": "2026-12-11T17:00:00+02:00", "reason": "Reschedule unfinished telemetry work after the CI deadline gate blocked; completion remains unverified.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P5", "field": "target_local", "from": "2026-12-08T17:00:00+02:00", "to": "2026-12-15T17:00:00+02:00", "reason": "Reschedule unfinished telemetry work after the CI deadline gate blocked; completion remains unverified.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P6", "field": "target_local", "from": "2026-12-09T17:00:00+02:00", "to": "2026-12-16T17:00:00+02:00", "reason": "Reschedule unfinished telemetry work after the CI deadline gate blocked; completion remains unverified.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P7", "field": "target_local", "from": "2026-12-11T17:00:00+02:00", "to": "2026-12-18T17:00:00+02:00", "reason": "Reschedule unfinished telemetry work after the CI deadline gate blocked; completion remains unverified.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P0", "field": "target_local", "from": "2026-11-16T17:00:00+02:00", "to": "2026-11-30T17:00:00+02:00", "reason": "Cumulative schedule change from the earlier baseline; intermediate dates are preserved in the preceding amendments.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P1", "field": "target_local", "from": "2026-11-17T17:00:00+02:00", "to": "2026-12-01T17:00:00+02:00", "reason": "Cumulative schedule change from the earlier baseline; intermediate dates are preserved in the preceding amendments.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P2", "field": "target_local", "from": "2026-11-20T17:00:00+02:00", "to": "2026-12-04T17:00:00+02:00", "reason": "Cumulative schedule change from the earlier baseline; intermediate dates are preserved in the preceding amendments.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P3", "field": "target_local", "from": "2026-11-25T17:00:00+02:00", "to": "2026-12-09T17:00:00+02:00", "reason": "Cumulative schedule change from the earlier baseline; intermediate dates are preserved in the preceding amendments.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P4", "field": "target_local", "from": "2026-11-27T17:00:00+02:00", "to": "2026-12-11T17:00:00+02:00", "reason": "Cumulative schedule change from the earlier baseline; intermediate dates are preserved in the preceding amendments.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P5", "field": "target_local", "from": "2026-12-01T17:00:00+02:00", "to": "2026-12-15T17:00:00+02:00", "reason": "Cumulative schedule change from the earlier baseline; intermediate dates are preserved in the preceding amendments.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P6", "field": "target_local", "from": "2026-12-02T17:00:00+02:00", "to": "2026-12-16T17:00:00+02:00", "reason": "Cumulative schedule change from the earlier baseline; intermediate dates are preserved in the preceding amendments.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]},
+    {"date_time": "2026-11-25T04:55:51+02:00", "phase": "P7", "field": "target_local", "from": "2026-12-04T17:00:00+02:00", "to": "2026-12-18T17:00:00+02:00", "reason": "Cumulative schedule change from the earlier baseline; intermediate dates are preserved in the preceding amendments.", "decision_owner": "repository-maintainer", "evidence": ["Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261124.md"]}
   ]
 }
 <!-- PLANLOG_CI_END -->
@@ -440,6 +464,7 @@ Target timezone: `Europe/Athens` (EET, UTC+02:00 for the dates below). These are
 | 2026-11-12 | measured | Actions run `43237654187` executed the gate; P0/P1 were overdue and their deliverable files were absent. | Keep both phases planned and amend the complete schedule by seven days; no completion is claimed. See `Docs/USAGE_TELEMETRY_PLANLOG_CI_FAILURE_20261112.md`. |
 | 2026-11-12 | declared | Amended P0–P7 dates by seven days after the gate failure; all phases remain planned. | Continue to block at each revised deadline until verified evidence exists. |
 | 2026-11-22 | measured | Actions run `45049104818` blocked P0–P2 as overdue and planned; the required P0–P2 deliverables were absent. | Rebaseline P0–P7 by seven days, keep all phases planned, and continue enforcement; see `Docs/USAGE_TELEMETRY_REPLAN_2026-11-22.md`. |
+| 2026-11-25 | declared | Reconciled parallel Planlog histories after the main-branch merge. | Retain main's latest targets and this branch's P0/P1 verification evidence; the independent earlier schedules and amendments remain recorded above. P2–P7 remain planned. |
 
 `declared`: Add a log entry for each phase transition and every dynamic amendment. Record actual results and remaining unknowns; never mark a phase complete because a plan, callback, scaffold, endpoint or workflow exists.
 
