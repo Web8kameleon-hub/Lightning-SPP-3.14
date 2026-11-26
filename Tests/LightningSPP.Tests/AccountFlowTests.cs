@@ -138,11 +138,36 @@ public sealed class AccountFlowTests : IClassFixture<LongoFixture>
             Assert.False(store.FindUser("ANOTHER@DIFFERENT.EXAMPLE", true)!.EmailVerified);
             using (var unverified = await Post("login", new { email = "ANOTHER@DIFFERENT.EXAMPLE", password }))
                 Assert.Equal(HttpStatusCode.Unauthorized, unverified.StatusCode);
+            using (var failedResend = await Post("request-verification", new { email = "another@different.example" }))
+            {
+                Assert.Equal(HttpStatusCode.ServiceUnavailable, failedResend.StatusCode);
+                var body = await failedResend.Content.ReadFromJsonAsync<JsonElement>(cancellation.Token);
+                Assert.Equal("account_email_unavailable", body.GetProperty("code").GetString());
+                Assert.Equal("request-verification", body.GetProperty("nextAction").GetString());
+            }
+            using (var failedResendRegistration = await Post("register", new { email = "resend@different.example", password }))
+                Assert.Equal(HttpStatusCode.ServiceUnavailable, failedResendRegistration.StatusCode);
+            Environment.SetEnvironmentVariable("SMTP_PORT", mailbox.Port.ToString());
+            using (var requestedVerification = await Post("request-verification", new { email = "RESEND@DIFFERENT.EXAMPLE" }))
+                Assert.Equal(HttpStatusCode.OK, requestedVerification.StatusCode);
+            var resentVerificationEmail = await mailbox.NextAsync(cancellation.Token);
+            Assert.Contains("RCPT TO:<resend@different.example>", resentVerificationEmail);
+            var resentVerificationToken = LinkToken(resentVerificationEmail, "verify");
+            using (var verifiedAfterResend = await Post("verify", new { token = resentVerificationToken }))
+                Assert.Equal(HttpStatusCode.OK, verifiedAfterResend.StatusCode);
             using (var unknown = await Post("request-reset", new { email = "unknown@third.example" }))
             {
                 Assert.Equal(HttpStatusCode.OK, unknown.StatusCode);
                 Assert.Equal(recoveryResponse, await unknown.Content.ReadAsStringAsync(cancellation.Token));
             }
+            using (var loginAfterResend = await Post("login", new { email = "RESEND@DIFFERENT.EXAMPLE", password }))
+                Assert.Equal(HttpStatusCode.OK, loginAfterResend.StatusCode);
+            client.DefaultRequestHeaders.Remove("X-CSRF-Token");
+            var signedInAfterResend = await client.GetFromJsonAsync<JsonElement>("/api/account", cancellation.Token);
+            client.DefaultRequestHeaders.Add("X-CSRF-Token", signedInAfterResend.GetProperty("csrfToken").GetString());
+            using (var logoutAfterResend = await Post("logout", new { }))
+                Assert.Equal(HttpStatusCode.OK, logoutAfterResend.StatusCode);
+            await Csrf();
             Assert.Single(store.ReadState().Entitlements);
             if (Environment.GetEnvironmentVariable("SPP_ACCOUNT_BROWSER") == "1")
             {

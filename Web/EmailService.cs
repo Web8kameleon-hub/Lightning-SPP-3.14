@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Net.Mail;
+using System.Text.Json;
 
 namespace wwwmmm.Web;
 
@@ -26,7 +27,8 @@ internal static class EmailService
         DateTime expirationUtc)
         => await TrySendEmailAsync(toEmail, "Your Lightning SPP license key", BuildBody(tier, licenseKey, expirationUtc));
 
-    internal static async Task<(bool Sent, string Error)> TrySendEmailAsync(string toEmail, string subject, string text)
+    internal static async Task<(bool Sent, string Error)> TrySendEmailAsync(
+        string toEmail, string subject, string text, HttpClient? resendClient = null)
     {
         if (string.IsNullOrWhiteSpace(toEmail))
         {
@@ -45,7 +47,7 @@ internal static class EmailService
 
         if (!string.IsNullOrWhiteSpace(resendApiKey))
         {
-            return await SendViaResendApiAsync(resendApiKey, toEmail, subject, text);
+            return await SendViaResendApiAsync(resendApiKey, toEmail, subject, text, resendClient ?? HttpClient);
         }
 
         return await SendViaSmtpAsync(toEmail, subject, text);
@@ -54,7 +56,7 @@ internal static class EmailService
     internal static string DeliveryAddress(string address) => address.Trim().ToLowerInvariant();
 
     private static async Task<(bool Sent, string Error)> SendViaResendApiAsync(
-        string apiKey, string toEmail, string subject, string text)
+        string apiKey, string toEmail, string subject, string text, HttpClient client)
     {
         var from = Environment.GetEnvironmentVariable("SMTP_FROM");
         if (string.IsNullOrWhiteSpace(from)) return (false, "Sender address is not configured.");
@@ -71,18 +73,40 @@ internal static class EmailService
                 text
             });
 
-            using var response = await HttpClient.SendAsync(request);
+            using var response = await client.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
             {
                 return (true, string.Empty);
             }
 
-            return (false, $"Email provider rejected the request ({(int)response.StatusCode}).");
+            var providerMessage = await ReadProviderMessageAsync(response);
+            return (false, string.IsNullOrEmpty(providerMessage)
+                ? $"Email provider rejected the request ({(int)response.StatusCode})."
+                : $"Email provider rejected the request ({(int)response.StatusCode}): {providerMessage}");
         }
         catch (Exception ex)
         {
             return (false, ex.GetType().Name);
+        }
+    }
+
+    private static async Task<string> ReadProviderMessageAsync(HttpResponseMessage response)
+    {
+        try
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(body)) return string.Empty;
+            using var document = JsonDocument.Parse(body);
+            var message = document.RootElement.TryGetProperty("message", out var value)
+                ? value.GetString()
+                : null;
+            if (string.IsNullOrWhiteSpace(message)) return string.Empty;
+            return new string(message.Trim().Where(character => !char.IsControl(character)).Take(300).ToArray());
+        }
+        catch (JsonException)
+        {
+            return string.Empty;
         }
     }
 
