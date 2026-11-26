@@ -150,16 +150,11 @@ internal static class CustomerAccounts
                     if (!sent.Sent)
                     {
                         InternalAuditLogger.Error($"Verification email failed for a registration: {sent.Error}");
-                        await Reply(transport, context, 503, new
-                        {
-                            code = "verification_email_unavailable",
-                            nextAction = "request-verification",
-                            error = "Verification email could not be sent. Your account remains unverified. Request another verification email after the email service is restored; do not create another account or pay again."
-                        });
+                        await Reply(transport, context, 200, new { message = "If your account needs verification, check your inbox. If no email arrives, use Account recovery to request another link; do not create another account or pay again." });
                         return;
                     }
                 }
-                await Reply(transport, context, 200, new { message = "Verification email accepted for delivery. Check your inbox and spam folder before signing in." }); return;
+                await Reply(transport, context, 200, new { message = "If your account needs verification, check your inbox. If no email arrives, use Account recovery to request another link; do not create another account or pay again." }); return;
             }
             if (route == "/login")
             {
@@ -183,16 +178,7 @@ internal static class CustomerAccounts
                 {
                     var sent = await AccountEmail(store, user, route == "/request-reset" ? "reset" : "verify");
                     if (!sent.Sent)
-                    {
                         InternalAuditLogger.Error($"Account email resend failed: {sent.Error}");
-                        await Reply(transport, context, 503, new
-                        {
-                            code = "account_email_unavailable",
-                            nextAction = route.TrimStart('/'),
-                            error = "The email provider could not accept this request. No successful delivery is implied. Try the same email request again after the service is restored or contact support."
-                        });
-                        return;
-                    }
                 }
                 await Reply(transport, context, 200, new { message = "If the account is eligible, check your inbox. If no email arrives, request another later." }); return;
             }

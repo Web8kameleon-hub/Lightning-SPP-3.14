@@ -6,8 +6,42 @@ using System.Net.Sockets;
 
 namespace LightningSPP.Tests;
 
+[CollectionDefinition("Email environment", DisableParallelization = true)]
+public sealed class EmailEnvironmentCollection;
+
+[Collection("Email environment")]
 public class EmailRecipientTests
 {
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("{\"message\":403}")]
+    public async Task UnexpectedResendJsonRetainsProviderStatus(string json)
+    {
+        var names = new[] { "RESEND_API_KEY", "SMTP_HOST", "SMTP_PASSWORD", "SMTP_FROM" };
+        var previous = names.ToDictionary(n => n, Environment.GetEnvironmentVariable);
+        var handler = new StubHttpHandler(new HttpResponseMessage(HttpStatusCode.Forbidden)
+        {
+            Content = new StringContent(json)
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://resend.test/") };
+        try
+        {
+            Environment.SetEnvironmentVariable("RESEND_API_KEY", "test-only-resend-key");
+            Environment.SetEnvironmentVariable("SMTP_HOST", null);
+            Environment.SetEnvironmentVariable("SMTP_PASSWORD", null);
+            Environment.SetEnvironmentVariable("SMTP_FROM", "noreply@scanprocessprint.com");
+            var result = await EmailService.TrySendEmailAsync(
+                "BUYER@EXAMPLE.TEST", "Verify email", "Verification fixture.", client);
+
+            Assert.False(result.Sent);
+            Assert.Equal("Email provider rejected the request (403).", result.Error);
+        }
+        finally
+        {
+            foreach (var pair in previous) Environment.SetEnvironmentVariable(pair.Key, pair.Value);
+        }
+    }
+
     [Fact]
     public async Task ResendRejectionIncludesSafeProviderReason()
     {

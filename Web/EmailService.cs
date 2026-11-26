@@ -98,9 +98,12 @@ internal static class EmailService
             var body = await response.Content.ReadAsStringAsync();
             if (string.IsNullOrWhiteSpace(body)) return string.Empty;
             using var document = JsonDocument.Parse(body);
-            var message = document.RootElement.TryGetProperty("message", out var value)
-                ? value.GetString()
-                : null;
+            var root = document.RootElement;
+            var message = root.ValueKind == JsonValueKind.Object &&
+                root.TryGetProperty("message", out var value) &&
+                value.ValueKind == JsonValueKind.String
+                    ? value.GetString()
+                    : null;
             if (string.IsNullOrWhiteSpace(message)) return string.Empty;
             return new string(message.Trim().Where(character => !char.IsControl(character)).Take(300).ToArray());
         }

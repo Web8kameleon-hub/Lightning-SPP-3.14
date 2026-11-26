@@ -144,7 +144,9 @@ internal sealed class CustomerStore
     {
         if (purpose is not ("verify" or "reset")) throw new ArgumentException("Invalid token purpose.");
         var token = RandomToken();
-        Change(s => { foreach (var key in s.Tokens.Where(x => x.Value.UserId == user.Id && x.Value.Purpose == purpose).Select(x => x.Key).ToArray()) s.Tokens.Remove(key);
+        Change(s =>
+        {
+            foreach (var key in s.Tokens.Where(x => x.Value.UserId == user.Id && x.Value.Purpose == purpose && x.Value.Expires <= Now).Select(x => x.Key).ToArray()) s.Tokens.Remove(key);
             s.Tokens.Add(Hash(token), new(user.Id, purpose, Now + (long)lifetime.TotalSeconds, s.Users[user.Id].Version)); });
         return token;
     }
@@ -161,6 +163,7 @@ internal sealed class CustomerStore
             if (purpose == "verify")
             {
                 s.Users[user.Id] = user with { EmailVerified = true };
+                foreach (var key in s.Tokens.Where(x => x.Value.UserId == user.Id && x.Value.Purpose == purpose).Select(x => x.Key).ToArray()) s.Tokens.Remove(key);
                 var candidates = s.Customers.Values.Where(c => string.Equals(c.Email, user.Email, StringComparison.OrdinalIgnoreCase) && c.UserId is null).ToArray();
                 if (candidates.Length == 1 && !s.Customers.Values.Any(c => c.UserId == user.Id)) s.Customers[candidates[0].Id] = candidates[0] with { UserId = user.Id };
             }

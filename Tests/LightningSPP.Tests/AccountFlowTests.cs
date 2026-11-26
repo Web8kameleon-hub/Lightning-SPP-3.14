@@ -11,6 +11,7 @@ using Xunit;
 namespace LightningSPP.Tests;
 
 /// <summary>Local HTTP, SMTP and Longo integration fixtures; no production credentials or email.</summary>
+[Collection("Email environment")]
 public sealed class AccountFlowTests : IClassFixture<LongoFixture>
 {
     [Fact]
@@ -108,6 +109,12 @@ public sealed class AccountFlowTests : IClassFixture<LongoFixture>
             Assert.DoesNotContain(password, resetEmail);
             Assert.DoesNotContain(replacement, resetEmail);
             var resetToken = LinkToken(resetEmail, "reset");
+            var unavailable = new TcpListener(IPAddress.Loopback, 0); unavailable.Start();
+            var closedPort = ((IPEndPoint)unavailable.LocalEndpoint).Port; unavailable.Stop();
+            Environment.SetEnvironmentVariable("SMTP_PORT", closedPort.ToString());
+            using (var failedResetResend = await Post("request-reset", new { email = user.Email }))
+                Assert.Equal(HttpStatusCode.OK, failedResetResend.StatusCode);
+            Environment.SetEnvironmentVariable("SMTP_PORT", mailbox.Port.ToString());
             using (var wrongPurpose = await Post("verify", new { token = resetToken })) Assert.Equal(HttpStatusCode.BadRequest, wrongPurpose.StatusCode);
             using (var reset = await Post("reset", new { token = resetToken, password = replacement })) Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/account", cancellation.Token)).StatusCode);
@@ -122,31 +129,33 @@ public sealed class AccountFlowTests : IClassFixture<LongoFixture>
             Assert.DoesNotContain(resetToken, durable); Assert.DoesNotContain(verifyToken, durable);
 
             // A refused transport never fabricates successful delivery or grants account access.
-            var unavailable = new TcpListener(IPAddress.Loopback, 0); unavailable.Start();
-            var closedPort = ((IPEndPoint)unavailable.LocalEndpoint).Port; unavailable.Stop();
             Environment.SetEnvironmentVariable("SMTP_PORT", closedPort.ToString());
             // A different customer gets its own request budget; keep production limits intact.
             client.DefaultRequestHeaders.Remove("X-Forwarded-For");
             client.DefaultRequestHeaders.Add("X-Forwarded-For", "192.0.2.247");
             await Csrf();
+            string failedRegistrationResponse;
             using (var failedEmail = await Post("register", new { email = "another@different.example", password }))
             {
-                Assert.Equal(HttpStatusCode.ServiceUnavailable, failedEmail.StatusCode);
-                var body = await failedEmail.Content.ReadFromJsonAsync<JsonElement>(cancellation.Token);
-                Assert.Equal("verification_email_unavailable", body.GetProperty("code").GetString());
+                Assert.Equal(HttpStatusCode.OK, failedEmail.StatusCode);
+                failedRegistrationResponse = await failedEmail.Content.ReadAsStringAsync(cancellation.Token);
+            }
+            using (var duplicateVerified = await Post("register", new { email = user.Email, password = "different long password 789!" }))
+            {
+                Assert.Equal(HttpStatusCode.OK, duplicateVerified.StatusCode);
+                Assert.Equal(failedRegistrationResponse, await duplicateVerified.Content.ReadAsStringAsync(cancellation.Token));
             }
             Assert.False(store.FindUser("ANOTHER@DIFFERENT.EXAMPLE", true)!.EmailVerified);
             using (var unverified = await Post("login", new { email = "ANOTHER@DIFFERENT.EXAMPLE", password }))
                 Assert.Equal(HttpStatusCode.Unauthorized, unverified.StatusCode);
+            string failedRecoveryResponse;
             using (var failedResend = await Post("request-verification", new { email = "another@different.example" }))
             {
-                Assert.Equal(HttpStatusCode.ServiceUnavailable, failedResend.StatusCode);
-                var body = await failedResend.Content.ReadFromJsonAsync<JsonElement>(cancellation.Token);
-                Assert.Equal("account_email_unavailable", body.GetProperty("code").GetString());
-                Assert.Equal("request-verification", body.GetProperty("nextAction").GetString());
+                Assert.Equal(HttpStatusCode.OK, failedResend.StatusCode);
+                failedRecoveryResponse = await failedResend.Content.ReadAsStringAsync(cancellation.Token);
             }
             using (var failedResendRegistration = await Post("register", new { email = "resend@different.example", password }))
-                Assert.Equal(HttpStatusCode.ServiceUnavailable, failedResendRegistration.StatusCode);
+                Assert.Equal(HttpStatusCode.OK, failedResendRegistration.StatusCode);
             Environment.SetEnvironmentVariable("SMTP_PORT", mailbox.Port.ToString());
             using (var requestedVerification = await Post("request-verification", new { email = "RESEND@DIFFERENT.EXAMPLE" }))
                 Assert.Equal(HttpStatusCode.OK, requestedVerification.StatusCode);
@@ -158,7 +167,9 @@ public sealed class AccountFlowTests : IClassFixture<LongoFixture>
             using (var unknown = await Post("request-reset", new { email = "unknown@third.example" }))
             {
                 Assert.Equal(HttpStatusCode.OK, unknown.StatusCode);
-                Assert.Equal(recoveryResponse, await unknown.Content.ReadAsStringAsync(cancellation.Token));
+                var unknownResponse = await unknown.Content.ReadAsStringAsync(cancellation.Token);
+                Assert.Equal(recoveryResponse, unknownResponse);
+                Assert.Equal(failedRecoveryResponse, unknownResponse);
             }
             using (var loginAfterResend = await Post("login", new { email = "RESEND@DIFFERENT.EXAMPLE", password }))
                 Assert.Equal(HttpStatusCode.OK, loginAfterResend.StatusCode);
