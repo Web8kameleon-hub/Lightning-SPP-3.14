@@ -25,10 +25,10 @@ public class ApiSigningStatusIntegrationTests
             Environment.SetEnvironmentVariable("LSPP_LICENSE_SIGNING_KEYS", "k1=alpha-secret;k2=beta-secret");
             Environment.SetEnvironmentVariable("LSPP_LICENSE_SIGNING_ACTIVE_KID", "k2");
 
-            var serverTask = LicenseApiServer.RunAsync(port, cts.Token);
+            var serverTask = LicenseApiServer.RunAsync(port, cts.Token, bindHost: "127.0.0.1");
             await WaitUntilHealthyAsync(port, TimeSpan.FromSeconds(5));
 
-            using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+            using var client = IsolatedHttpClient.Create(port, 76);
 
             // Unauthorized request
             var unauthorized = await client.GetAsync("/api/license/signing-status");
@@ -66,7 +66,7 @@ public class ApiSigningStatusIntegrationTests
 
     private static async Task WaitUntilHealthyAsync(int port, TimeSpan timeout)
     {
-        using var client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+        using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
         var deadline = DateTime.UtcNow + timeout;
 
         while (DateTime.UtcNow < deadline)

@@ -9,9 +9,9 @@ shqyrtues) dhe **çdo hap ka provë të ekzekutuar**.
 ```
 burim (file | folder | watch-folder | UNC | http-upload | scanner)
   ↓ IntakeEnumerator + ScanProviderRegistry
-PDF me shtresë teksti
-  ↓ TextLayerExtractor (pdftotext, SHA-256 i skedarit)
-tekst për faqe
+PDF me shtresë teksti (ose PDF i skanuar, kur OCR është aktiv)
+  ↓ OcrTextReader → TextLayerExtractor (pdftotext) / TesseractOcrEngine
+tekst për faqe + burimi i tekstit (`text-layer` / `ocr`)
   ↓ RuleSet (JSON i operatorit) + FieldExtractor
 vlera + faqe + offset
   ↓ ProvenanceTrail (JSONL i lidhur me hash)
@@ -53,12 +53,19 @@ wwwmmm flow trail-verify trail.jsonl
 | Paketa është e riprodhueshme | memberë të renditur, kohë fikse, manifest me hash | `Package_IsReproducibleAndVerifiable` |
 | Ngacmimi i paketës zbulohet | verifikim hash për çdo member | `Package_VerifyDetectsModifiedMember` |
 | Shtrirja e tekstit lexohet realisht | `pdftotext -layout -enc UTF-8` mbi PDF me xref të saktë | `FlowPdfTextTests.TextLayer_ReadsRealPdfPagesAndFeedsRules` |
+| OCR lexon një faqe të rasterizuar | Tesseract mbi PNG-n e renderuar nga `PdfDocumentService`; rezultati kthehet pa pastrim | `OcrTests.Reader_WithOcrEnabled_RecognizesARealRasterPage`, `OcrTests.Engine_RecognizesTextFromAnImageItCannotCheat` |
+| Një PDF digjital nuk degradohet nga OCR | OCR thirret vetëm kur shtresa e tekstit është bosh | `OcrTests.Reader_WithOcrDisabled_LeavesAScannedPdfEmptyAndNeverCallsTheEngine` |
+| Raporti thotë kush e lexoi tekstin | `BatchEntry.textSource` shkruhet në manifest; `flow report` e shfaq | `FlowBatch.Report` |
 
 ## Kufij të deklaruar
 
-- **Nuk ka OCR.** Input imazh (png/jpg/tiff) kthehet si dështim i qartë
-  ("No text layer"), jo si dokument bosh. Shtimi i OCR-së kërkon Tesseract ose
-  shërbim tjetër dhe provë mbi corpus real — nuk është bërë.
+- **OCR është opt-in dhe i kushtëzuar.** Pa `LSPP_OCR_ENABLED=true`, një PDF i
+  skanuar kthehet me shtresë teksti bosh ("No text layer"), jo si dokument me
+  vlera. Me flamurin aktiv dhe Tesseract të pranishëm, faqet rasterizohen dhe
+  lexohen nga `TesseractOcrEngine`; pa Tesseract dështon me gabim të qartë, nuk
+  kthehet bosh. Input imazh (png/jpg/tiff) ende refuzohet nga `flow run` — ktheje
+  në PDF me `wwwmmm document pdf-create`. Saktësia e OCR-së nuk është matur në
+  corpus real: prova ekzistuese është një imazh i vizatuar nga vetë testi.
 - **Skanimi fizik nuk është provuar.** `flow sources` raporton SANE si të
   disponueshëm vetëm kur `scanimage` ekziston (Linux); WIA njihet në Windows por
   marrja e figurës nuk është implementuar; TWAIN raportohet si i padisponueshëm.

@@ -1,4 +1,4 @@
-# Lightning SPP 3.14 — përpunimi real
+pse po vonohesh vella# Lightning SPP 3.14 — përpunimi real
 
 Ky dokument përshkruan çka pipeline-i ekzekuton **vërtet**, cilat motorë marrin
 pjesë dhe si matet. Nuk përmban krahasime me një "mod të simuluar", sepse ai mod
@@ -136,7 +136,9 @@ i testeve, jo nga ky dokument.
 
 - Skanimi fizik (`device scan`) nuk është verifikuar në harduer.
 - Printimi fizik nuk është verifikuar në harduer.
-- OCR nuk ekziston në këtë kod.
+- OCR ekziston vetëm si rrugë opt-in e dokumenteve (`OcrTextReader` +
+  `TesseractOcrEngine`, e aktivizuar me `LSPP_OCR_ENABLED=true`); nuk merr pjesë
+  në pipeline-in e imazhit dhe saktësia e tij nuk është matur në corpus real.
 - Inferenca ONNX kërkon model real të konfiguruar.
 - Numrat e performancës janë matje mjedisi, jo garanci.
 

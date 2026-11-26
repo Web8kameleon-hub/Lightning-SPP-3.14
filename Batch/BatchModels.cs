@@ -10,6 +10,13 @@ public static class BatchStatus
     public const string Skipped = "skipped";
 }
 
+/// <summary>Which reader produced the text of a manifest entry.</summary>
+public static class BatchTextSource
+{
+    /// <summary>No text was read: the document failed before a reader produced anything.</summary>
+    public const string None = "none";
+}
+
 /// <summary>One processed document, written to the manifest as a single JSON line.</summary>
 public sealed record BatchEntry(
     [property: JsonPropertyName("index")] int Index,
@@ -21,6 +28,11 @@ public sealed record BatchEntry(
     [property: JsonPropertyName("pages")] int Pages,
     [property: JsonPropertyName("fields")] int Fields,
     [property: JsonPropertyName("missingRequired")] IReadOnlyList<string> MissingRequired,
+    /// <summary>
+    /// <c>text-layer</c> or <c>ocr</c>. Null for manifests written before the field existed —
+    /// the report shows it as unknown rather than guessing a reader.
+    /// </summary>
+    [property: JsonPropertyName("textSource")] string? TextSource,
     [property: JsonPropertyName("error")] string? Error);
 
 /// <summary>Durable position of a run. Written after every document, atomically.</summary>

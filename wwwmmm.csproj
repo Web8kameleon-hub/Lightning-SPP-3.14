@@ -7,7 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PublishAot>false</PublishAot>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Chat validates BCP-47 tags and resolves localized culture names at runtime. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
 
@@ -71,6 +72,12 @@
     <Compile Remove="VSExtension\**\*.cs" />
     <Compile Remove="Desktop\**\*.cs" />
     <Compile Remove="artifacts\**\*.cs" />
+<!-- The Rust core and its .NET interop harness are separate artefacts. Without this the
+         SDK default glob would compile their Program.cs into this assembly. -->
+<Compile Remove="native\**\*.cs" />
+<None Remove="native\**" />
+<EmbeddedResource Remove="native\**" />
+
   </ItemGroup>
 
   <ItemGroup>
@@ -105,4 +112,3 @@
     <EmbeddedResource Remove="wwwmmm.FluidEngine/**" />
   </ItemGroup>
 </Project>
-

@@ -1,4 +1,8 @@
 {
+    "rust-analyzer.linkedProjects": [
+      "native/lightning_core/Cargo.toml"
+    ],
+    "rust-analyzer.check.command": "check",
     "cSpell.words": [
       "dizajnuar",
       "Ekzekutim",

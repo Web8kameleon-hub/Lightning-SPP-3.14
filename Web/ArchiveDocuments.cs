@@ -56,7 +56,7 @@ internal static class ArchiveDocuments
                 { file["processing"] = "FAILED"; file["processingError"] = "PDF could not be validated, rendered or processed. Original preserved; no processed output created."; }
             }
             report["operation"] = "archive-pdf-processing";
-            report["scope"] = "Originals preserved. Up to 4 PDF attempts and 32 aggregate pages; generated document bytes limited to 32 MiB. Successful PDFs are rasterized; text, vectors and forms are not preserved. No supplier classification, OCR or optimization is claimed. Inspect every file processing status for failures and skipped files.";
+            report["scope"] = "Originals preserved. Up to 4 PDF attempts and 32 aggregate pages; generated document bytes limited to 32 MiB. Successful PDFs are rasterized; text, vectors and forms are not preserved. No supplier classification or optimization is claimed. This path never runs OCR; OCR is available only through the flow text reader when LSPP_OCR_ENABLED=true. Inspect every file processing status for failures and skipped files.";
             report["generatedBytes"] = generatedBytes;
             using var output = zip.CreateEntry("report.json").Open();
             await System.Text.Json.JsonSerializer.SerializeAsync(output, report, cancellationToken: token);

@@ -40,7 +40,7 @@ internal static class LicenseApiServer
 
     internal static bool IsTryRateLimited(string ip) => _tryRateLimits.IsLimited(ip, DateTimeOffset.UtcNow);
 
-    public static async Task RunAsync(int port, CancellationToken cancellationToken = default)
+    public static async Task RunAsync(int port, CancellationToken cancellationToken = default, string? bindHost = null)
     {
         RuntimeSecurity.ValidateProduction();
         if (RuntimeSecurity.IsProduction && CustomerAccounts.Enabled) _ = CustomerAccounts.Store.ReadState();
@@ -53,7 +53,7 @@ internal static class LicenseApiServer
             Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
             "true",
             StringComparison.OrdinalIgnoreCase);
-        var bindHost = Environment.GetEnvironmentVariable("LSPP_BIND_HOST") ?? (inContainer ? "+" : "localhost");
+        bindHost ??= Environment.GetEnvironmentVariable("LSPP_BIND_HOST") ?? (inContainer ? "+" : "localhost");
         listener.Prefixes.Add($"http://{bindHost}:{port}/");
         listener.Start();
 
@@ -170,6 +170,7 @@ internal static class LicenseApiServer
             return;
         }
 
+        if (path.StartsWith("/api/", StringComparison.Ordinal)) LightningMetrics.RecordApiRequest();
         try
         {
             // Kloud fabric bridge: Scan-Process-Print JSON endpoints (/api/v1/*)
@@ -321,6 +322,37 @@ internal static class LicenseApiServer
             if (path.StartsWith("/api/fluid/", StringComparison.OrdinalIgnoreCase))
             {
                 await FluidApiHandler.HandleAsync(context, path);
+                return;
+            }
+
+            if (path == "/api/admin/summary")
+            {
+                context.Response.Headers["Cache-Control"] = "no-store";
+                if (context.Request.HttpMethod != "GET")
+                {
+                    context.Response.Headers["Allow"] = "GET";
+                    await JsonAsync(context, HttpStatusCode.MethodNotAllowed, "{\"ok\":false,\"error\":\"GET required\"}");
+                    return;
+                }
+                if (!IsAdminAuthorized(context.Request))
+                {
+                    context.Response.Headers["WWW-Authenticate"] = "Bearer";
+                    await JsonAsync(context, HttpStatusCode.Unauthorized, "{\"ok\":false,\"error\":\"Administrator authorization required\"}");
+                    return;
+                }
+                if (!CustomerAccounts.Enabled)
+                {
+                    await JsonAsync(context, HttpStatusCode.ServiceUnavailable, "{\"ok\":false,\"error\":\"Customer account store is unavailable\"}");
+                    return;
+                }
+                var counts = CustomerAccounts.Store.GetSummaryCounts();
+                var summary = new StringBuilder(LightningMetrics.ToText(includeApiRequests: true));
+                summary.AppendLine($"totalUsers={counts.TotalUsers}");
+                summary.AppendLine($"verifiedActiveUsers={counts.VerifiedActiveUsers}");
+                summary.AppendLine($"linkedCustomers={counts.LinkedCustomers}");
+                summary.AppendLine($"entitlements={counts.Entitlements}");
+                summary.AppendLine($"activeSessions={counts.ActiveSessions}");
+                await TextAsync(context, HttpStatusCode.OK, summary.ToString());
                 return;
             }
 

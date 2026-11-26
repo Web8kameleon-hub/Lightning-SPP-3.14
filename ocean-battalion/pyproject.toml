@@ -1,0 +1,33 @@
+[project]
+name = "ocean-battalion"
+version = "0.1.0"
+description = "Crawling battalion: collects open sources, extracts text (incl. OCR), chunks and embeds them for Ocean Core"
+requires-python = ">=3.11"
+
+dependencies = [
+    "httpx>=0.27",
+    "PyYAML>=6.0",
+    "beautifulsoup4>=4.12",
+    "feedparser>=6.0",
+]
+
+[project.optional-dependencies]
+# Heavy: only needed for real embeddings.
+embed = ["FlagEmbedding>=1.2", "torch>=2.2", "transformers>=4.40"]
+# Only needed for the Chroma vector store; the JSONL store needs nothing.
+chroma = ["chromadb>=0.5"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+ocean-battalion = "battalion.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["battalion*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

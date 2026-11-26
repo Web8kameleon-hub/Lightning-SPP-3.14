@@ -44,10 +44,11 @@ public static class FlowBatch
         async Task<BatchDocumentResult> ProcessAsync(string path, CancellationToken token)
         {
             if (!string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase))
-                return BatchDocumentResult.Failed(
-                    "No text layer: this input is an image. OCR is not implemented, so no fields were extracted.");
+                return BatchDocumentResult.Failed(OcrTextReader.IsEnabled
+                    ? "Only PDF input is supported by this command; wrap the image in a PDF first."
+                    : "No text layer: this input is an image. Set LSPP_OCR_ENABLED=true to read scanned pages.");
 
-            var document = await TextLayerExtractor.ExtractAsync(path, token);
+            var document = await OcrTextReader.ReadAsync(path, token);
             var result = FieldExtractor.Apply(document, rules);
 
             foreach (var match in result.Matches)
@@ -57,7 +58,8 @@ public static class FlowBatch
                     match.RuleId, match.Field, match.Value, match.Page, match.Offset, token);
             }
 
-            return BatchDocumentResult.Ok(result.PageCount, result.Matches.Count, result.MissingRequired);
+            return BatchDocumentResult.Ok(
+                result.PageCount, result.Matches.Count, result.MissingRequired, document.TextSource);
         }
     }
 
@@ -124,13 +126,14 @@ public static class FlowBatch
         builder.AppendLine($"- Të përfunduara: {checkpoint?.Completed ?? 0} | Dështuara: {checkpoint?.Failed ?? 0}");
         builder.AppendLine($"- Regjistrime prove: {records.Count} | Pranuar: {accepted} | Refuzuar: {rejected}");
         builder.AppendLine();
-        builder.AppendLine("| Dokument | Faqe | Fusha | Pa fusha të detyrueshme | Statusi |");
-        builder.AppendLine("| --- | --- | --- | --- | --- |");
+        builder.AppendLine("| Dokument | Faqe | Fusha | Teksti | Pa fusha të detyrueshme | Statusi |");
+        builder.AppendLine("| --- | --- | --- | --- | --- | --- |");
 
         foreach (var entry in entries)
         {
             var missing = entry.MissingRequired.Count == 0 ? "—" : string.Join(", ", entry.MissingRequired);
-            builder.AppendLine($"| {entry.RelativePath} | {entry.Pages} | {entry.Fields} | {missing} | {entry.Status} |");
+            var textSource = string.IsNullOrEmpty(entry.TextSource) ? "i panjohur" : entry.TextSource;
+            builder.AppendLine($"| {entry.RelativePath} | {entry.Pages} | {entry.Fields} | {textSource} | {missing} | {entry.Status} |");
         }
 
         builder.AppendLine();

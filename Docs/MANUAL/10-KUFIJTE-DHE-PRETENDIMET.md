@@ -15,7 +15,7 @@ marketingu ose një deklaratë në një ofertë.
 | Rendering PDF | ⚠️ Kërkon Poppler | `document pdf-render` |
 | Skanim fizik | ❌ I paverifikuar | `device scan` vetëm Linux |
 | Printim fizik | ❌ I paverifikuar | `device print`, radhë CUPS |
-| OCR | ❌ Nuk ekziston | Asnjë motor OCR në kod |
+| OCR i skanimeve | ⚠️ Ekziston, opt-in, kërkon Tesseract | `Documents/OcrTextReader.cs`, `Documents/TesseractOcrEngine.cs`; `OcrTests` nxjerr tekst nga një imazh i vizatuar nga testi |
 | Inferencë AI me model real | ⚠️ Kërkon `LSPP_ONNX_MODEL_PATH` | `RealAIProcessor` |
 | Workflow me plane | ⚠️ Funksionon; i fikur në prodhim | `/api/workflow`, 503 pa flag |
 | Bridges Excel | ⚠️ Verifikuar lokalisht | `Docs/BRIDGES.md` |
@@ -33,7 +33,8 @@ Legjenda: ✅ provuar dhe i përdorshëm; ⚠️ i kushtëzuar; ❌ nuk provohet
 Mos shkruaj dhe mos thuaj:
 
 - "AI-powered" kur `LSPP_ONNX_MODEL_PATH` nuk është konfiguruar.
-- "OCR" kur nuk ekziston asnjë motor OCR.
+- "OCR" kur `LSPP_OCR_ENABLED=true` nuk është vendosur ose Tesseract nuk
+  gjendet; kurrë si saktësi e garantuar, sepse asnjë corpus real nuk është matur.
 - "printon" për `print`, që prodhon një artefakt `.br`.
 - "skanon dokumente" për `scan`, që lexon imazhe ekzistuese.
 - "certifikuar ISO/CE/FDA/HIPAA" — nuk ka evidencë auditimi në këtë repository.
@@ -48,8 +49,12 @@ Mos shkruaj dhe mos thuaj:
 ## 10.3 Kufijtë teknikë që klienti duhet t'i dijë
 
 1. **Imazhi, jo dokumenti.** `scan` pranon imazhe. PDF duhet renderuar më parë.
-2. **Pa OCR.** Skedari PDF me tekst lexohet vetëm përmes `pdftotext` në workflow;
-   skanimet nuk konvertohen në tekst pa një motor OCR që nuk ekziston këtu.
+2. **OCR vetëm me kërkesë.** PDF me shtresë teksti lexohet gjithmonë me
+   `pdftotext`; OCR ekzekutohet vetëm kur `LSPP_OCR_ENABLED=true` dhe shtresa e
+   tekstit është bosh, me Tesseract të gjetur nga `SPP_TESSERACT_PATH`, PATH ose
+   `C:\Program Files\Tesseract-OCR`. Kufij: 32 faqe për dokument, 120 s për faqe.
+   Cilësia e OCR-së nuk është matur në corpus real dhe raporti e shënon burimin
+   e tekstit (`text-layer` / `ocr`) për çdo dokument.
 3. **Profil i vetëm aktiv.** `WWWMMM_STIGMA_LEVEL` mbishkruan parametrat e
    kërkesës; nuk mund të kesh njëkohësisht "maksimum cilësie" dhe "maksimum
    shpejtësi" në të njëjtin proces.
@@ -104,6 +109,7 @@ Këto mbeten të hapura derisa të ekzistojë provë e regjistruar:
 - [ ] Ingest/readback real i OS-CLX me auth dhe HMAC
 - [ ] Printim fizik në harduer të verifikuar
 - [ ] Skanim fizik nga pajisje SANE e verifikuar
+- [ ] Saktësi OCR e matur në corpus real (ekziston vetëm prova e njohjes së një imazhi testi)
 - [ ] Inferencë ONNX me model real të klientit
 - [ ] Dorëzim email në marrës real të jashtëm
 - [x] Aktivizim offline i sigurt (ECDSA me çelës publik — `LicenseAsymmetricTests`)

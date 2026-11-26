@@ -1,0 +1,41 @@
+name: Native core validation
+
+on:
+  pull_request:
+    paths:
+      - 'native/**'
+      - '.github/workflows/native-validation.yml'
+  push:
+    branches: [main, 'fix/**']
+    paths:
+      - 'native/**'
+      - '.github/workflows/native-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.94.1'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test real native processing and resource failures
+        run: cargo test --manifest-path native/lightning_core/Cargo.toml --locked --all-targets
+      - name: Build release C ABI
+        run: cargo build --manifest-path native/lightning_core/Cargo.toml --locked --release
+      - name: Verify managed-to-native execution
+        shell: bash
+        run: |
+          mkdir -p artifacts/native-validation
+          cd artifacts/native-validation
+          dotnet run --project "$GITHUB_WORKSPACE/native/LightningCore.Interop/LightningCore.Interop.csproj" --configuration Release -- "$GITHUB_WORKSPACE/Web/wwwroot/assets/landing-hero.png"

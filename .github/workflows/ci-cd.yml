@@ -50,9 +50,7 @@ jobs:
 
   build-and-test:
     name: Build & Test
-    runs-on: [self-hosted, linux, x64, lightning-hetzner]
-    env:
-      DOTNET_INSTALL_DIR: /home/lightning-runner/.dotnet
+    runs-on: ubuntu-latest
 
     steps:
     - name: Configure private Six Labors license
@@ -83,6 +81,12 @@ jobs:
     - name: Enforce dynamic usage Planlog schedule and evidence
       run: python3 Scripts/planlog-gate.py
 
+    - name: Validate usage contracts without generating metrics
+      run: |
+        python3 -m pip install -r Scripts/requirements-usage-contracts.txt
+        python3 Scripts/validate-usage-contracts.py
+        python3 Scripts/test-usage-contracts.py -v
+
     - name: Restore dependencies
       run: dotnet restore
 
@@ -103,14 +107,25 @@ jobs:
         SPP_TEST_NATIVE_DOCUMENTS: '1'
 
         # Shërbimet e jashtme (Excel/NodeDB) mbeten të anashkaluara në CI
-     
+
       run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr fonts-dejavu-core
         command -v pdfinfo
+        command -v pdftoppm
+        command -v pdftotext
+        command -v tesseract
         fc-match --format='%{family}' 'DejaVu Sans Mono' | grep -F 'DejaVu Sans Mono'
         dotnet test ./Tests/LightningSPP.Tests/LightningSPP.Tests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=ci-tests.trx" --filter "FullyQualifiedName!~BridgeUpstreamTests&FullyQualifiedName!~PlanDocumentBenchmarkTests"
 
     - name: Require 100 percent test execution and pass rate
       run: python3 Scripts/require-all-tests-pass.py
+
+    - name: Test Ocean extraction, real OCR and bounded HTTP
+      run: |
+        python3 -m pip install './ocean-battalion[dev]'
+        python3 -m pytest ocean-battalion/tests -q -p no:cacheprovider --junitxml=artifacts/ocean-tests.xml
+        python3 -c "import xml.etree.ElementTree as E; s=E.parse('artifacts/ocean-tests.xml').getroot().findall('testsuite'); assert s and sum(int(x.get('tests', '0')) for x in s)>0 and all(int(x.get(k, '0'))==0 for x in s for k in ('errors', 'failures', 'skipped')), 'Ocean requires executed tests with zero failures or skips'"
 
     - name: Run Lightning SPP Demo
       run: dotnet run --no-build --configuration Release -- demo
@@ -161,6 +176,7 @@ jobs:
         path: |
           artifacts/ci-evidence-status.txt
           Tests/LightningSPP.Tests/TestResults/**/*.trx
+          artifacts/ocean-tests.xml
           artifacts/benchmark-environment.txt
           artifacts/speed-benchmark.txt
           artifacts/analysis-report.json

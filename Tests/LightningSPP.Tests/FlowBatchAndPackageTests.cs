@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using wwwmmm.Batch;
+using wwwmmm.Documents;
 using wwwmmm.Packaging;
 using Xunit;
 
@@ -11,7 +12,8 @@ public class FlowBatchAndPackageTests
         (path, _) =>
         {
             lock (processed) processed.Add(path);
-            return Task.FromResult(BatchDocumentResult.Ok(pages: 1, fields: 2, Array.Empty<string>()));
+            return Task.FromResult(BatchDocumentResult.Ok(
+                pages: 1, fields: 2, Array.Empty<string>(), DocumentText.TextLayerSource));
         };
 
     private static string NewDirectory(string prefix)
@@ -121,7 +123,7 @@ public class FlowBatchAndPackageTests
             var summary = await runner.RunAsync(inputs, (path, _) =>
                 Task.FromResult(path.EndsWith("doc01.pdf", StringComparison.Ordinal)
                     ? BatchDocumentResult.Failed("no text layer")
-                    : BatchDocumentResult.Ok(1, 1, Array.Empty<string>())));
+                    : BatchDocumentResult.Ok(1, 1, Array.Empty<string>(), DocumentText.TextLayerSource)));
 
             Assert.Equal(3, summary.Processed);
             Assert.Equal(2, summary.Completed);
