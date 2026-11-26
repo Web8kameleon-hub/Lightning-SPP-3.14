@@ -15,7 +15,7 @@ async function request(action, data) {
     throw error;
   }
   const body = await response.json();
-  if (!response.ok) throw Object.assign(new Error(body.error || body.message || 'Account request failed.'), {status:response.status, code:body.code});
+  if (!response.ok) throw Object.assign(new Error(body.error || body.message || 'Account request failed.'), {status:response.status, code:body.code, nextAction:body.nextAction});
   return body;
 }
 async function refresh() {
@@ -70,12 +70,17 @@ async function busy(button, action) {
   button.disabled = true;
   try { await action(); } catch (error) {
     message(error.message,true);
-    if (error.code === 'email_not_verified') {
-      byId('accountState').textContent = 'Account: UNVERIFIED · Action required: Verify email';
-      byId('accountState').hidden = false;
-      byId('recoveryEmail').value = byId('loginEmail').value.trim().toLowerCase();
-      byId('recoveryAction').value = 'request-verification';
+    if (error.code === 'email_not_verified' || error.code === 'verification_email_unavailable' || error.code === 'account_email_unavailable') {
+      const verification = error.nextAction !== 'request-reset';
+      if (verification) {
+        byId('accountState').textContent = 'Account: UNVERIFIED · Action required: Verify email';
+        byId('accountState').hidden = false;
+      }
+      const emailSource = error.code === 'verification_email_unavailable' ? byId('registerEmail') : error.code === 'email_not_verified' ? byId('loginEmail') : byId('recoveryEmail');
+      byId('recoveryEmail').value = emailSource.value.trim().toLowerCase();
+      byId('recoveryAction').value = verification ? 'request-verification' : 'request-reset';
       byId('loginPassword').value = '';
+      byId('registerPassword').value = '';
       byId('recoveryForm').querySelector('button').focus();
     }
   }

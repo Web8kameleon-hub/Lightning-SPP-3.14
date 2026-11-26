@@ -144,9 +144,17 @@ internal static class CustomerAccounts
             if (route == "/register")
             {
                 var user = store.Register(email, password);
-                if (!user.EmailVerified && !await AccountEmail(store, user, "verify"))
-                { await Reply(transport, context, 503, new { code = "verification_email_unavailable", nextAction = "request-verification", error = "Verification email could not be sent. Your account remains unverified. Request another verification email later or contact support; do not pay again." }); return; }
-                await Reply(transport, context, 200, new { message = "If your account needs verification, check your email before signing in." }); return;
+                if (!user.EmailVerified)
+                {
+                    var sent = await AccountEmail(store, user, "verify");
+                    if (!sent.Sent)
+                    {
+                        InternalAuditLogger.Error($"Verification email failed for a registration: {sent.Error}");
+                        await Reply(transport, context, 200, new { message = "If your account needs verification, check your inbox. If no email arrives, use Account recovery to request another link; do not create another account or pay again." });
+                        return;
+                    }
+                }
+                await Reply(transport, context, 200, new { message = "If your account needs verification, check your inbox. If no email arrives, use Account recovery to request another link; do not create another account or pay again." }); return;
             }
             if (route == "/login")
             {
@@ -164,9 +172,14 @@ internal static class CustomerAccounts
             if (route is "/request-reset" or "/request-verification")
             {
                 CustomerStore.User? user = null; try { user = store.FindUser(CustomerStore.NormalizeEmail(email), true); } catch (ArgumentException) { }
-                // Uniform response does not reveal whether an account exists or its verification state.
+                // Unknown and ineligible accounts retain the generic response. Eligible
+                // accounts surface provider failure so the UI never claims acceptance.
                 if (user is not null && user.Status == "ACTIVE" && (route == "/request-reset" || !user.EmailVerified))
-                    if (!await AccountEmail(store, user, route == "/request-reset" ? "reset" : "verify")) InternalAuditLogger.Error("Account email unavailable; token can be replaced by a later request.");
+                {
+                    var sent = await AccountEmail(store, user, route == "/request-reset" ? "reset" : "verify");
+                    if (!sent.Sent)
+                        InternalAuditLogger.Error($"Account email resend failed: {sent.Error}");
+                }
                 await Reply(transport, context, 200, new { message = "If the account is eligible, check your inbox. If no email arrives, request another later." }); return;
             }
             if (route is "/verify" or "/reset")
@@ -249,13 +262,12 @@ internal static class CustomerAccounts
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.Host != hostname) throw new InvalidOperationException("Unexpected Stripe redirect.");
         return url!;
     }
-    private static async Task<bool> AccountEmail(CustomerStore store, CustomerStore.User user, string purpose)
+    private static async Task<(bool Sent, string Error)> AccountEmail(CustomerStore store, CustomerStore.User user, string purpose)
     {
         var token = store.CreateToken(user, purpose, purpose == "reset" ? TimeSpan.FromHours(1) : TimeSpan.FromHours(24));
         var link = PublicOrigin + "/account#" + purpose + "=" + Uri.EscapeDataString(token);
-        var result = await EmailService.TrySendEmailAsync(user.Email, purpose == "reset" ? "Reset your Lightning SPP password" : "Verify your Lightning SPP email",
+        return await EmailService.TrySendEmailAsync(user.Email, purpose == "reset" ? "Reset your Lightning SPP password" : "Verify your Lightning SPP email",
             "Open this single-use link to " + (purpose == "reset" ? "reset your password" : "verify your email") + ":\n" + link + "\nIf you did not request this, ignore this email.");
-        return result.Sent;
     }
     private static async Task Reply(HttpListenerContext transport, HttpContext? context, int status, object data)
     {

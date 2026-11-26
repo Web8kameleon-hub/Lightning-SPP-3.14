@@ -16,9 +16,14 @@ internal static class InternalAuditLogger
 
     public static void Info(string message) => Write("INFO", message);
     public static void Warn(string message) => Write("WARN", message);
-    public static void Error(string message) => Write("ERROR", message);
+    public static void Error(string message)
+    {
+        if (Write("ERROR", message)) return;
+        try { Console.Error.WriteLine($"{DateTime.UtcNow:O}|ERROR|{message}"); }
+        catch { }
+    }
 
-    private static void Write(string level, string message)
+    private static bool Write(string level, string message)
     {
         try
         {
@@ -29,10 +34,11 @@ internal static class InternalAuditLogger
                 var line = $"{DateTime.UtcNow:O}|{level}|{message}";
                 File.AppendAllText(LogFilePath, line + Environment.NewLine, Encoding.UTF8);
             }
+            return true;
         }
         catch
         {
-            // Logging must not block runtime.
+            return false;
         }
     }
 
